@@ -21,11 +21,11 @@ const characters={
 // the companion. Nova is intentionally more responsive and conversational:
 // she makes brief eye-contact gestures instead of looping one large idle pose.
 const expressiveProfiles={
-  robot:{microInterval:[5.5,10],microLift:.006,microYaw:.018,microRoll:.012,eye:'#ff9d4d'},
-  nova:{microInterval:[2.6,5.1],microLift:.012,microYaw:.042,microRoll:.03,eye:'#ffb3d4'},
-  butler:{microInterval:[6,11],microLift:.004,microYaw:.012,microRoll:.008,eye:'#9edfff'},
-  pixel:{microInterval:[2.1,4],microLift:.01,microYaw:.035,microRoll:.028,eye:'#dcff81'},
-  luma:{microInterval:[3.4,6.5],microLift:.008,microYaw:.028,microRoll:.02,eye:'#9fe7ff'}
+  robot:{microInterval:[5.5,10],microLift:.006,microYaw:.018,microRoll:.012,eye:'#ff9d4d',lightSpeed:1.05},
+  nova:{microInterval:[2.6,5.1],microLift:.012,microYaw:.042,microRoll:.03,eye:'#ffb3d4',lightSpeed:.82},
+  butler:{microInterval:[6,11],microLift:.004,microYaw:.012,microRoll:.008,eye:'#9edfff',lightSpeed:.48},
+  pixel:{microInterval:[2.1,4],microLift:.01,microYaw:.035,microRoll:.028,eye:'#dcff81',lightSpeed:1.55},
+  luma:{microInterval:[3.4,6.5],microLift:.008,microYaw:.028,microRoll:.02,eye:'#9fe7ff',lightSpeed:.68}
 };
 const expressionPose={
   relaxed:{lift:0,pitch:0,yaw:0,roll:0},
@@ -147,7 +147,7 @@ export class PortraitFace {
     }[bot]||null;
     this.character=characters[bot]||characters.robot;
     this.profile=expressiveProfiles[bot]||expressiveProfiles.robot;
-    this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.lastEmotion='relaxed';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.expressionKick=0;this.nextGaze=1.8;this.gaze=0;this.gazeTarget=0;this.transitionKick=0;this.dragKick=0;this.ambientKick=0;this.nextAmbient=2;this.ambientTarget={lift:0,roll:0};this.surpriseJump=0;this.nextMicroGesture=1.2;this.microGesture={lift:0,yaw:0,roll:0,scale:0};this.microTarget={...this.microGesture};this.nextIdleEyePaintAt=0;
+    this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.lastEmotion='relaxed';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.expressionKick=0;this.nextGaze=1.8;this.gaze=0;this.gazeTarget=0;this.transitionKick=0;this.dragKick=0;this.ambientKick=0;this.nextAmbient=2;this.ambientTarget={lift:0,roll:0};this.surpriseJump=0;this.nextMicroGesture=1.2;this.microGesture={lift:0,yaw:0,roll:0,scale:0};this.microTarget={...this.microGesture};this.nextIdleLightPaintAt=0;
     this.image=new Image();this.image.decoding='async';
     this.image.onload=()=>{this.imageReady=true;this.paintHardware(0,0);};
     this.image.src=`/assets/bots/${portraits[bot]||'rivet'}-portrait.png`;
@@ -206,11 +206,10 @@ export class PortraitFace {
     this.mouthValue=THREE.MathUtils.lerp(this.mouthValue,mouth,ease(18,dt));
     const now=performance.now();
     const enoughTime=now-this.lastPaintAt>=1000/this.performance.effectFps;
-    // Nova gets a restrained idle eye shimmer (capped at 24 fps). It lets her
-    // look present between turns while avoiding a permanent 24 fps canvas
-    // repaint for every companion and every static state.
-    const novaIdleEyes=this.bot==='nova'&&state==='IDLE'&&emotion==='relaxed'&&now>=this.nextIdleEyePaintAt;
-    if(this.imageReady&&enoughTime&&(Math.abs(this.mouthValue-this.lastLevel)>.018||Math.abs(blink-this.lastBlink)>.04||state!==this.lastState||emotion!==this.lastEmotion||emotion!=='relaxed'||speaking||listening||thinking||novaIdleEyes))this.paintHardware(this.mouthValue,blink,state,t,emotion,now);
+    // Presence lights move gently even at rest. Idle repaints are capped at
+    // 12 fps; active states still use the configured effect rate.
+    const idleLights=state==='IDLE'&&now>=this.nextIdleLightPaintAt;
+    if(this.imageReady&&enoughTime&&(Math.abs(this.mouthValue-this.lastLevel)>.018||Math.abs(blink-this.lastBlink)>.04||state!==this.lastState||emotion!==this.lastEmotion||emotion!=='relaxed'||speaking||listening||thinking||idleLights))this.paintHardware(this.mouthValue,blink,state,t,emotion,now);
   }
   configure(options={}){if(Number.isFinite(options.effectFps))this.performance.effectFps=THREE.MathUtils.clamp(options.effectFps,1,60);}
   react(state,previousState='IDLE'){
@@ -267,28 +266,12 @@ export class PortraitFace {
       }
       ctx.restore();
     }
+    this.paintPresenceLights(ctx,hardware,state,t,blink);
     // Keep state feedback inside the illustrated camera and speaker hardware.
     if(state==='LISTENING'){
       ctx.save();ctx.globalCompositeOperation='screen';ctx.strokeStyle=color;ctx.globalAlpha=.38+.22*Math.sin(t*5);ctx.lineWidth=2;
       ctx.beginPath();ctx.arc(x,y,Math.max(width,height)*(.53+.05*Math.sin(t*5)),0,Math.PI*2);ctx.stroke();
       for(const [eyeX,eyeY] of hardware.eyes){ctx.fillStyle=color;ctx.beginPath();ctx.arc(eyeX,eyeY,3+Math.sin(t*6)*1.5,0,Math.PI*2);ctx.fill();}ctx.restore();
-    }
-    if(this.bot==='nova'){
-      // Nova's image is intentionally kept intact. These lightweight overlays
-      // add living eye contact and state cues inside the existing lenses.
-      ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=this.profile.eye;
-      const shimmer=state==='SPEAKING'?.64+.24*Math.sin(t*7):state==='LISTENING'?.48+.18*Math.sin(t*4):.26;
-      for(const [eyeX,eyeY,rx,ry] of hardware.eyes){
-        const glintX=eyeX+this.gaze*rx*.32;
-        ctx.globalAlpha=shimmer;ctx.beginPath();ctx.arc(glintX,eyeY-ry*.18,Math.max(2,rx*.075),0,Math.PI*2);ctx.fill();
-        if(state==='LISTENING'){
-          ctx.globalAlpha=.24+.14*Math.sin(t*5);ctx.lineWidth=1.5;ctx.strokeStyle=this.profile.eye;
-          ctx.beginPath();ctx.ellipse(eyeX,eyeY,rx*.82,ry*.78,0,0,Math.PI*2);ctx.stroke();
-        }else if(state==='THINKING'){
-          ctx.globalAlpha=.32;ctx.fillRect(eyeX-rx*.55+(Math.sin(t*3+eyeX)*.5+.5)*rx*.8,eyeY-1,rx*.22,2);
-        }
-      }
-      ctx.restore();
     }
     if(state==='THINKING'){
       ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=color;ctx.globalAlpha=.75;
@@ -318,7 +301,47 @@ export class PortraitFace {
     else{ctx.fillRect(x-4,panelY,3,2);ctx.fillRect(x-1,panelY+2,3,2);ctx.fillRect(x+2,panelY-2,3,2);}ctx.restore();
     ctx.restore();
     this.texture.needsUpdate=true;this.lastLevel=level;this.lastBlink=blink;this.lastState=state;this.lastEmotion=emotion;this.lastTime=t;this.lastPaintAt=now;
-    if(this.bot==='nova')this.nextIdleEyePaintAt=now+1000/Math.min(this.performance.effectFps,24);
+    this.nextIdleLightPaintAt=now+1000/Math.min(this.performance.effectFps,12);
+  }
+  paintPresenceLights(ctx,hardware,state,t,blink){
+    const active=state==='SPEAKING'?1:state==='LISTENING'?.82:state==='THINKING'?.7:.42;
+    const phase=t*this.profile.lightSpeed;
+    const color=this.profile.eye;
+    ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=color;ctx.strokeStyle=color;
+    if(this.bot==='robot'){
+      // Rivet performs a measured diagnostic sweep across the camera and scope.
+      const [camera,scope]=hardware.eyes,angle=phase%(Math.PI*2);
+      ctx.globalAlpha=.16+.18*active;ctx.lineWidth=2.2;
+      ctx.beginPath();ctx.arc(camera[0],camera[1],camera[2]*.72,angle,angle+Math.PI*.42);ctx.stroke();
+      const scan=(Math.sin(phase*2.4)*.5+.5)*scope[2]*1.1;
+      ctx.globalAlpha=.12+.24*active;ctx.fillRect(scope[0]-scope[2]*.55+scan,scope[1]-scope[3]*.42,2,scope[3]*.84);
+    }else if(this.bot==='nova'){
+      // Nova uses soft moving catchlights that follow her conversational gaze.
+      for(const [eyeX,eyeY,rx,ry] of hardware.eyes){
+        const orbit=phase+(eyeX<314?0:Math.PI*.28),glintX=eyeX+this.gaze*rx*.32+Math.sin(orbit)*rx*.1;
+        ctx.globalAlpha=(.2+.34*active)*(1-blink*.65);ctx.shadowColor=color;ctx.shadowBlur=6;
+        ctx.beginPath();ctx.arc(glintX,eyeY-ry*.2+Math.cos(orbit)*ry*.06,Math.max(2,rx*.075),0,Math.PI*2);ctx.fill();
+      }
+    }else if(this.bot==='butler'){
+      // Sterling's slow paired glints move in lockstep like polished optics.
+      for(const [eyeX,eyeY,rx,ry] of hardware.eyes){
+        const travel=Math.sin(phase)*rx*.2;
+        ctx.globalAlpha=(.16+.2*active)*(1-blink*.7);ctx.beginPath();ctx.ellipse(eyeX+travel,eyeY-ry*.22,rx*.07,ry*.11,0,0,Math.PI*2);ctx.fill();
+      }
+    }else if(this.bot==='pixel'){
+      // Pixel's lively LEDs chase between the two lenses without touching the mouth.
+      hardware.eyes.forEach(([eyeX,eyeY,rx,ry],index)=>{
+        const angle=phase*2.4+index*Math.PI;
+        ctx.globalAlpha=.16+.3*active;ctx.beginPath();ctx.arc(eyeX+Math.cos(angle)*rx*.62,eyeY+Math.sin(angle)*ry*.54,2.4,0,Math.PI*2);ctx.fill();
+      });
+    }else if(this.bot==='luma'){
+      // Luma's visor carries a slow cyan composition scan and two focus points.
+      const left=hardware.eyes[0],right=hardware.eyes[1];
+      const scanX=left[0]-left[2]*.58+(Math.sin(phase)*.5+.5)*(right[0]-left[0]+right[2]*1.16);
+      ctx.globalAlpha=.1+.19*active;ctx.fillRect(scanX,left[1]-left[3]*.72,2,left[3]*1.44);
+      for(const [eyeX,eyeY,rx] of hardware.eyes){ctx.globalAlpha=.18+.24*active;ctx.beginPath();ctx.arc(eyeX+Math.sin(phase*.7)*rx*.08,eyeY,2.2,0,Math.PI*2);ctx.fill();}
+    }
+    ctx.restore();
   }
   dispose(){this.scene.traverse(object=>{object.geometry?.dispose();if(object.material){const materials=Array.isArray(object.material)?object.material:[object.material];materials.forEach(material=>{material.map?.dispose();material.dispose();});}});}
 }
