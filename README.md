@@ -52,7 +52,7 @@ Create a double-clickable Mac launcher after setup:
 npm run app
 ```
 
-This creates `MyAvatar.app` in the cloned folder. Keep it in that folder and double-click it whenever you want to launch the companion. It starts the local services and opens the widget without a Terminal command.
+This creates `MyAvatar.app` in the cloned folder. Keep it in that folder and double-click it whenever you want to launch the companion. It starts the local services and opens the widget without a Terminal command. If startup fails, inspect `~/Library/Logs/MyAvatar-launcher.log`.
 
 ## Run
 
