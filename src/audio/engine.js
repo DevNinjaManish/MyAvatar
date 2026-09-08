@@ -52,4 +52,11 @@ export class AudioEngine{
     const data=new Float32Array(256);const tick=()=>{if(!this.playing||this.source!==source)return;this.analyser.getFloatTimeDomainData(data);const rms=Math.sqrt(data.reduce((n,x)=>n+x*x,0)/data.length);this.onAmplitude(Math.min(1,rms*9));requestAnimationFrame(tick);};tick();
   }
   stop(){this.generation++;this.queue=[];if(this.source){this.source.onended=null;try{this.source.stop();this.source.disconnect();this.analyser?.disconnect();}catch{}}this.source=null;this.playing=false;this.onAmplitude(0);}
+  playFiller(){
+    if(!this.ctx)return;
+    const osc=this.ctx.createOscillator(),gain=this.ctx.createGain();
+    osc.type='sine';osc.frequency.setValueAtTime(880,this.ctx.currentTime);osc.frequency.exponentialRampToValueAtTime(440,this.ctx.currentTime+.05);
+    gain.gain.setValueAtTime(0.1,this.ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,this.ctx.currentTime+.05);
+    osc.connect(gain).connect(this.ctx.destination);osc.start();osc.stop(this.ctx.currentTime+.05);
+  }
 }

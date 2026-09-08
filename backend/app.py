@@ -1,4 +1,4 @@
-import asyncio, base64, json, logging, os, time, copy, random, re
+import asyncio, base64, json, logging, os, time, copy, random, re, subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -6,6 +6,7 @@ from backend.stt.provider import transcribe
 from backend.tts.provider import Speech
 from backend.llm.provider import stream
 from backend.conversation.chunks import split_ready
+from backend.memory import load_history, save_history, clear_history
 
 app=FastAPI()
 Path('logs').mkdir(exist_ok=True)
@@ -32,6 +33,7 @@ def load_config():
     config=json.loads(Path('config.json').read_text())
     try:preferences=json.loads(PREFERENCES_PATH.read_text())
     except FileNotFoundError:preferences={}
+    if 'language' in preferences:config['stt']['language']=preferences['language']
     profile=preferences.get('performanceProfile')
     if profile:apply_profile(config,profile)
     bot=preferences.get('persona')
@@ -45,6 +47,26 @@ def load_config():
 def save_preferences(config):
     PREFERENCES_PATH.parent.mkdir(exist_ok=True)
     PREFERENCES_PATH.write_text(json.dumps({'persona':config['conversation']['persona'],'performanceProfile':config.get('performanceProfile','low'),'interaction':config['audio']['mode'],'greetingIndexes':config.get('_greetingIndexes',{})}))
+
+def run_action(action_str):
+    """Execute a macOS command via AppleScript. Format: 'command(args)'"""
+    try:
+        match = re.match(r'(\w+)\((.*)\)', action_str)
+        if not match: return False
+        cmd, args = match.groups()
+        args = args.strip("'\"")
+
+        script = ''
+        if cmd == 'open_app': script = f'tell application "{args}" to activate'
+        elif cmd == 'close_app': script = f'tell application "{args}" to quit'
+        elif cmd == 'set_volume': script = f'set volume output volume {args}'
+
+        if script:
+            subprocess.run(['osascript', '-e', script], check=True)
+            return True
+    except Exception as e:
+        log.error(f'Action failed: {e}')
+    return False
 
 def speech_text(text):
     """Prevent the speech engine from saying Unicode emoji names aloud."""
@@ -87,27 +109,63 @@ async def ws(socket:WebSocket):
         await socket.close(code=1008); return
     await socket.accept()
     config=load_config()
-    history=[]
-    bot_histories={config['conversation']['persona']:history}
+    bot_id=config['conversation']['persona']
+    history=load_history(bot_id)
+    log.info(f'Loaded history for {bot_id}: {len(history)} turns')
+    bot_histories={bot_id:history}
     task=None
     async def send(kind, turn=None, **data): await socket.send_json({'type':kind,'turn':turn,**data})
     async def greet():
         if os.environ.get('MYAVATAR_TOKEN','development')=='development':return
         bot=config.get('conversation',{}).get('persona','nova')
+        import datetime
+        hour=datetime.datetime.now().hour
+        time_cat='night'
+        if 5<=hour<12:time_cat='morning'
+        elif 12<=hour<18:time_cat='afternoon'
+        elif 18<=hour<22:time_cat='evening'
         lines={
-            'nova':['Hello, darling. What are we making happen today?','I am here. Let us get your day in order.','Hi. Give me the next thing you want handled.','Your favorite assistant is ready. What needs attention?','I have a clear desk and a clear head. Where do we begin?','Hello again. Give me one useful thing to make easier.','I am listening. What would make today feel lighter?','Ready when you are. What are we sorting out?'],
-            'robot':['Back online. What code needs fixing?','Rivet ready. Show me the bug before it multiplies.','Diagnostics clear. What are we building?','Workshop open. Hand me the tricky part.','Systems awake. What are we shipping today?','I brought tools and sarcasm. What needs repair?','Ready for a clean compile. What is the mission?','Signal acquired. Let us make the machine behave.'],
-            'butler':['Good to see you. What shall we organize first?','At your service. Give me your highest priority.','Welcome back. I am ready to make a plan.','The desk is yours, sir. What deserves our focus?','Good evening. Shall we turn the loose ends into a list?','I am prepared. Which matter would you like handled first?','Your agenda awaits. What is the next sensible move?','A pleasure to see you. How may I be useful?'],
-            'pixel':['Okay, I am in. What is the campaign vibe?','Hey. Give me the brief, I will make it marketable.','I am ready. Let us make the brand less boring.','Fresh ideas loaded. What are we trying to sell today?','I am here for the scroll-stopping version. What is the brief?','Let us find the angle people will actually care about.','Marketing brain online. Give me the messy draft.','All right, creative director. What are we making loud?']
-            ,'luma':['Design desk is open. What should we make clearer?','Luma ready. Show me the screen, brief, or rough idea.','Let us make the next decision feel obvious. What are we designing?','I am here for the sharpest version of the idea. Where should we start?']
+            'nova':{
+                'morning':['Good morning, darling. Ready to conquer the day?','Morning! I have your schedule ready when you are.','A fresh start. What are we making happen this morning?'],
+                'afternoon':['Good afternoon. How is your day shaping up?','I am here. What needs attention this afternoon?','Hello! Ready for the second half of the day?'],
+                'evening':['Good evening. Let us wrap up the day with something productive.','Evening. I am here to help you wind down and organize.','Hello again. What shall we finish before the day ends?'],
+                'night':['Still awake? I am here if you need a late-night partner.','Good evening. A quiet time for a clear mind. What is on your mind?','Night time. I am ready for any midnight inspirations.']
+            },
+            'robot':{
+                'morning':['Systems online. Morning diagnostics clear. What is the mission?','Morning. Code is waiting. Let us fix something before lunch.','Signal acquired. Ready for a productive morning.'],
+                'afternoon':['Afternoon. The machine is humming. What needs repair?','Diagnostics stable. Hand me the tricky part of the day.','Back online. What are we shipping this afternoon?'],
+                'evening':['Evening. Let us clean up these bugs before shutdown.','Systems awake. Ready to polish the final compile of the day.','Diagnostics clear. What is the evening mission?'],
+                'night':['Midnight shift active. What code are we debugging in the dark?','Systems awake. I brought tools and sarcasm for the late hours.','Still compiling? I am here for the night watch.']
+            },
+            'butler':{
+                'morning':['Good morning. I have prepared your priorities for the day.','A splendid morning. Where shall we focus our energy first?','Good morning, sir. Your agenda is ready for your review.'],
+                'afternoon':['Good afternoon. I trust your day is proceeding smoothly.','At your service this afternoon. What deserves our focus now?','Good afternoon. Shall we turn the afternoon loose ends into a list?'],
+                'evening':['Good evening. Shall we organize the remaining matters of the day?','A pleasant evening. I am ready to make a plan for tomorrow.','Good evening. How may I be most useful as the day closes?'],
+                'night':['Good evening. A quiet hour for strategic planning.','At your service in the late hours. What shall we organize?','A peaceful night. I am here to ensure everything is in order.']
+            },
+            'pixel':{
+                'morning':['Morning! Let us make something viral before noon.','Wake up! I have a brand new hook for the morning campaign.','Morning. Give me the brief, I will make it marketable.'],
+                'afternoon':['Afternoon! The vibe is shifting. Let us pivot the strategy.','Hey. I am ready to make the brand less boring this afternoon.','Afternoon. What are we trying to sell before the day ends?'],
+                'evening':['Evening! Time to polish those posts for tomorrow.','Hey. Give me the messy draft, I will make it punchy.','Evening. Let us find the angle people will actually care about.'],
+                'night':['Late night energy is the best energy. What is the midnight vibe?','Still awake? Let us brainstorm something bold while the world sleeps.','Night shift. I am ready for the scroll-stopping version.']
+            },
+            'luma':{
+                'morning':['Morning. Let us make the first decision of the day obvious.','Good morning. What should we make clearer today?','A fresh canvas. Where should we start our design today?'],
+                'afternoon':['Good afternoon. How is the visual hierarchy holding up?','Afternoon. I am here for the sharpest version of the idea.','Let us refine the interaction design this afternoon.'],
+                'evening':['Good evening. Let us review the day\'s creative direction.','Evening. I am ready to critique the final layouts.','A peaceful evening for some deep design thinking.'],
+                'night':['Night time. The perfect hour for inventive thinking.','Good evening. What visual system are we exploring tonight?','Designing in the dark. I am ready for the creative spark.']
+            }
         }
-        choices=lines.get(bot,lines['nova']);indexes=config.setdefault('_greetingIndexes',{});index=indexes.get(bot,0)%len(choices);text=choices[index];indexes[bot]=(index+1)%len(choices);save_preferences(config)
+        bot_lines=lines.get(bot,lines['nova']).get(time_cat,lines['nova'][time_cat])
+        choices=bot_lines;indexes=config.setdefault('_greetingIndexes',{});index=indexes.get(bot,0)%len(choices);text=choices[index];indexes[bot]=(index+1)%len(choices);save_preferences(config)
         loop=asyncio.get_running_loop()
         wav=await loop.run_in_executor(tts_pool,speech.generate,text,config['tts'])
         await send('greeting',text=text,audio=base64.b64encode(wav).decode())
     async def respond(msg):
         turn_config=copy.deepcopy(config)
         turn=msg['turn'];start=time.perf_counter();metrics={};loop=asyncio.get_running_loop()
+        bot_id=turn_config['conversation']['persona']
+        history=bot_histories.setdefault(bot_id,[])
         try:
             await send('state',turn,state='THINKING')
             text=msg.get('text','').strip()
@@ -128,7 +186,13 @@ async def ws(socket:WebSocket):
                     chunk=await queue.get()
                     if chunk is None:return
                     synth_start=time.perf_counter()
-                    wav=await loop.run_in_executor(tts_pool,speech.generate,speech_text(chunk),turn_config['tts'])
+                    # Apply emotion-based speed modifier to the current TTS config
+                    current_tts=copy.deepcopy(turn_config['tts'])
+                    if 'current_emotion' in turn_config:
+                        emotion=turn_config['current_emotion']
+                        mod={ 'happy':1.1, 'surprised':1.2, 'sad':0.85, 'relaxed':0.95, 'curious':1.05 }.get(emotion, 1.0)
+                        current_tts['speed']=current_tts.get('speed',1.0)*mod
+                    wav=await loop.run_in_executor(tts_pool,speech.generate,speech_text(chunk),current_tts)
                     if 'first_tts_ms' not in metrics:
                         metrics['first_tts_ms']=round((time.perf_counter()-synth_start)*1000)
                         metrics['server_first_audio_ms']=round((time.perf_counter()-start)*1000)
@@ -154,10 +218,18 @@ async def ws(socket:WebSocket):
                     answer+=token;pending+=token
                     await send('token',turn,text=token)
                     if not tag_checked:
-                        if pending.lstrip().startswith('[') and ']' not in pending and len(pending)<30:continue
-                        match=re.match(r'^\s*\[(happy|sad|relaxed|surprised)\]\s*',pending)
-                        if match:
-                            await send('emotion',turn,emotion=match[1]);pending=pending[match.end():]
+                        if pending.lstrip().startswith('[') and ']' not in pending and len(pending)<50:continue
+                        action_match=re.match(r'^\s*\[action:(.*?)\]\s*',pending)
+                        if action_match:
+                            action_str=action_match.group(1)
+                            loop.run_in_executor(None,run_action,action_str)
+                            pending=pending[action_match.end():]
+                            continue
+                        emotion_match=re.match(r'^\s*\[(happy|sad|relaxed|surprised|curious)\]\s*',pending)
+                        if emotion_match:
+                            emotion=emotion_match[1]
+                            turn_config['current_emotion']=emotion
+                            await send('emotion',turn,emotion=emotion);pending=pending[emotion_match.end():]
                         tag_checked=True
                     while True:
                         chunk,pending=split_ready(pending,first=chunks_sent==0,first_chars=turn_config['conversation'].get('firstChunkChars',56),chunk_chars=turn_config['conversation'].get('chunkChars',140))
@@ -174,6 +246,7 @@ async def ws(socket:WebSocket):
                 if not speaker.done():speaker.cancel()
             history.extend([{'role':'user','content':text},{'role':'assistant','content':answer}])
             del history[:-turn_config['conversation']['historyTurns']*2]
+            save_history(bot_id, history)
             metrics['server_generation_ms']=round((time.perf_counter()-start)*1000)
             timing.info(json.dumps({'turn':turn,**metrics}))
             await send('metrics',turn,metrics=metrics)
@@ -205,12 +278,15 @@ async def ws(socket:WebSocket):
                     except asyncio.CancelledError:pass
                     task=None
             if msg['type']=='turn':task=asyncio.create_task(respond(msg))
-            elif msg['type']=='clear':history.clear()
+            elif msg['type']=='clear':
+                history.clear()
+                clear_history(config['conversation']['persona'])
             elif msg['type']=='bot':
                 bot_id=msg.get('bot')
                 profile=config.get('bots',{}).get(bot_id)
                 if not profile:continue
-                history=bot_histories.setdefault(bot_id,[])
+                history=load_history(bot_id)
+                bot_histories[bot_id]=history
                 config['conversation'].update(persona=bot_id,system=profile['system'])
                 config['tts']['voice']=profile['voice']
                 config['avatar']['type']='robot'
