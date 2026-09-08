@@ -40,6 +40,7 @@ body.widget #widget-drag:hover span{background:#e1e8e3cc}
 
 .widget-caption{display:flex;align-items:center;gap:6px;padding:2px 9px;border-radius:12px;background:#101921b8}
 #widget-name{font-size:10px;font-weight:600;color:#f2e9e7;letter-spacing:.3px}
+#widget-emoji{display:grid;place-items:center;width:14px;height:14px;border-radius:50%;background:#ffffff12;color:#ffddab;font-size:10px;line-height:1}
 #widget-tools .widget-caption #widget-status{background:none;padding:0;font-size:9px;color:#afd6c7}
 #widget-status:before{content:'·';margin-right:6px;color:#ffffff66}
 #bot-library{position:absolute;z-index:30;top:62px;left:50%;transform:translateX(-50%);width:264px;padding:13px;border-radius:20px;background:#19212bf5;border:1px solid #d8dde332;box-shadow:0 10px 35px #0008;-webkit-app-region:no-drag}

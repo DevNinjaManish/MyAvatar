@@ -4,15 +4,19 @@ import {AudioEngine,toBase64} from './audio/engine.js';
 import {AppState} from './conversation/state.js';
 const $=id=>document.getElementById(id);
 const avatar=new Avatar($('stage'));const audio=new AudioEngine(v=>avatar.setMouth(v));const state=new AppState();
+const emotionEmoji={happy:'✦',sad:'◔',relaxed:'◌',surprised:'!',listening:'◉',thinking:'⋯',speaking:'♫'};
+let expressionEmotion='relaxed';
+function showEmoji(emotion){$('widget-emoji').textContent=emotionEmoji[emotion]||emotionEmoji.relaxed;$('widget-emoji').title=emotion;}
+avatar.onExpression=emotion=>{expressionEmotion=emotion;showEmoji(emotion);};
 let inputKind="text";
 let liveOn=false,resumeTimer;
 let turn=0,recording=false,starting=false,complete=false,decodeChain=Promise.resolve(),pendingAudio=0,assistantNode,metrics={},started,firstToken,firstAudio,config;
-state.addEventListener('change',()=>{avatar.setState(state.value);$('status').textContent=state.value[0]+state.value.slice(1).toLowerCase();});
+state.addEventListener('change',()=>{avatar.setState(state.value);$('status').textContent=state.value[0]+state.value.slice(1).toLowerCase();if(['LISTENING','THINKING','SPEAKING'].includes(state.value))showEmoji(state.value.toLowerCase());else showEmoji(expressionEmotion);});
 const socket=new WebSocket(`ws://127.0.0.1:8765/ws?token=${import.meta.env.VITE_API_TOKEN||'development'}`);
 const send=data=>{if(socket.readyState!==WebSocket.OPEN)throw Error('Local service is disconnected. Restart the app.');socket.send(JSON.stringify(data));};
 const error=e=>$('error').textContent=e.message||e;
 socket.onopen=()=>{$('status').textContent='Preparing…';};socket.onclose=()=>{$('mic').disabled=true;interrupt(false);if(!$('error').textContent)error('Local service disconnected. Restart with npm start.');};
-function message(role,text){const p=document.createElement('div');p.className='message';const label=document.createElement('div');label.className='role';label.textContent=role;const body=document.createElement('div');body.textContent=text;p.append(label,body);$('messages').append(p);p.scrollIntoView();return body;}
+function message(role,text){const p=document.createElement('div');p.className='message';const label=document.createElement('div');label.className='role';label.textContent=role==='You'?role:`${emotionEmoji[expressionEmotion]||'◌'} ${role}`;const body=document.createElement('div');body.textContent=text;p.append(label,body);$('messages').append(p);p.scrollIntoView();return body;}
 function displayMetrics(){const labels={speech_to_stt_ms:'Speech → STT',stt_to_first_token_ms:inputKind==='speech'?'STT → token':'Text → token',token_to_audio_ms:'Token → audio',end_to_first_audio_ms:inputKind==='speech'?'Speech → audio':'Text → audio',end_to_end_ms:'Through playback'};$('metrics').textContent=Object.entries(labels).filter(([k])=>metrics[k]!=null).map(([k,label])=>`${label}: ${(metrics[k]/1000).toFixed(2)}s`).join(' · ');}
 function finish(){if(complete&&!audio.playing&&!audio.queue.length&&!pendingAudio){state.set('IDLE');metrics.end_to_end_ms=Math.round(performance.now()-started);displayMetrics();send({type:'metrics',turn,metrics});avatar.setExpression('relaxed');complete=false;if(liveOn){const current=turn;resumeTimer=setTimeout(()=>{if(liveOn&&turn===current){audio.setListening(true);state.set('LISTENING');}},config?.audio?.resumeDelayMs??250);}}}
 function interrupt(notify=true){clearTimeout(resumeTimer);turn++;if(recording||liveOn){audio.stopRecord();recording=false;liveOn=false;updateMicLabel();}audio.stop();pendingAudio=0;decodeChain=Promise.resolve();complete=false;state.set('IDLE');avatar.setExpression('relaxed');if(notify&&socket.readyState===1)send({type:'stop'});}
