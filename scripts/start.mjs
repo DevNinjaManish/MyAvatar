@@ -13,4 +13,4 @@ const vite=run('node',['node_modules/vite/bin/vite.js','--host','127.0.0.1','--p
 backend.on('exit',()=>stop());
 vite.on('exit',()=>stop());
 async function wait(url){for(let i=0;i<120;i++){if(stopping)return;try{if((await fetch(url)).ok)return;}catch{}await new Promise(r=>setTimeout(r,500));}throw Error('Startup timed out');}
-try{await Promise.all([wait('http://127.0.0.1:5173'),wait('http://127.0.0.1:8765/health')]);if(!stopping)run('node_modules/.bin/electron',['.']);}catch(e){console.error(e);stop();}
+try{await Promise.all([wait('http://127.0.0.1:5173'),wait('http://127.0.0.1:8765/health')]);if(!stopping)run(process.execPath,['node_modules/electron/cli.js','.']);}catch(e){console.error(e);stop();}
