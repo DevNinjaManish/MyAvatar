@@ -57,11 +57,20 @@ export class PortraitFace {
     // Nova has a matching transparent cutout behind the circular portrait.
     // The circle covers its centre while the shoulders remain visible beyond
     // the frame, preserving all live eye/speaker effects painted above it.
+    this.bust=null;
     if(bot==='nova'){
       const bustMap=new THREE.TextureLoader().load('/assets/bots/nova-bust.png');
       bustMap.colorSpace=THREE.SRGBColorSpace;bustMap.generateMipmaps=false;bustMap.minFilter=THREE.LinearFilter;bustMap.magFilter=THREE.LinearFilter;
-      const bust=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshBasicMaterial({map:bustMap,transparent:true,depthWrite:false}));
-      bust.position.z=-.03;bust.renderOrder=-1;this.root.add(bust);
+      const maskCanvas=document.createElement('canvas');maskCanvas.width=4;maskCanvas.height=256;
+      const maskContext=maskCanvas.getContext('2d'),maskGradient=maskContext.createLinearGradient(0,0,0,256);
+      maskGradient.addColorStop(0,'#000');maskGradient.addColorStop(.52,'#000');maskGradient.addColorStop(.66,'#fff');maskGradient.addColorStop(1,'#fff');
+      maskContext.fillStyle=maskGradient;maskContext.fillRect(0,0,4,256);
+      const bustMask=new THREE.CanvasTexture(maskCanvas);bustMask.generateMipmaps=false;bustMask.minFilter=THREE.LinearFilter;bustMask.magFilter=THREE.LinearFilter;
+      this.bust=new THREE.Mesh(new THREE.PlaneGeometry(1.52,1.52),new THREE.MeshBasicMaterial({map:bustMap,alphaMap:bustMask,transparent:true,depthWrite:false}));
+      // The live circular portrait masks the centre of this larger cutout. Only
+      // Nova's shoulders and lower chassis escape the ring, which gives the
+      // composition depth without duplicating or obscuring her animated face.
+      this.bust.position.set(0,-.11,-.03);this.bust.renderOrder=-1;this.root.add(this.bust);
     }
     // Source-pixel maps place the live effects within each illustrated device.
     this.hardware={
@@ -117,6 +126,13 @@ export class PortraitFace {
       (pose.yaw+this.gaze*.03+attentive+thoughtful+characterGesture+expression.yaw+this.microGesture.yaw+attention.x*.038*proximity)*motion,
       (pose.roll+Math.sin(t*.56*temperament)*.006+(listening ? .008 : 0)+expression.roll+this.microGesture.roll+this.ambientKick*this.ambientTarget.roll)*motion
     );
+    if(this.bust){
+      // A small counter-shift separates the torso from the face like two
+      // physical depth planes. The circular portrait hides their join.
+      this.bust.position.x=-attention.x*.016*motion;
+      this.bust.position.y=-.11+breath*.004*motion;
+      this.bust.rotation.z=-this.root.rotation.z*.12;
+    }
 
     this.mouthValue=THREE.MathUtils.lerp(this.mouthValue,mouth,ease(18,dt));
     const now=performance.now();
