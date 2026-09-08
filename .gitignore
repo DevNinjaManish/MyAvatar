@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+models/*
+!models/.gitkeep
+public/assets/*.vrm
+logs/
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+assets/source/

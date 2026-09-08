@@ -1,0 +1,8 @@
+fastapi==0.135.1
+uvicorn==0.41.0
+httpx==0.28.1
+mlx-whisper==0.4.3
+kokoro-onnx==0.4.9
+soundfile==0.13.1
+
+websockets==16.0

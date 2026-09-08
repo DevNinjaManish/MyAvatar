@@ -1,0 +1,168 @@
+import './style.css';
+import {Avatar} from './avatar/Avatar.js';
+import {AudioEngine,toBase64} from './audio/engine.js';
+import {AppState} from './conversation/state.js';
+const $=id=>document.getElementById(id);
+const avatar=new Avatar($('stage'));const audio=new AudioEngine(v=>avatar.setMouth(v));const state=new AppState();
+let inputKind="text";
+let liveOn=false,resumeTimer;
+let turn=0,recording=false,starting=false,complete=false,decodeChain=Promise.resolve(),pendingAudio=0,assistantNode,metrics={},started,firstToken,firstAudio,config;
+state.addEventListener('change',()=>{avatar.setState(state.value);$('status').textContent=state.value[0]+state.value.slice(1).toLowerCase();});
+const socket=new WebSocket(`ws://127.0.0.1:8765/ws?token=${import.meta.env.VITE_API_TOKEN||'development'}`);
+const send=data=>{if(socket.readyState!==WebSocket.OPEN)throw Error('Local service is disconnected. Restart the app.');socket.send(JSON.stringify(data));};
+const error=e=>$('error').textContent=e.message||e;
+socket.onopen=()=>{$('status').textContent='Preparing…';};socket.onclose=()=>{$('mic').disabled=true;interrupt(false);if(!$('error').textContent)error('Local service disconnected. Restart with npm start.');};
+function message(role,text){const p=document.createElement('div');p.className='message';const label=document.createElement('div');label.className='role';label.textContent=role;const body=document.createElement('div');body.textContent=text;p.append(label,body);$('messages').append(p);p.scrollIntoView();return body;}
+function displayMetrics(){const labels={speech_to_stt_ms:'Speech → STT',stt_to_first_token_ms:inputKind==='speech'?'STT → token':'Text → token',token_to_audio_ms:'Token → audio',end_to_first_audio_ms:inputKind==='speech'?'Speech → audio':'Text → audio',end_to_end_ms:'Through playback'};$('metrics').textContent=Object.entries(labels).filter(([k])=>metrics[k]!=null).map(([k,label])=>`${label}: ${(metrics[k]/1000).toFixed(2)}s`).join(' · ');}
+function finish(){if(complete&&!audio.playing&&!audio.queue.length&&!pendingAudio){state.set('IDLE');metrics.end_to_end_ms=Math.round(performance.now()-started);displayMetrics();send({type:'metrics',turn,metrics});avatar.setExpression('relaxed');complete=false;if(liveOn){const current=turn;resumeTimer=setTimeout(()=>{if(liveOn&&turn===current){audio.setListening(true);state.set('LISTENING');}},config?.audio?.resumeDelayMs??250);}}}
+function interrupt(notify=true){clearTimeout(resumeTimer);turn++;if(recording||liveOn){audio.stopRecord();recording=false;liveOn=false;updateMicLabel();}audio.stop();pendingAudio=0;decodeChain=Promise.resolve();complete=false;state.set('IDLE');avatar.setExpression('relaxed');if(notify&&socket.readyState===1)send({type:'stop'});}
+function begin(data){audio.setListening(false);turn++;inputKind=data.pcm?'speech':'text';metrics={input_kind:inputKind};started=performance.now()-(data.endDetectionMs||0);firstToken=null;firstAudio=null;complete=false;assistantNode=null;$('error').textContent='';$('metrics').textContent='';send({type:'turn',turn,...data});state.set('THINKING');}
+socket.onmessage=event=>{
+ const m=JSON.parse(event.data);if(m.type==='preparing'){$('status').textContent='Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){$('mic').disabled=false;state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){$('mic').disabled=true;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';avatar.maxFps=config.avatar?.maxFps||60;avatar.showRobot(config.conversation.persona);$('model').value=config.llm.model;$('voice').value=config.tts.voice;$('system').value=config.conversation.system;syncBotUI();return;}if(m.type==='bot_history'){$('messages').replaceChildren();for(const item of m.history)message(item.role==='user'?'You':config.bots[config.conversation.persona]?.name||'Companion',item.content);return;}if(m.turn!==turn)return;
+ if(m.type==='state')state.set(m.state);
+ if(m.type==='transcript'){if(inputKind==='speech')metrics.speech_to_stt_ms=Math.round(performance.now()-started);message('You',m.text);assistantNode=message(config.bots?.[config.conversation.persona]?.name||'Companion','');}
+ if(m.type==='first_token')firstToken=performance.now();
+ if(m.type==='token'&&assistantNode){assistantNode.textContent+=m.text;assistantNode.scrollIntoView();}
+ if(m.type==='emotion')avatar.setExpression(m.emotion);
+ if(m.type==='audio'){
+   const current=turn;pendingAudio++;
+   decodeChain=decodeChain.then(async()=>{if(current!==turn)return;await audio.enqueue(m.audio,()=>{if(current!==turn)return;state.set('SPEAKING');if(!firstAudio){firstAudio=performance.now();metrics.token_to_audio_ms=Math.round(firstAudio-firstToken);metrics.end_to_first_audio_ms=Math.round(firstAudio-started);displayMetrics();}},()=>{if(current===turn)finish();});}).catch(e=>{if(current===turn){interrupt();error(e);}}).finally(()=>{if(current===turn){pendingAudio--;finish();}});
+ }
+ if(m.type==='metrics'){Object.assign(metrics,m.metrics);displayMetrics();}
+ if(m.type==='done'){complete=true;finish();}
+ if(m.type==='error'){interrupt();error(m.message);}
+};
+function updateMicLabel(){
+ $('mic').textContent=liveOn?'Mic on · end conversation':recording?'Finish & send':$('interaction').value==='live'?'Start live conversation':'Start microphone';
+ $('widget-mic').title=liveOn?'End live conversation':recording?'Finish and send':'Start live conversation';
+ $('widget-mic').setAttribute('aria-pressed',String(liveOn||recording));
+ $('detail').textContent=$('interaction').value==='live'?'Mic stays on · pause to send · listening resumes after the reply':'Click once to talk, again to send · microphone is off until enabled';
+}
+$('mic').onclick=async()=>{
+ if(starting)return;
+ try{
+  if(liveOn){interrupt();return;}
+  if(recording){const pcm=audio.stopRecord();recording=false;updateMicLabel();begin({pcm:toBase64(new Uint8Array(pcm.buffer))});return;}
+  interrupt();starting=true;$('mic').disabled=true;$('error').textContent='';
+  const requestTurn=turn;
+  if($('interaction').value==='live'){
+    await audio.startLive((pcm,meta)=>{if(liveOn)begin({pcm:toBase64(new Uint8Array(pcm.buffer)),...meta});},config.audio?.vad);
+    if(requestTurn!==turn){audio.stopRecord();return;}
+    liveOn=true;audio.setListening(true);
+  }else{
+    await audio.record(()=>$('mic').click());
+    if(requestTurn!==turn){audio.stopRecord();return;}
+    recording=true;
+  }
+  state.set('LISTENING');updateMicLabel();
+ }catch(e){audio.stopRecord();recording=false;liveOn=false;updateMicLabel();state.set('IDLE');error(e);}
+ finally{starting=false;$('mic').disabled=socket.readyState!==1;}
+};
+$('interaction').onchange=()=>{interrupt();updateMicLabel();};
+$('stop').onclick=()=>interrupt();
+$('text-form').onsubmit=async event=>{event.preventDefault();try{const text=$('text').value.trim();if(!text)return;if($('mic').disabled)throw Error('Wait for local voice preparation to finish.');interrupt();await audio.ready();$('text').value='';begin({text});}catch(e){error(e);}};
+$('clear').onclick=()=>{interrupt();send({type:'clear'});$('messages').replaceChildren();};
+$('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidden;};
+$('settings-toggle').onclick=()=>$('settings').showModal();
+$('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,persona:config.conversation.persona,model:$('model').value,voice:$('voice').value,system:$('system').value});$('settings').close();};
+window.addEventListener('beforeunload',()=>{audio.stream?.getTracks().forEach(t=>t.stop());audio.stop();});
+// Public animation interface for experiments and automated shell validation.
+window.avatar=avatar;window.appState=state;
+
+
+setInterval(()=>{$('fps').textContent=`${avatar.fps} FPS · ${(config?.bots?.[config.conversation.persona]?.name||'Rivet')} · robot`;},1000);
+
+
+function windowMode(mode){
+ document.body.classList.toggle('widget',mode==='widget');$('bot-library').hidden=true;
+ const isWidget=mode==='widget';
+ $('stage').setAttribute('role','img');
+ $('stage').setAttribute('aria-label',(config?.bots?.[config.conversation.persona]?.name||'Companion')+' avatar');
+ $('stage').tabIndex=-1;
+ $('stage').title=isWidget?'Use Open for controls · drag the face or top handle to move':'';
+}
+if(window.desktop){windowMode('widget');window.desktop.onMode(windowMode);}else{$('collapse').hidden=true;$('close-window').hidden=true;}
+$('expand').onclick=()=>window.desktop?.mode('full');
+$('collapse').onclick=()=>window.desktop?.mode('widget');
+$('close-window').onclick=()=>window.desktop?.close();
+$('widget-mic').onclick=()=>{if(!$('mic').disabled)$('mic').click();};
+$('widget-stop').onclick=()=>$('stop').click();
+$('widget-minimize').onclick=()=>window.desktop?.minimize();
+$('widget-close').onclick=()=>window.desktop?.close();
+new MutationObserver(()=>{$('widget-status').textContent=$('error').textContent?'Open controls · needs attention':$('status').textContent;$('widget-mic').disabled=$('mic').disabled;$('widget-mic').classList.toggle('active',recording||liveOn);}).observe($('status').parentElement,{subtree:true,childList:true,attributes:true});
+
+
+window.addEventListener('keydown',event=>{
+  if(event.metaKey&&event.shiftKey&&event.key.toLowerCase()==='m'){event.preventDefault();if(!$('mic').disabled)$('mic').click();}
+  if(event.key==='Escape'&&!$('bot-library').hidden){closeBotLibrary();return;}
+  if(event.key==='Escape'&&!$('settings').open){interrupt();if(window.desktop)window.desktop.mode('widget');}
+});
+
+
+// Pointer capture keeps the drag active as the native window follows the cursor.
+for(const surface of [$('stage'),$('widget-drag')]){
+  let pointer=null;
+  const endDrag=()=>{
+    if(pointer===null)return;
+    const id=pointer;pointer=null;
+    window.desktop?.stopDrag();
+    document.body.classList.remove('dragging');
+    if(surface.hasPointerCapture(id))surface.releasePointerCapture(id);
+  };
+  surface.addEventListener('pointerdown',event=>{
+    if(!window.desktop||!document.body.classList.contains('widget')||event.button!==0)return;
+    event.preventDefault();pointer=event.pointerId;
+    surface.setPointerCapture(pointer);
+    document.body.classList.add('dragging');
+    window.desktop.startDrag();
+  });
+  surface.addEventListener('pointerup',endDrag);
+  surface.addEventListener('pointercancel',endDrag);
+  surface.addEventListener('lostpointercapture',endDrag);
+  window.addEventListener('blur',endDrag);
+  window.addEventListener('beforeunload',endDrag);
+}
+
+function syncBotUI(){
+ const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
+ $('widget-name').textContent=name;$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
+ $('stage').setAttribute('aria-label',name+' avatar');
+ $('widget-drag').title='Drag here to move '+name;
+ document.body.dataset.bot=id;
+}
+function switchBot(id){
+ if(!config?.bots?.[id]||socket.readyState!==1)return;
+ interrupt();avatar.showRobot(id);
+ send({type:'bot',bot:id});
+}
+function openBotLibrary(){
+ if(!config)return;
+ const cards=$('bot-cards');cards.replaceChildren();
+ for(const [id,bot] of Object.entries(config.bots||{})){
+   const button=document.createElement('button');button.className='bot-card '+id;
+   const selected=id===config.conversation.persona;
+   button.setAttribute('aria-pressed',String(selected));
+   const icon=document.createElement('span');icon.className='bot-mark';icon.textContent=({nova:'♡',robot:'⚙',butler:'◈',pixel:'✦'})[id]||'◌';
+   const info=document.createElement('span');const name=document.createElement('b');name.textContent=bot.name+(selected?' · current':'');
+   const detail=document.createElement('small');detail.textContent=({nova:'Charming, playful assistant',robot:'Witty repair robot',butler:'Wise British-style butler',pixel:'Bold marketing intern'})[id]||'Custom companion';
+   info.append(name,detail);button.append(icon,info);
+   button.onclick=()=>{if(!selected)switchBot(id);closeBotLibrary();};cards.append(button);
+ }
+ $('bot-library').hidden=false;$('library-close').focus();
+}
+function closeBotLibrary(){$('bot-library').hidden=true;$('widget-bot').focus();}
+$('widget-bot').onclick=()=>{$('bot-library').hidden?openBotLibrary():closeBotLibrary();};
+$('library-close').onclick=closeBotLibrary;
+window.addEventListener('pointerdown',event=>{if(!$('bot-library').hidden&&!$('bot-library').contains(event.target)&&!$('widget-bot').contains(event.target))$('bot-library').hidden=true;});
+
+$('bot-select').onchange=()=>switchBot($('bot-select').value);
+
+const widgetIcons={
+ 'widget-mic':'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M9 22h6"/>',
+ 'widget-stop':'<rect x="6" y="6" width="12" height="12" rx="3"/>',
+ 'widget-bot':'<path d="M4 8h15l-4-4M20 16H5l4 4"/>',
+ 'widget-minimize':'<path d="M5 12h14"/>',
+ 'expand':'<path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/>',
+ 'widget-close':'<path d="m7 7 10 10M17 7 7 17"/>'
+};
+for(const [id,paths] of Object.entries(widgetIcons))$(id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
