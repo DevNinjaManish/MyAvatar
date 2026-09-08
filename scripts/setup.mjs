@@ -9,10 +9,11 @@ const run=(command,args)=>{
 };
 
 if(process.platform!=='darwin')fail('MyAvatar V1 currently supports macOS on Apple Silicon.');
+if(process.arch!=='arm64')fail('Apple Silicon is required by the current MLX speech stack.');
 run('node',['--version']);
 run('uv',['--version']);
 if(!existsSync('.venv/bin/python'))run('uv',['venv','--python','3.11']);
 run('npm',['ci']);
 run('uv',['pip','install','-r','requirements.lock']);
 console.log('\nSetup complete. Next run: ollama pull qwen3.5:0.8b');
-console.log('Then start MyAvatar with: npm start');
+console.log('Then run npm run doctor for a local readiness report, and start MyAvatar with: npm start');

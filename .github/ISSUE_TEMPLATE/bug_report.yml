@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible problem in MyAvatar
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include microphone recordings, transcripts, tokens, credentials, or private files.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the actual and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Start MyAvatar\n2. ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: companion
+    attributes:
+      label: Companion
+      options: [Rivet, Nova, Sterling, Pixel, Luma, Not companion-specific]
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: macOS version, Apple Silicon chip, selected performance mode, and app commit/version.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Safe diagnostic output
+      description: Paste redacted output from npm run doctor or relevant launcher lines. Remove personal data.
+

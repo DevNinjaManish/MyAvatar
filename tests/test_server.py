@@ -1,4 +1,5 @@
-import base64, unittest, asyncio
+import base64, unittest, asyncio, tempfile
+from pathlib import Path
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
@@ -93,6 +94,18 @@ class BotSwitching(unittest.TestCase):
                 config=ws.receive_json()['config']
                 self.assertIn('Nova',config['conversation']['system'])
                 self.assertEqual(ws.receive_json()['history'][0]['content'],'Remember my blue bicycle')
+
+    def test_onboarding_saves_companion_profile_and_interaction(self):
+        with tempfile.TemporaryDirectory() as directory,patch('backend.app.PREFERENCES_PATH',Path(directory)/'settings.json'):
+            with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
+                ws.receive_json();ws.receive_json()
+                ws.send_json({'type':'onboarding','bot':'luma','performanceProfile':'high','interaction':'manual'})
+                config=ws.receive_json()['config']
+                self.assertIn('Luma',config['conversation']['system'])
+                self.assertEqual(config['tts']['voice'],'af_heart')
+                self.assertEqual(config['performanceProfile'],'high')
+                self.assertEqual(config['audio']['mode'],'manual')
+                self.assertEqual(ws.receive_json()['type'],'bot_history')
 
 
 class Recovery(unittest.TestCase):

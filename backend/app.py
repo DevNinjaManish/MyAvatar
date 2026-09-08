@@ -20,6 +20,7 @@ stt_pool=ThreadPoolExecutor(1)
 tts_pool=ThreadPoolExecutor(1)
 
 warm_task=None
+warm_stage='Preparing local speech models…'
 
 def apply_profile(config,name):
     profile=config.get('performanceProfiles',{}).get(name)
@@ -50,20 +51,24 @@ def speech_text(text):
     return re.sub(r'[\U0001F000-\U0001FAFF\U00002600-\U000027BF\ufe0f]', '', text).strip()
 
 async def warm_models():
+    global warm_stage
     config=load_config()
     loop=asyncio.get_running_loop()
+    warm_stage='Warming local voice and speech recognition…'
     log.info('Preparing local speech models (first launch can take a minute)...')
     wav=await loop.run_in_executor(tts_pool,speech.generate,'Hello, I am Rivet.',config['tts'])
     import io, numpy as np, soundfile as sf
     audio,rate=sf.read(io.BytesIO(wav),dtype='float32')
     pcm=np.interp(np.arange(int(len(audio)*16000/rate))*rate/16000,np.arange(len(audio)),audio).astype('<f4').tobytes()
     await loop.run_in_executor(stt_pool,transcribe,pcm,config['stt'])
+    warm_stage='Warming the selected local language model…'
     log.info('Speech models ready. Preparing Ollama model...')
     import httpx
     async with httpx.AsyncClient(timeout=180) as client:
         response=await client.post(config['llm']['url']+'/api/generate',json={'model':config['llm']['model'],'prompt':'','stream':False,'think':False,'keep_alive':config['llm'].get('keepAlive','30m'),'options':{'num_ctx':config['llm']['context']}})
         if response.status_code==404:raise RuntimeError('LLM model missing. Run: ollama pull '+config['llm']['model'])
         response.raise_for_status()
+    warm_stage='Local models are ready.'
     log.info('All local models ready.')
 
 @app.on_event('startup')
@@ -94,6 +99,7 @@ async def ws(socket:WebSocket):
             'robot':['Back online. What code needs fixing?','Rivet ready. Show me the bug before it multiplies.','Diagnostics clear. What are we building?','Workshop open. Hand me the tricky part.','Systems awake. What are we shipping today?','I brought tools and sarcasm. What needs repair?','Ready for a clean compile. What is the mission?','Signal acquired. Let us make the machine behave.'],
             'butler':['Good to see you. What shall we organize first?','At your service. Give me your highest priority.','Welcome back. I am ready to make a plan.','The desk is yours, sir. What deserves our focus?','Good evening. Shall we turn the loose ends into a list?','I am prepared. Which matter would you like handled first?','Your agenda awaits. What is the next sensible move?','A pleasure to see you. How may I be useful?'],
             'pixel':['Okay, I am in. What is the campaign vibe?','Hey. Give me the brief, I will make it marketable.','I am ready. Let us make the brand less boring.','Fresh ideas loaded. What are we trying to sell today?','I am here for the scroll-stopping version. What is the brief?','Let us find the angle people will actually care about.','Marketing brain online. Give me the messy draft.','All right, creative director. What are we making loud?']
+            ,'luma':['Design desk is open. What should we make clearer?','Luma ready. Show me the screen, brief, or rough idea.','Let us make the next decision feel obvious. What are we designing?','I am here for the sharpest version of the idea. Where should we start?']
         }
         choices=lines.get(bot,lines['nova']);indexes=config.setdefault('_greetingIndexes',{});index=indexes.get(bot,0)%len(choices);text=choices[index];indexes[bot]=(index+1)%len(choices);save_preferences(config)
         loop=asyncio.get_running_loop()
@@ -178,7 +184,12 @@ async def ws(socket:WebSocket):
     try:
         await send('config',config=config)
         if warm_task is not None:
-            await send('preparing')
+            last_stage=warm_stage
+            await send('preparing',stage=last_stage)
+            while not warm_task.done():
+                if warm_stage!=last_stage:
+                    await send('preparing',stage=warm_stage);last_stage=warm_stage
+                await asyncio.sleep(.12)
             try:await asyncio.shield(warm_task)
             except Exception as e:
                 await send('setup_error',message=str(e))
@@ -214,6 +225,18 @@ async def ws(socket:WebSocket):
                 save_preferences(config)
                 await send('config',config=config)
                 await greet()
+            elif msg['type']=='onboarding':
+                bot_id=msg.get('bot')
+                profile=config.get('bots',{}).get(bot_id)
+                if profile:
+                    config['conversation'].update(persona=bot_id,system=profile['system'])
+                    config['tts']['voice']=profile['voice']
+                    history=bot_histories.setdefault(bot_id,[])
+                config.setdefault('audio',{})['mode']='manual' if msg.get('interaction')=='manual' else 'live'
+                apply_profile(config,msg.get('performanceProfile'))
+                save_preferences(config)
+                await send('config',config=config)
+                await send('bot_history',history=history)
             elif msg['type']=='metrics':timing.info(json.dumps(msg))
     except WebSocketDisconnect:pass
     finally:

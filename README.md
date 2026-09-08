@@ -41,6 +41,8 @@ cd MyAvatar
 npm run setup
 ```
 
+Check that the Mac, local services, models, and speech assets are ready with `npm run doctor`. The report stays on the Mac and identifies missing prerequisites, including when Low mode is the sensible choice for lower-memory hardware.
+
 Download the Low and Medium models. Low mode uses a 1 GB LLM; speech assets add roughly 500 MB. High mode is optional and needs the larger 9B model.
 
 ```sh
@@ -75,7 +77,7 @@ Widget size remains fixed in both modes. Switching mode gives a greeting, then r
 
 ## Use and privacy
 
-On launch, the selected bot greets you and starts listening. Speak, then pause briefly to submit a turn. Stop ends playback and microphone capture. The state display shows Listening, Thinking, and Speaking.
+On first launch, onboarding explains the local-only design, lets you choose a companion and performance mode, then asks for microphone access only when you begin a conversation. Speak, then pause briefly to submit a turn. Stop ends playback and microphone capture. The state display shows Listening, Thinking, and Speaking.
 
 [`config.json`](config.json) contains provider defaults, bot prompts, voices, profiles, and VAD tuning. Runtime choices save to ignored `data/settings.json`; no API key is stored.
 
@@ -91,6 +93,6 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for module details and [LATENCY.md](LATEN
 
 ## Limitations
 
-This is a source-run V1 with a generated launcher, not a signed distributable app. Conversation is sequential; full-duplex barge-in is not implemented. The speech path is English-first.
+This is a source-run V1 with a generated launcher, not a signed distributable app. On first launch, macOS asks for microphone permission. Conversation is sequential; full-duplex barge-in is not implemented. The speech path is English-first.
 
-MyAvatar is released under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+MyAvatar is released under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [ROADMAP.md](ROADMAP.md).

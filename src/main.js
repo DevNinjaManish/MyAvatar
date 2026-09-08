@@ -27,7 +27,7 @@ function playGreeting(m){
  audio.enqueue(m.audio,()=>state.set('SPEAKING'),()=>{state.set('IDLE');avatar.setExpression('relaxed');startListeningSoon();}).catch(e=>{error(e);startListeningSoon();});
 }
 socket.onmessage=event=>{
- const m=JSON.parse(event.data);if(m.type==='preparing'){document.body.classList.add('model-loading');$('status').lastChild.textContent='Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){document.body.classList.remove('model-loading');$('mic').disabled=false;state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){document.body.classList.remove('model-loading');$('mic').disabled=true;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';$('performance').value=config.performanceProfile||'low';performanceNote();avatar.configure(config.avatar);avatar.showRobot(config.conversation.persona);syncBotUI();return;}if(m.type==='bot_history'){$('messages').replaceChildren();for(const item of m.history)message(item.role==='user'?'You':config.bots[config.conversation.persona]?.name||'Companion',item.content);return;}if(m.type==='greeting'){playGreeting(m);return;}if(m.turn!==turn)return;
+ const m=JSON.parse(event.data);if(m.type==='preparing'){document.body.classList.add('model-loading');$('status').lastChild.textContent=m.stage||'Preparing local models…';$('onboarding-status').textContent=m.stage||'Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){document.body.classList.remove('model-loading');$('mic').disabled=false;$('onboarding-status').textContent='Local models are ready. When you continue, macOS will ask to use your microphone.';state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){document.body.classList.remove('model-loading');$('mic').disabled=true;$('onboarding-status').textContent='Setup needs attention: '+m.message;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';$('performance').value=config.performanceProfile||'low';$('onboarding-bot').value=config.conversation.persona;$('onboarding-performance').value=config.performanceProfile||'low';performanceNote();avatar.configure(config.avatar);avatar.showRobot(config.conversation.persona);syncBotUI();openOnboarding();return;}if(m.type==='bot_history'){$('messages').replaceChildren();for(const item of m.history)message(item.role==='user'?'You':config.bots[config.conversation.persona]?.name||'Companion',item.content);return;}if(m.type==='greeting'){playGreeting(m);return;}if(m.turn!==turn)return;
  if(m.type==='state')state.set(m.state);
  if(m.type==='transcript'){if(inputKind==='speech')metrics.speech_to_stt_ms=Math.round(performance.now()-started);message('You',m.text);assistantNode=message(config.bots?.[config.conversation.persona]?.name||'Companion','');}
  if(m.type==='first_token')firstToken=performance.now();
@@ -77,6 +77,18 @@ $('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value});$('settings').close();window.desktop?.mode('widget');};
 function performanceNote(){$('performance-note').textContent=$('performance').value==='high'?'Uses the 9B model with smoother, more natural speech pacing. Best on the M1 Pro.':$('performance').value==='medium'?'Uses the installed 4B model for stronger replies. Best on 16 GB Macs.':'Uses the smallest local model and lower-power rendering.';}
 $('performance').onchange=performanceNote;
+function openOnboarding(){
+ if(localStorage.getItem('myavatar.onboarding.complete')||$('onboarding').open)return;
+ if(window.desktop)window.desktop.mode('full');
+ setTimeout(()=>{if(!$('onboarding').open)$('onboarding').showModal();},180);
+}
+$('onboarding-start').onclick=event=>{
+ event.preventDefault();if(!config||socket.readyState!==1)return;
+ localStorage.setItem('myavatar.onboarding.complete','1');
+ send({type:'onboarding',bot:$('onboarding-bot').value,performanceProfile:$('onboarding-performance').value,interaction:$('interaction').value});
+ $('onboarding').close();window.desktop?.mode('widget');
+};
+$('onboarding-later').onclick=()=>{localStorage.setItem('myavatar.onboarding.complete','1');window.desktop?.mode('widget');};
 window.addEventListener('beforeunload',()=>{audio.stream?.getTracks().forEach(t=>t.stop());audio.stop();});
 // Public animation interface for experiments and automated shell validation.
 window.avatar=avatar;window.appState=state;
