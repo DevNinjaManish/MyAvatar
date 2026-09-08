@@ -18,7 +18,7 @@ backend/tts/provider.py          persistent Kokoro ONNX engine
 backend/llm/provider.py          Ollama streaming HTTP client
 backend/conversation/chunks.py   sentence-sized synthesis chunks
 backend/app.py                  WebSocket/session history/cancellation/logging
-config.json                     provider, bot, and Low/Medium/High profile defaults
+config.json                     provider, bot, and Fast/Balanced profile defaults
 data/settings.json               ignored local bot/profile/microphone preferences
 scripts/start.mjs               starts and stops child services
 ```

@@ -103,7 +103,7 @@ class BotSwitching(unittest.TestCase):
                 config=ws.receive_json()['config']
                 self.assertIn('Luma',config['conversation']['system'])
                 self.assertEqual(config['tts']['voice'],'af_heart')
-                self.assertEqual(config['performanceProfile'],'high')
+                self.assertEqual(config['performanceProfile'],'medium')
                 self.assertEqual(config['audio']['mode'],'manual')
                 self.assertEqual(ws.receive_json()['type'],'bot_history')
 

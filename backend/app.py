@@ -24,8 +24,9 @@ warm_task=None
 warm_stage='Preparing local speech models…'
 
 def apply_profile(config,name):
+    if name=='high':name='medium'
     profile=config.get('performanceProfiles',{}).get(name)
-    if not profile:return
+    if not profile:name='medium';profile=config['performanceProfiles'][name]
     config['performanceProfile']=name
     for section in ('llm','conversation','tts','avatar'):config[section].update(profile.get(section,{}))
 

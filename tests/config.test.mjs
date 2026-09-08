@@ -18,8 +18,8 @@ test('companion configuration is complete and unique',()=>{
 
 test('performance profiles reference usable local models',()=>{
   for(const [id,profile] of Object.entries(config.performanceProfiles)){
-    assert.match(id,/^(low|medium|high)$/);
-    assert.match(profile.llm.model,/^qwen3\.5:/);
+    assert.match(id,/^(low|medium)$/);
+    assert.match(profile.llm.model,/^huihui_ai\/qwen3\.5-abliterated:/);
     assert.ok(profile.llm.context>=2048);
     assert.ok(profile.avatar.maxFps>0);
   }

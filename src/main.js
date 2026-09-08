@@ -127,7 +127,7 @@ $('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidd
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value,memoryEnabled:$('memory-enabled').checked});$('settings').close();window.desktop?.mode('widget');};
-function performanceNote(){$('performance-note').textContent=$('performance').value==='high'?'Uses the 9B model with smoother, more natural speech pacing. Best on the M1 Pro.':$('performance').value==='medium'?'Uses the installed 4B model for stronger replies. Best on 16 GB Macs.':'Uses the smallest local model and lower-power rendering.';}
+function performanceNote(){$('performance-note').textContent=$('performance').value==='medium'?'Balanced is recommended for natural everyday voice conversations.':'Fast minimizes memory and time to first response.';}
 $('performance').onchange=performanceNote;
 function openOnboarding(){
  if(localStorage.getItem('myavatar.onboarding.complete')||$('onboarding').open)return;
@@ -220,7 +220,7 @@ for(const surface of [$('stage'),$('widget-drag')]){
 
 function syncBotUI(){
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
- $('widget-name').textContent=name;const profile=config.performanceProfile||'low';$('widget-quality').textContent='Performance · '+profile[0].toUpperCase()+profile.slice(1);$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Low')+' · click to change';$('widget-quality-slider').value=profile==='high'?'2':profile==='medium'?'1':'0';$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
+ $('widget-name').textContent=name;const profile=config.performanceProfile||'medium';$('widget-quality').textContent='Performance · '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended');$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended')+' · click to change';$('widget-quality-slider').value=profile==='medium'?'1':'0';$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
  $('stage').setAttribute('aria-label',name+' avatar');
  $('widget-drag').setAttribute('aria-label','Drag to move '+name);
  document.body.dataset.bot=id;
@@ -248,7 +248,7 @@ function openBotLibrary(){
 function closeBotLibrary(){$('bot-library').hidden=true;$('widget-more').focus();}
 $('widget-bot').onclick=()=>{$('bot-library').hidden?openBotLibrary():closeBotLibrary();};
 $('widget-quality').onclick=()=>{$('widget-quality-panel').hidden=!$('widget-quality-panel').hidden;$('widget-quality').setAttribute('aria-expanded',String(!$('widget-quality-panel').hidden));};
-$('widget-quality-slider').onchange=()=>{const profile=['low','medium','high'][Number($('widget-quality-slider').value)];if(profile===config.performanceProfile)return;closeWidgetMenu();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:profile});};
+$('widget-quality-slider').onchange=()=>{const profile=['low','medium'][Number($('widget-quality-slider').value)];if(profile===config.performanceProfile)return;closeWidgetMenu();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:profile});};
 $('library-close').onclick=closeBotLibrary;
 window.addEventListener('pointerdown',event=>{if(!$('bot-library').hidden&&!$('bot-library').contains(event.target)&&!$('widget-bot').contains(event.target))$('bot-library').hidden=true;});
 
