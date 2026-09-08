@@ -29,7 +29,7 @@ Microphone → AudioWorklet → local turn detector (or manual capture) → resa
 
 Opt-in screen awareness uses a narrow preload IPC call to capture a downscaled image of the active display. The frame is passed in memory to the local Ollama vision message, then discarded. Screen text is explicitly treated as untrusted and cannot emit action requests. Only the generated comment, companion, source label, and timestamp are written to the separate ignored screen-awareness log.
 
-STT and TTS each use a dedicated single-thread executor. The token producer and speech consumer run concurrently with bounded queueing. Models remain loaded across turns for lower latency. History is owned per connection. An optional whitelisted leading emotion tag sets the face without waiting for a separate classification call.
+STT and TTS each use a dedicated single-thread executor. The token producer and speech consumer run concurrently with bounded queueing. Models remain loaded across turns for lower latency. History is owned per connection. An optional whitelisted leading emotion tag sets the face without waiting for a separate classification call. The backend removes this control tag before streaming visible text, synthesis, history, or screen logs; the renderer presents the mood as an emoji-labelled badge beside the companion name.
 
 Each client turn has an increasing identifier. Stop increments it, empties queued playback, stops the source node, and cancels the backend coroutine. Late messages and decodes from earlier turns are ignored. In-flight native inference cannot be forcibly terminated; its result is discarded. Settings and clear-history also cancel current work.
 
