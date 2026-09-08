@@ -77,6 +77,13 @@ export class PortraitFace {
       ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=color;ctx.globalAlpha=.75;
       for(const [eyeX,eyeY,rx] of hardware.eyes){const sweep=eyeX-rx*.46+(Math.sin(t*3)+1)*rx*.46;ctx.fillRect(sweep,eyeY-2,3,4);}ctx.restore();
     }
+    // Tiny physical diagnostic panel: a pulse, scan dots, or a confirmation tick.
+    ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=color;ctx.globalAlpha=.55+.35*Math.sin(t*4);
+    const panelY=y+height*.62;
+    if(state==='THINKING')for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(x-7+i*7,panelY,1.7+(i===Math.floor(t*4)%3?1:0),0,Math.PI*2);ctx.fill();}
+    else if(state==='LISTENING'){ctx.beginPath();ctx.arc(x,panelY,3.5+Math.sin(t*5),0,Math.PI*2);ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();}
+    else if(state==='SPEAKING'){ctx.fillRect(x-6,panelY-2,3,4);ctx.fillRect(x-1,panelY-4,3,8);ctx.fillRect(x+4,panelY-2,3,4);}
+    else{ctx.fillRect(x-4,panelY,3,2);ctx.fillRect(x-1,panelY+2,3,2);ctx.fillRect(x+2,panelY-2,3,2);}ctx.restore();
     ctx.restore();
     this.texture.needsUpdate=true;this.lastLevel=level;this.lastBlink=blink;this.lastState=state;this.lastTime=t;this.lastPaintAt=performance.now();
   }

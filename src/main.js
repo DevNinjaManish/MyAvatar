@@ -9,6 +9,8 @@ let expressionEmotion='relaxed';
 function showEmoji(emotion){$('widget-emoji').textContent=emotionEmoji[emotion]||emotionEmoji.relaxed;$('widget-emoji').title=emotion;}
 avatar.onExpression=emotion=>{expressionEmotion=emotion;showEmoji(emotion);};
 let inputKind="text";
+let widgetHideTimer;
+function wakeWidgetControls(){if(!document.body.classList.contains('widget'))return;document.body.classList.remove('controls-hidden');clearTimeout(widgetHideTimer);widgetHideTimer=setTimeout(()=>document.body.classList.add('controls-hidden'),3200);}
 let liveOn=false,resumeTimer;
 let turn=0,recording=false,starting=false,complete=false,decodeChain=Promise.resolve(),pendingAudio=0,assistantNode,metrics={},started,firstToken,firstAudio,config;
 state.addEventListener('change',()=>{avatar.setState(state.value);$('status').textContent=state.value[0]+state.value.slice(1).toLowerCase();if(['LISTENING','THINKING','SPEAKING'].includes(state.value))showEmoji(state.value.toLowerCase());else showEmoji(expressionEmotion);});
@@ -87,6 +89,7 @@ setInterval(()=>{$('fps').textContent=`${avatar.fps} FPS · ${(config?.bots?.[co
 
 function windowMode(mode){
  document.body.classList.toggle('widget',mode==='widget');$('bot-library').hidden=true;
+ if(mode==='widget')wakeWidgetControls();else document.body.classList.remove('controls-hidden');
  const isWidget=mode==='widget';
  $('stage').setAttribute('role','img');
  $('stage').setAttribute('aria-label',(config?.bots?.[config.conversation.persona]?.name||'Companion')+' avatar');
@@ -110,6 +113,7 @@ window.addEventListener('keydown',event=>{
   if(event.key==='Escape'&&!$('bot-library').hidden){closeBotLibrary();return;}
   if(event.key==='Escape'&&!$('settings').open){interrupt();if(window.desktop)window.desktop.mode('widget');}
 });
+window.addEventListener('pointermove',wakeWidgetControls);
 
 
 // Pointer capture keeps the drag active as the native window follows the cursor.

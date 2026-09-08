@@ -94,6 +94,8 @@ body.widget main{box-shadow:0 10px 34px #0007}
 body.widget #stage:after{content:'';position:absolute;inset:10px;border-radius:50%;border:1px solid #ffffff12;pointer-events:none}
 body.widget #widget-tools{bottom:12px;transition:opacity .2s,transform .2s}
 body.widget #widget-tools:not(:hover){transform:translateY(3px)}
+body.widget.controls-hidden #widget-tools{opacity:0;transform:translateY(12px);pointer-events:none}
+body.widget.controls-hidden:hover #widget-tools{opacity:1;transform:translateY(0);pointer-events:auto}
 .widget-caption{max-width:205px;white-space:nowrap;overflow:hidden}
 #widget-tools .widget-toolbar{gap:1px;padding:3px 5px}
 #widget-tools .widget-toolbar button,#widget-tools .widget-toolbar #widget-bot{width:29px;height:29px;padding:6px}
