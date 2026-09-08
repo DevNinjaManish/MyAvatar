@@ -9,7 +9,7 @@
   },
   "performanceProfiles": {
     "low": {"name":"Fast","llm":{"model":"huihui_ai/qwen3.5-abliterated:0.8b","context":2048,"maxTokens":80,"keepAlive":"20m"},"conversation":{"historyTurns":3,"firstChunkChars":48,"chunkChars":120},"avatar":{"maxFps":45,"pixelRatio":1.25,"portraitSize":512,"effectFps":24}},
-    "medium": {"name":"Balanced · Recommended","llm":{"model":"huihui_ai/qwen3.5-abliterated:4B","context":4096,"maxTokens":128,"keepAlive":"20m"},"conversation":{"historyTurns":5,"firstChunkChars":60,"chunkChars":150},"tts":{"speed":1.04},"avatar":{"maxFps":60,"pixelRatio":1.75,"portraitSize":627,"effectFps":40}}
+    "medium": {"name":"Balanced · Recommended","llm":{"model":"huihui_ai/qwen3.5-abliterated:4b","context":4096,"maxTokens":128,"keepAlive":"20m"},"conversation":{"historyTurns":5,"firstChunkChars":60,"chunkChars":150},"tts":{"speed":1.04},"avatar":{"maxFps":60,"pixelRatio":1.75,"portraitSize":627,"effectFps":40}}
   },
   "performanceProfile": "medium",
   "stt": {
