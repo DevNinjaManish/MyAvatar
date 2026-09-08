@@ -1,6 +1,6 @@
 # Observed local results — 2026-09-08
 
-Machine: Apple M1 Pro, 16 GB unified memory, macOS 26.6.2. Default: Qwen3.5 4B Q4_K_M, Ollama 0.33.3, 4096 context, thinking disabled; MLX Whisper base.en; Kokoro ONNX CPU with four inference threads.
+Machine: Apple M1 Pro, 16 GB unified memory, macOS 26.6.2. These historical observations used Qwen3.5 4B, a 4096-token context, MLX Whisper base.en, and Kokoro ONNX. Current MyAvatar defaults to Low mode (Qwen3.5 0.8B, 2048 context); Medium mode uses the 4B configuration. Treat the figures below as development reference points, not current guarantees.
 
 These are individual development observations, not percentile benchmarks. Generated speech was used as a controlled STT fixture. Actual room noise, microphone, answer length, model loading, competing apps, and thermals will change latency.
 
@@ -28,7 +28,7 @@ The synthetic service test does not include actual microphone capture or speaker
 
 Ollama reported 3.1 GB model runtime, 100% GPU, 4096-token context. Renderer was observed around 53–60 FPS after the cap (some browser captures showed 46–56 FPS with multiple test views and inference running). Initially uncapped, the desktop renderer reached the display's 120 FPS; V1 caps it at 60 to reduce load.
 
-The application now warms STT, TTS, and the LLM at launch. LLM cold loading can recur if the model has been evicted after idle time. The original configuration retained the model for five minutes; current tuning below extends this to thirty minutes.
+The application warms STT, TTS, and the selected LLM at launch. LLM cold loading can recur if the model is evicted after its configured keep-alive period.
 
 ## Reproduce
 

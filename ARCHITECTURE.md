@@ -3,7 +3,7 @@
 Electron hosts a sandboxed renderer. Three.js/WebGL renders the included art-directed 2.5D robot portraits with embedded dynamic hardware effects. The frontend connects via a per-launch token to a Python WebSocket service bound to 127.0.0.1. No public listener, remote scripts, or cloud API is needed.
 
 ```
-electron/main.cjs                 circular transparent window / native full screen
+electron/main.cjs                 circular transparent widget / expanded controls window
 electron/preload.cjs              narrow window-mode IPC bridge
 src/avatar/Avatar.js             shared scene and portrait lifecycle
 src/avatar/PortraitFace.js       portrait texture, speaker-grille LEDs, camera shutter animation
@@ -18,7 +18,8 @@ backend/tts/provider.py          persistent Kokoro ONNX engine
 backend/llm/provider.py          Ollama streaming HTTP client
 backend/conversation/chunks.py   sentence-sized synthesis chunks
 backend/app.py                  WebSocket/session history/cancellation/logging
-config.json                     provider/model/persona configuration
+config.json                     provider, bot, and Low/Medium profile defaults
+data/settings.json               ignored local bot/profile/microphone preferences
 scripts/start.mjs               starts and stops child services
 ```
 
@@ -42,6 +43,6 @@ This is a small source-run desktop V1. There is no database, container, agent fr
 
 The widget ships four original robot portraits: Rivet, Nova, Sterling, and Pixel. Each portrait contains only functional robot hardware such as camera optics, speaker grilles, microphone ports, status lights, panel seams, and service modules. Dynamic equalizers and camera shutters are drawn into the matching illustrated hardware texture rather than floated over the widget as UI. No television artwork, character model, show dialogue, or imitated actor voice is used. This records design choices, not a legal clearance or guarantee.
 
-Native full screen and the circular widget share one renderer/audio session without reconnecting or losing conversation history.
+The expanded controls window and circular widget share one renderer/audio session without reconnecting or losing conversation history.
 
 Hands-free mode keeps one MediaStream open until the user turns it off. Capture gates close before transcription and remain closed throughout response generation/playback. The gate reopens after playback plus a short echo-settling interval. This is sequential hands-free conversation, not full-duplex voice barge-in. Silence buffering is bounded, brief noises are rejected, and Stop/disconnect/error close the stream.
