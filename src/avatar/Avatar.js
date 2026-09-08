@@ -22,7 +22,7 @@ export class Avatar {
     this.scene.remove(this.robot.scene);this.robot.dispose();this.robot=new PortraitFace(bot,this.performance);this.bot=bot;this.scene.add(this.robot.scene);
   }
   configure(options={}){for(const key of ['maxFps','pixelRatio','portraitSize','effectFps'])if(Number.isFinite(options[key]))this.performance[key]=options[key];this.maxFps=this.performance.maxFps;this.renderer.setPixelRatio(Math.min(devicePixelRatio,this.performance.pixelRatio));this.resize();this.robot.configure(this.performance);}
-  setState(state){this.state=state;}
+  setState(state){if(this.state!==state)this.robot.react(state);this.state=state;}
   setMouth(value){this.mouth=THREE.MathUtils.clamp(value,0,1);}
   setExpression(value){this.emotion=value;this.onExpression?.(value);}
   update(){

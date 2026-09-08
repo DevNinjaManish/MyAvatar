@@ -22,22 +22,25 @@ export class PortraitFace {
       butler:{speaker:[314,344,47,60,'dots','#75d8ff'],eyes:[[228,231,48,45],[399,231,48,45]]},
       pixel:{speaker:[314,344,82,52,'dots','#c9ff55'],eyes:[[225,242,53,43],[404,242,53,43]]}
     }[bot]||null;
-    this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;
+    this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.nextGaze=1.8;this.gaze=0;
     this.image=new Image();this.image.decoding='async';
     this.image.onload=()=>{this.imageReady=true;this.paintHardware(0,0);};
     this.image.src=`/assets/bots/${portraits[bot]||'rivet'}-portrait.png`;
   }
   update(t,blink,mouth,state){
+    if(t>this.nextGaze){this.gaze=(Math.random()-.5)*.8;this.nextGaze=t+2.2+Math.random()*3.8;}
+    this.reaction=Math.max(0,this.reaction-.045);
     const speaking=state==='SPEAKING',listening=state==='LISTENING',thinking=state==='THINKING';
     const breath=Math.sin(t*(speaking?2.8:1.45));
     this.root.position.y=1.30+breath*(speaking ? .014 : .008);
     this.root.scale.setScalar(1+(speaking ? .008 : Math.sin(t*.9)*.002));
-    this.root.rotation.set(Math.sin(t*(thinking ? 1.6 : .72))*(thinking ? .018 : .010),Math.sin(t*(listening ? 1.15 : .40))*(listening ? .052 : thinking ? .068 : .032),listening ? .035 : thinking ? -.028 : Math.sin(t*.6)*.008);
+    this.root.rotation.set(Math.sin(t*(thinking ? 1.6 : .72))*(thinking ? .018 : .010)+this.reaction*.025,Math.sin(t*(listening ? 1.15 : .40))*(listening ? .052 : thinking ? .068 : .032)+this.gaze*.026,listening ? .035 : thinking ? -.028 : Math.sin(t*.6)*.008);
     this.mouthValue=THREE.MathUtils.lerp(this.mouthValue,mouth,.42);
     const enoughTime=performance.now()-this.lastPaintAt>=1000/this.performance.effectFps;
     if(this.imageReady&&enoughTime&&(Math.abs(this.mouthValue-this.lastLevel)>.025||Math.abs(blink-this.lastBlink)>.04||state!==this.lastState||speaking||listening||thinking))this.paintHardware(this.mouthValue,blink,state,t);
   }
   configure(options={}){if(Number.isFinite(options.effectFps))this.performance.effectFps=options.effectFps;}
+  react(state){this.reaction=state==='SPEAKING'||state==='LISTENING'?1:.45;}
   paintHardware(level,blink,state='IDLE',t=0){
     const ctx=this.context,hardware=this.hardware;if(!hardware)return;
     const size=this.canvas.width,scale=size/627;

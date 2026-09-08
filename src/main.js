@@ -138,7 +138,7 @@ for(const surface of [$('stage'),$('widget-drag')]){
 
 function syncBotUI(){
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
- $('widget-name').textContent=name;$('widget-quality').textContent=(config.performanceProfile||'low').toUpperCase();$('widget-quality').title='Performance: '+(config.performanceProfiles?.[config.performanceProfile]?.name||'Low');$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
+ $('widget-name').textContent=name;const profile=config.performanceProfile||'low';$('widget-quality').textContent=profile.toUpperCase();$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Low')+' · click to change';$('widget-quality-slider').value=profile==='medium'?'1':'0';$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
  $('stage').setAttribute('aria-label',name+' avatar');
  $('widget-drag').title='Drag here to move '+name;
  document.body.dataset.bot=id;
@@ -165,6 +165,8 @@ function openBotLibrary(){
 }
 function closeBotLibrary(){$('bot-library').hidden=true;$('widget-bot').focus();}
 $('widget-bot').onclick=()=>{$('bot-library').hidden?openBotLibrary():closeBotLibrary();};
+$('widget-quality').onclick=()=>{$('widget-quality-panel').hidden=!$('widget-quality-panel').hidden;};
+$('widget-quality-slider').onchange=()=>{const profile=$('widget-quality-slider').value==='1'?'medium':'low';if(profile===config.performanceProfile)return;$('widget-quality-panel').hidden=true;interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:profile});};
 $('library-close').onclick=closeBotLibrary;
 window.addEventListener('pointerdown',event=>{if(!$('bot-library').hidden&&!$('bot-library').contains(event.target)&&!$('widget-bot').contains(event.target))$('bot-library').hidden=true;});
 

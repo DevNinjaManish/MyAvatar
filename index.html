@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' blob: ws://127.0.0.1:8765; img-src 'self' blob: data:; worker-src 'self' blob:;"><title>MyAvatar</title></head><body>
 <div id="widget-drag" title="Drag here to move Rivet" aria-label="Drag handle"><span></span></div>
-<div id="widget-tools"><div class="widget-caption"><span id="widget-emoji" aria-hidden="true">◌</span><span id="widget-name">Nova</span><span id="widget-quality" title="Performance mode">LOW</span><span id="widget-status" aria-live="polite">Preparing…</span></div><div class="widget-toolbar">
+<div id="widget-tools"><div class="widget-caption"><span id="widget-emoji" aria-hidden="true">◌</span><span id="widget-name">Nova</span><button id="widget-quality" title="Change performance mode">LOW</button><span id="widget-status" aria-live="polite">Preparing…</span></div><div id="widget-quality-panel" hidden><span>Low</span><input id="widget-quality-slider" type="range" min="0" max="1" step="1" value="0" aria-label="Performance mode"><span>Medium</span></div><div class="widget-toolbar">
 <button id="widget-mic" aria-label="Toggle microphone" title="Start or end live conversation"></button>
 <button id="widget-stop" aria-label="Stop speaking" title="Stop speaking and microphone"></button>
 <button id="widget-bot" aria-label="Switch robot" title="Switch robot"></button>
