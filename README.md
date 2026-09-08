@@ -67,10 +67,10 @@ The app warms the local models, then enables the microphone. Click the microphon
 
 | Bot | Role | Default local voice |
 | --- | --- | --- |
-| Rivet | Witty repair robot | `am_michael` |
-| Nova | Charming, playful assistant | `af_heart` |
-| Sterling | Wise British-style butler | `bm_george` |
-| Pixel | Bold marketing intern | `af_sarah` |
+| Rivet | Witty coding and debugging companion | `am_michael` |
+| Nova | Charming, proactive personal assistant | `af_heart` |
+| Sterling | Wise executive personal assistant | `bm_george` |
+| Pixel | Bold marketing strategist | `af_sarah` |
 
 Use the widget bot-library icon or the full-window selector to switch. Each bot has its own in-session history, voice, system prompt, portrait, and hardware color language. The included portraits are art-directed 2.5D assets under `public/assets/bots/`; speaker activity and camera shutters are composited inside the real illustrated hardware instead of as UI overlays.
 

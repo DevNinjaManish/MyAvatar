@@ -85,10 +85,10 @@ async def ws(socket:WebSocket):
         if os.environ.get('MYAVATAR_TOKEN','development')=='development':return
         bot=config.get('conversation',{}).get('persona','nova')
         lines={
-            'nova':['Hello, darling. What are we making happen today?','I am here. Give me something interesting.','Hi. I missed your excellent timing.'],
-            'robot':['Back online. What needs fixing?','Rivet ready. Try not to break anything expensive.','Diagnostics clear. What are we tackling?'],
-            'butler':['Good to see you. How may I help?','At your service. What shall we handle first?','Welcome back. I am ready when you are.'],
-            'pixel':['Okay, I am in. What is the vibe?','Hey. Give me the brief, I will make it work.','I am ready. Let us make it less boring.']
+            'nova':['Hello, darling. What are we making happen today?','I am here. Let us get your day in order.','Hi. Give me the next thing you want handled.'],
+            'robot':['Back online. What code needs fixing?','Rivet ready. Show me the bug before it multiplies.','Diagnostics clear. What are we building?'],
+            'butler':['Good to see you. What shall we organize first?','At your service. Give me your highest priority.','Welcome back. I am ready to make a plan.'],
+            'pixel':['Okay, I am in. What is the campaign vibe?','Hey. Give me the brief, I will make it marketable.','I am ready. Let us make the brand less boring.']
         }
         text=random.choice(lines.get(bot,lines['nova']))
         loop=asyncio.get_running_loop()
