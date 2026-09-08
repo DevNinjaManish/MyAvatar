@@ -35,9 +35,9 @@
   "audio": {
     "mode": "live",
     "vad": {
-      "threshold": 0.009,
-      "silenceMs": 600,
-      "minSpeechMs": 280,
+      "threshold": 0.004,
+      "silenceMs": 450,
+      "minSpeechMs": 180,
       "maxSpeechMs": 20000,
       "preRollMs": 250
     },
