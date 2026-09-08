@@ -33,11 +33,14 @@ else {
   try {
     const response=await fetch(config.llm.url+'/api/tags',{signal:AbortSignal.timeout(2500)});
     if(!response.ok)throw Error('Ollama did not return its model list.');
-    const installed=new Set((await response.json()).models?.map(model=>model.name)||[]);
+    // Ollama normalizes tags to lowercase when it writes its local manifest,
+    // while model references such as 4B remain valid at runtime.
+    const installed=new Set((await response.json()).models?.map(model=>model.name.toLowerCase())||[]);
     add('Ollama','pass','Ollama is running locally.');
     for(const profile of Object.keys(config.performanceProfiles)){
       const model=modelFor(profile);
-      add('Model: '+profile,installed.has(model)?'pass':'warn',installed.has(model)?model:'Missing '+model+'. Run: ollama pull '+model);
+      const available=installed.has(model.toLowerCase());
+      add('Model: '+profile,available?'pass':'warn',available?model:'Missing '+model+'. Run: ollama pull '+model);
     }
   } catch {
     add('Ollama','fail','Ollama is installed but not responding on 127.0.0.1:11434. Open the Ollama app and try again.');
