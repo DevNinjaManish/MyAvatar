@@ -239,27 +239,33 @@ body.widget {
 body.widget header,body.widget footer,body.widget aside,body.widget dialog {
   display:none}
 body.widget main {
+  --widget-avatar-size:224px;
   flex:none;
-  width:224px;
-  height:224px;
+  width:var(--widget-avatar-size);
+  height:236px;
   margin:0 auto;
   padding:0;
   display:block;
-  border-radius:50%;
-  box-shadow:0 6px 12px #0004}
+  border-radius:0;
+  box-shadow:none}
 body.widget #stage {
   width:100%;
   height:100%;
-  border-radius:50%;
-  border:1px solid #ffffff2b;
-  background:radial-gradient(circle at 50% 40%,#354044,#1b2528 75%);
+  overflow:visible;
+  border-radius:0;
+  border:0;
+  background:transparent;
   cursor:grab;
   touch-action:none;
   user-select:none}
 body.widget #stage::before {
-  inset:8px;
+  inset:4px auto auto 12px;
+  width:calc(var(--widget-avatar-size) - 24px);
+  height:calc(var(--widget-avatar-size) - 24px);
   border-radius:50%;
-  background:radial-gradient(circle at var(--avatar-light-x,50%) var(--avatar-light-y,44%),#d8fff32b 0%,transparent 42%)}
+  border:1px solid #ffffff2b;
+  background:radial-gradient(circle at var(--avatar-light-x,50%) var(--avatar-light-y,44%),#d8fff32b 0%,#354044 45%,#1b2528 78%);
+  box-shadow:0 7px 16px #0005}
 body.widget[data-state=listening] #stage::before {
   animation:companion-listen 1.8s ease-in-out infinite}
 body.widget[data-state=thinking] #stage::before {
@@ -269,13 +275,19 @@ body.widget[data-state=speaking] #stage::before {
 body.dragging #stage::before {
   opacity:.48}
 body.widget[data-bot=nova] #stage {
-  background:radial-gradient(circle at 50% 40%,#4b3543,#25232b 75%)}
+  --widget-stage-center:#4b3543;
+  --widget-stage-edge:#25232b}
 body.widget[data-bot=butler] #stage {
-  background:radial-gradient(circle at 50% 40%,#344252,#202730 75%)}
+  --widget-stage-center:#344252;
+  --widget-stage-edge:#202730}
 body.widget[data-bot=pixel] #stage {
-  background:radial-gradient(circle at 50% 40%,#483247,#28232d 75%)}
+  --widget-stage-center:#483247;
+  --widget-stage-edge:#28232d}
 body.widget[data-bot=luma] #stage {
-  background:radial-gradient(circle at 50% 40%,#3a3d68,#1d2038 75%)}
+  --widget-stage-center:#3a3d68;
+  --widget-stage-edge:#1d2038}
+body.widget[data-bot] #stage::before {
+  background:radial-gradient(circle at var(--avatar-light-x,50%) var(--avatar-light-y,44%),#d8fff32b 0%,var(--widget-stage-center,#354044) 45%,var(--widget-stage-edge,#1b2528) 78%)}
 body.widget #widget-drag {
   display:flex;
   position:absolute;
@@ -305,9 +317,9 @@ body.widget #widget-tools {
 body.widget #widget-chat {
   display:none}
 body.widget.widget-chat-open main {
+  --widget-avatar-size:160px;
   width:160px;
-  height:160px;
-  box-shadow:0 4px 10px #0004}
+  height:168px}
 body.widget.widget-chat-open #widget-tools {
   margin-top:7px;
   gap:5px}

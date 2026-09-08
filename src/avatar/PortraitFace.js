@@ -106,25 +106,36 @@ export class PortraitFace {
     this.canvas=document.createElement('canvas');this.canvas.width=this.performance.portraitSize;this.canvas.height=this.performance.portraitSize;
     this.context=this.canvas.getContext('2d');
     const map=new THREE.CanvasTexture(this.canvas);map.colorSpace=THREE.SRGBColorSpace;map.generateMipmaps=false;map.minFilter=THREE.LinearFilter;map.magFilter=THREE.LinearFilter;map.anisotropy=1;
-    const portrait=new THREE.Mesh(new THREE.CircleGeometry(.625,48),new THREE.MeshBasicMaterial({map,transparent:true}));
+    // The portrait is the live face layer; the dedicated upper-body art below
+    // it gets enough room to cross the circular frame for every companion.
+    const portraitRadius=.565;
+    const portrait=new THREE.Mesh(new THREE.CircleGeometry(portraitRadius,48),new THREE.MeshBasicMaterial({map,transparent:true}));
     portrait.position.z=-.015;this.root.add(portrait);
-    // Nova has a matching transparent cutout behind the circular portrait.
-    // The circle covers its centre while the shoulders remain visible beyond
-    // the frame, preserving all live eye/speaker effects painted above it.
-    this.bust=null;
-    if(bot==='nova'){
-      const bustMap=new THREE.TextureLoader().load('/assets/bots/nova-bust.png');
+    // Dedicated transparent busts sit behind the live circular face. The circle
+    // masks their centre while each companion's shoulders and chest escape the
+    // frame without obscuring animated eyes or speaker hardware.
+    this.bust=null;this.bustShadow=null;
+    const bustProfiles={
+      robot:{asset:'rivet-bust-v2.png',fade:[.44,.59],size:1.48,y:-.15},
+      nova:{asset:'nova-bust-v3.png',fade:[.47,.62],size:1.48,y:-.145},
+      butler:{asset:'sterling-bust-v2.png',fade:[.43,.58],size:1.46,y:-.15},
+      pixel:{asset:'pixel-bust-v3.png',fade:[.46,.61],size:1.49,y:-.15},
+      luma:{asset:'luma-bust-v2.png',fade:[.42,.57],size:1.48,y:-.15}
+    };
+    this.bustProfile=bustProfiles[bot]||null;
+    if(this.bustProfile){
+      const bustMap=new THREE.TextureLoader().load(`/assets/bots/${this.bustProfile.asset}`);
       bustMap.colorSpace=THREE.SRGBColorSpace;bustMap.generateMipmaps=false;bustMap.minFilter=THREE.LinearFilter;bustMap.magFilter=THREE.LinearFilter;
       const maskCanvas=document.createElement('canvas');maskCanvas.width=4;maskCanvas.height=256;
       const maskContext=maskCanvas.getContext('2d'),maskGradient=maskContext.createLinearGradient(0,0,0,256);
-      maskGradient.addColorStop(0,'#000');maskGradient.addColorStop(.52,'#000');maskGradient.addColorStop(.66,'#fff');maskGradient.addColorStop(1,'#fff');
+      maskGradient.addColorStop(0,'#000');maskGradient.addColorStop(this.bustProfile.fade[0],'#000');maskGradient.addColorStop(this.bustProfile.fade[1],'#fff');maskGradient.addColorStop(.91,'#fff');maskGradient.addColorStop(1,'#000');
       maskContext.fillStyle=maskGradient;maskContext.fillRect(0,0,4,256);
       const bustMask=new THREE.CanvasTexture(maskCanvas);bustMask.generateMipmaps=false;bustMask.minFilter=THREE.LinearFilter;bustMask.magFilter=THREE.LinearFilter;
-      this.bust=new THREE.Mesh(new THREE.PlaneGeometry(1.52,1.52),new THREE.MeshBasicMaterial({map:bustMap,alphaMap:bustMask,transparent:true,depthWrite:false}));
-      // The live circular portrait masks the centre of this larger cutout. Only
-      // Nova's shoulders and lower chassis escape the ring, which gives the
-      // composition depth without duplicating or obscuring her animated face.
-      this.bust.position.set(0,-.11,-.03);this.bust.renderOrder=-1;this.root.add(this.bust);
+      const bustGeometry=new THREE.PlaneGeometry(this.bustProfile.size,this.bustProfile.size);
+      this.bustShadow=new THREE.Mesh(bustGeometry.clone(),new THREE.MeshBasicMaterial({map:bustMap,alphaMap:bustMask,color:'#120b12',opacity:.48,transparent:true,depthWrite:false}));
+      this.bustShadow.position.set(.018,this.bustProfile.y-.025,-.045);this.bustShadow.scale.setScalar(1.025);this.bustShadow.renderOrder=-2;this.root.add(this.bustShadow);
+      this.bust=new THREE.Mesh(bustGeometry,new THREE.MeshBasicMaterial({map:bustMap,alphaMap:bustMask,transparent:true,depthWrite:false}));
+      this.bust.position.set(0,this.bustProfile.y,-.03);this.bust.renderOrder=-1;this.root.add(this.bust);
     }
     // Source-pixel maps place the live effects within each illustrated device.
     this.hardware={
@@ -185,8 +196,11 @@ export class PortraitFace {
       // A small counter-shift separates the torso from the face like two
       // physical depth planes. The circular portrait hides their join.
       this.bust.position.x=-attention.x*.016*motion;
-      this.bust.position.y=-.11+breath*.004*motion;
+      this.bust.position.y=this.bustProfile.y+breath*.005*motion;
       this.bust.rotation.z=-this.root.rotation.z*.12;
+      this.bustShadow.position.x=.018-attention.x*.009*motion;
+      this.bustShadow.position.y=this.bustProfile.y-.025+breath*.002*motion;
+      this.bustShadow.rotation.z=-this.root.rotation.z*.06;
     }
 
     this.mouthValue=THREE.MathUtils.lerp(this.mouthValue,mouth,ease(18,dt));
@@ -216,19 +230,22 @@ export class PortraitFace {
     const size=this.canvas.width,scale=size/627;
     ctx.clearRect(0,0,size,size);ctx.drawImage(this.image,0,0,size,size);ctx.save();ctx.scale(scale,scale);
     const [x,y,width,height,mode,color]=hardware.speaker;
-    // Rivet's source illustration includes a bright grille. Dim that baked
-    // artwork while idle/listening so the equalizer remains an unambiguous
-    // playback cue rather than a permanent "talking" signal.
-    if(this.bot==='robot'&&state!=='SPEAKING'){
-      ctx.save();ctx.beginPath();ctx.ellipse(x,y,width*.37,height*.49,0,0,Math.PI*2);ctx.clip();
-      ctx.fillStyle='rgba(8,17,18,.72)';ctx.fillRect(x-width/2,y-height/2,width,height);
-      ctx.globalCompositeOperation='screen';ctx.globalAlpha=.22;ctx.fillStyle='#d88951';
-      for(let i=0;i<7;i++)ctx.fillRect(x-width*.30+i*width*.10,y-height*.17,width*.035,height*.34);
-      ctx.restore();
+    // Every source portrait contains a baked grille highlight. Neutralize it
+    // first so a lit mouth always means audible companion speech. Microphone
+    // input, listening, thinking, and idle states never illuminate the grille.
+    ctx.save();ctx.beginPath();
+    if(this.bot==='robot')ctx.ellipse(x,y,width*.39,height*.49,0,0,Math.PI*2);
+    else ctx.roundRect(x-width/2,y-height/2,width,height,Math.min(width,height)*.24);
+    ctx.clip();ctx.fillStyle=state==='SPEAKING'?'rgba(5,9,11,.64)':'rgba(5,9,11,.84)';ctx.fillRect(x-width/2,y-height/2,width,height);
+    ctx.strokeStyle='rgba(184,194,190,.22)';ctx.lineWidth=1;
+    if(mode==='vertical'){
+      for(let i=0;i<7;i++){const barX=x-width*.30+i*width*.10;ctx.beginPath();ctx.moveTo(barX,y-height*.24);ctx.lineTo(barX,y+height*.24);ctx.stroke();}
+    }else{
+      ctx.fillStyle='rgba(184,194,190,.2)';
+      for(let row=-1;row<=1;row++)for(let column=-2;column<=2;column++){ctx.beginPath();ctx.arc(x+column*width*.13,y+row*height*.18,1.5,0,Math.PI*2);ctx.fill();}
     }
-    // Microphone input can move the shared mouth meter while the companion is
-    // listening. The grille is a playback indicator, so it must only animate
-    // when the companion is actually speaking.
+    ctx.restore();
+    // The TTS output level is the sole source of active mouth light.
     if(state==='SPEAKING'&&level>.015){
       ctx.save();ctx.beginPath();ctx.rect(x-width/2,y-height/2,width,height);ctx.clip();
       ctx.globalCompositeOperation='screen';ctx.shadowColor=color;ctx.shadowBlur=10;ctx.fillStyle=color;
