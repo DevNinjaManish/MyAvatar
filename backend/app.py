@@ -1,4 +1,4 @@
-import asyncio, base64, json, logging, os, time, copy, random
+import asyncio, base64, json, logging, os, time, copy, random, re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -43,6 +43,10 @@ def load_config():
 def save_preferences(config):
     PREFERENCES_PATH.parent.mkdir(exist_ok=True)
     PREFERENCES_PATH.write_text(json.dumps({'persona':config['conversation']['persona'],'performanceProfile':config.get('performanceProfile','low'),'interaction':config['audio']['mode']}))
+
+def speech_text(text):
+    """Prevent the speech engine from saying Unicode emoji names aloud."""
+    return re.sub(r'[\U0001F000-\U0001FAFF\U00002600-\U000027BF\ufe0f]', '', text).strip()
 
 async def warm_models():
     config=load_config()
@@ -108,7 +112,7 @@ async def ws(socket:WebSocket):
             if not text:
                 await send('done',turn);return
             await send('transcript',turn,text=text)
-            messages=[{'role':'system','content':turn_config['conversation']['system']}]+history+[{'role':'user','content':text}]
+            messages=[{'role':'system','content':turn_config['conversation']['system']+' Never output emoji, emoticons, or decorative Unicode symbols; this response will be spoken aloud.'}]+history+[{'role':'user','content':text}]
             stt_end=time.perf_counter();first=None;answer='';pending=''
             queue=asyncio.Queue(maxsize=8)
             chunks_sent=0
@@ -117,7 +121,7 @@ async def ws(socket:WebSocket):
                     chunk=await queue.get()
                     if chunk is None:return
                     synth_start=time.perf_counter()
-                    wav=await loop.run_in_executor(tts_pool,speech.generate,chunk,turn_config['tts'])
+                    wav=await loop.run_in_executor(tts_pool,speech.generate,speech_text(chunk),turn_config['tts'])
                     if 'first_tts_ms' not in metrics:
                         metrics['first_tts_ms']=round((time.perf_counter()-synth_start)*1000)
                         metrics['server_first_audio_ms']=round((time.perf_counter()-start)*1000)

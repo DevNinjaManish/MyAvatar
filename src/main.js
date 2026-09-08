@@ -24,7 +24,7 @@ function begin(data){audio.setListening(false);turn++;inputKind=data.pcm?'speech
 function startListeningSoon(){if($('interaction').value!=='live'||$('mic').disabled||liveOn||recording)return;setTimeout(()=>{$('mic').click();},180);}
 function playGreeting(m){
  interrupt(false);message(config.bots?.[config.conversation.persona]?.name||'Companion',m.text);state.set('SPEAKING');avatar.setExpression('happy');
- audio.enqueue(m.audio,()=>state.set('SPEAKING'),()=>{state.set('IDLE');avatar.setExpression('relaxed');startListeningSoon();}).catch(error);
+ audio.enqueue(m.audio,()=>state.set('SPEAKING'),()=>{state.set('IDLE');avatar.setExpression('relaxed');startListeningSoon();}).catch(e=>{error(e);startListeningSoon();});
 }
 socket.onmessage=event=>{
  const m=JSON.parse(event.data);if(m.type==='preparing'){$('status').textContent='Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){$('mic').disabled=false;state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){$('mic').disabled=true;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';$('performance').value=config.performanceProfile||'low';performanceNote();avatar.configure(config.avatar);avatar.showRobot(config.conversation.persona);syncBotUI();return;}if(m.type==='bot_history'){$('messages').replaceChildren();for(const item of m.history)message(item.role==='user'?'You':config.bots[config.conversation.persona]?.name||'Companion',item.content);return;}if(m.turn!==turn)return;
