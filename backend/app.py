@@ -90,10 +90,10 @@ async def ws(socket:WebSocket):
         if os.environ.get('MYAVATAR_TOKEN','development')=='development':return
         bot=config.get('conversation',{}).get('persona','nova')
         lines={
-            'nova':['Hello, darling. What are we making happen today?','I am here. Let us get your day in order.','Hi. Give me the next thing you want handled.'],
-            'robot':['Back online. What code needs fixing?','Rivet ready. Show me the bug before it multiplies.','Diagnostics clear. What are we building?'],
-            'butler':['Good to see you. What shall we organize first?','At your service. Give me your highest priority.','Welcome back. I am ready to make a plan.'],
-            'pixel':['Okay, I am in. What is the campaign vibe?','Hey. Give me the brief, I will make it marketable.','I am ready. Let us make the brand less boring.']
+            'nova':['Hello, darling. What are we making happen today?','I am here. Let us get your day in order.','Hi. Give me the next thing you want handled.','Your favorite assistant is ready. What needs attention?','I have a clear desk and a clear head. Where do we begin?','Hello again. Give me one useful thing to make easier.','I am listening. What would make today feel lighter?','Ready when you are. What are we sorting out?'],
+            'robot':['Back online. What code needs fixing?','Rivet ready. Show me the bug before it multiplies.','Diagnostics clear. What are we building?','Workshop open. Hand me the tricky part.','Systems awake. What are we shipping today?','I brought tools and sarcasm. What needs repair?','Ready for a clean compile. What is the mission?','Signal acquired. Let us make the machine behave.'],
+            'butler':['Good to see you. What shall we organize first?','At your service. Give me your highest priority.','Welcome back. I am ready to make a plan.','The desk is yours, sir. What deserves our focus?','Good evening. Shall we turn the loose ends into a list?','I am prepared. Which matter would you like handled first?','Your agenda awaits. What is the next sensible move?','A pleasure to see you. How may I be useful?'],
+            'pixel':['Okay, I am in. What is the campaign vibe?','Hey. Give me the brief, I will make it marketable.','I am ready. Let us make the brand less boring.','Fresh ideas loaded. What are we trying to sell today?','I am here for the scroll-stopping version. What is the brief?','Let us find the angle people will actually care about.','Marketing brain online. Give me the messy draft.','All right, creative director. What are we making loud?']
         }
         choices=lines.get(bot,lines['nova']);indexes=config.setdefault('_greetingIndexes',{});index=indexes.get(bot,0)%len(choices);text=choices[index];indexes[bot]=(index+1)%len(choices);save_preferences(config)
         loop=asyncio.get_running_loop()

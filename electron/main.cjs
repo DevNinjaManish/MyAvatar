@@ -5,8 +5,8 @@ app.whenReady().then(async()=>{
   session.defaultSession.setPermissionRequestHandler((wc,permission,callback)=>callback(local(wc.getURL())&&permission==='media'));
   if(process.platform==='darwin')await systemPreferences.askForMediaAccess('microphone');
   const area=screen.getPrimaryDisplay().workArea;
-  const widgetSize=340;
-  const win=new BrowserWindow({width:widgetSize,height:widgetSize,x:area.x+area.width-380,y:area.y+80,minWidth:300,minHeight:300,title:'Rivet',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  const widgetSize=232;
+  const win=new BrowserWindow({width:widgetSize,height:widgetSize,x:area.x+area.width-270,y:area.y+80,minWidth:232,minHeight:232,title:'Rivet',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
   let widgetBounds=win.getBounds();let mode='widget';

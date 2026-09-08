@@ -93,17 +93,17 @@ body:not(.widget) #stop{background:#ffffff08;border-color:#ffffff14;border-radiu
 body:not(.widget) dialog{border-color:#ffffff1d;background:#182331f7;box-shadow:0 25px 80px #000a}
 body:not(.widget) dialog h2{margin:0 0 6px;font-size:18px}
 
-body.widget{padding:7px;background:transparent}
+body.widget{padding:5px;background:transparent}
 body.widget main{box-shadow:0 10px 34px #0007}
 body.widget #stage:after{content:'';position:absolute;inset:10px;border-radius:50%;border:1px solid #ffffff12;pointer-events:none}
-body.widget #widget-tools{bottom:12px;transition:opacity .2s,transform .2s}
+body.widget #widget-tools{bottom:8px;transition:opacity .2s,transform .2s}
 body.widget #widget-tools:not(:hover){transform:translateY(3px)}
 body.widget.controls-hidden #widget-tools{opacity:0;transform:translateY(12px);pointer-events:none}
 body.widget.controls-hidden:hover #widget-tools{opacity:1;transform:translateY(0);pointer-events:auto}
-.widget-caption{max-width:205px;white-space:nowrap;overflow:hidden}
+.widget-caption{max-width:174px;white-space:nowrap;overflow:hidden}
 #widget-tools .widget-toolbar{gap:1px;padding:3px 5px}
-#widget-tools .widget-toolbar button,#widget-tools .widget-toolbar #widget-bot{width:29px;height:29px;padding:6px}
-#widget-tools .widget-toolbar #widget-bot{display:none}
+#widget-tools .widget-toolbar button,#widget-tools .widget-toolbar #widget-bot{width:27px;height:27px;padding:6px}
+#widget-tools .widget-toolbar #widget-bot{display:grid;color:#ffd8a8;opacity:.92}
 #widget-tools .widget-toolbar #widget-minimize{display:none}
 #widget-tools .widget-toolbar #widget-close{opacity:.42}
 .widget-caption{box-shadow:0 3px 12px #0004;border:1px solid #ffffff12;backdrop-filter:blur(12px)}
@@ -112,3 +112,14 @@ body.widget.controls-hidden:hover #widget-tools{opacity:1;transform:translateY(0
 #widget-tools .widget-toolbar button:hover{transform:translateY(-1px)}
 #widget-tools #widget-mic{color:#bdf8e4;opacity:1}
 #widget-tools #widget-close:hover{background:#aa5260;color:white}
+
+/* The picker is a complete compact view, not a clipped desktop popover. */
+body.widget #bot-library{inset:7px;top:7px;left:7px;transform:none;width:auto;padding:10px;border-radius:50%;display:flex;flex-direction:column;justify-content:center;background:#111b24fa;border-color:#ffffff24;box-shadow:0 12px 32px #000a}
+body.widget .library-heading{margin:0 22px 5px}
+body.widget .library-heading strong{font-size:11px}
+body.widget #library-close{font-size:17px;width:20px;height:20px}
+body.widget #bot-cards{gap:3px;margin:0 18px}
+body.widget .bot-card{gap:7px;padding:5px 7px;border-radius:10px}
+body.widget .bot-card b{font-size:10px}
+body.widget .bot-card small{font-size:8px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:112px}
+body.widget .bot-mark{width:24px;height:25px;border-radius:8px;font-size:15px}
