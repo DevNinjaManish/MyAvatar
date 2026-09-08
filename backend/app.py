@@ -25,7 +25,7 @@ def apply_profile(config,name):
     profile=config.get('performanceProfiles',{}).get(name)
     if not profile:return
     config['performanceProfile']=name
-    for section in ('llm','conversation','avatar'):config[section].update(profile.get(section,{}))
+    for section in ('llm','conversation','tts','avatar'):config[section].update(profile.get(section,{}))
 
 def load_config():
     config=json.loads(Path('config.json').read_text())
@@ -38,11 +38,12 @@ def load_config():
         config['conversation'].update(persona=bot,system=config['bots'][bot]['system'])
         config['tts']['voice']=config['bots'][bot]['voice']
     if preferences.get('interaction') in ('live','manual'):config['audio']['mode']=preferences['interaction']
+    config['_greetingIndexes']=preferences.get('greetingIndexes',{})
     return config
 
 def save_preferences(config):
     PREFERENCES_PATH.parent.mkdir(exist_ok=True)
-    PREFERENCES_PATH.write_text(json.dumps({'persona':config['conversation']['persona'],'performanceProfile':config.get('performanceProfile','low'),'interaction':config['audio']['mode']}))
+    PREFERENCES_PATH.write_text(json.dumps({'persona':config['conversation']['persona'],'performanceProfile':config.get('performanceProfile','low'),'interaction':config['audio']['mode'],'greetingIndexes':config.get('_greetingIndexes',{})}))
 
 def speech_text(text):
     """Prevent the speech engine from saying Unicode emoji names aloud."""
@@ -94,7 +95,7 @@ async def ws(socket:WebSocket):
             'butler':['Good to see you. What shall we organize first?','At your service. Give me your highest priority.','Welcome back. I am ready to make a plan.'],
             'pixel':['Okay, I am in. What is the campaign vibe?','Hey. Give me the brief, I will make it marketable.','I am ready. Let us make the brand less boring.']
         }
-        text=random.choice(lines.get(bot,lines['nova']))
+        choices=lines.get(bot,lines['nova']);indexes=config.setdefault('_greetingIndexes',{});index=indexes.get(bot,0)%len(choices);text=choices[index];indexes[bot]=(index+1)%len(choices);save_preferences(config)
         loop=asyncio.get_running_loop()
         wav=await loop.run_in_executor(tts_pool,speech.generate,text,config['tts'])
         await send('greeting',text=text,audio=base64.b64encode(wav).decode())

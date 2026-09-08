@@ -9,7 +9,8 @@
   },
   "performanceProfiles": {
     "low": {"name":"Low · MacBook Air","llm":{"model":"qwen3.5:0.8b","context":2048,"maxTokens":96,"keepAlive":"10m"},"conversation":{"historyTurns":4},"avatar":{"maxFps":45,"pixelRatio":1.25,"portraitSize":512,"effectFps":24}},
-    "medium": {"name":"Medium · Better replies","llm":{"model":"qwen3.5:4b","context":4096,"maxTokens":140,"keepAlive":"15m"},"conversation":{"historyTurns":6},"avatar":{"maxFps":60,"pixelRatio":1.75,"portraitSize":627,"effectFps":40}}
+    "medium": {"name":"Medium · Better replies","llm":{"model":"qwen3.5:4b","context":4096,"maxTokens":140,"keepAlive":"15m"},"conversation":{"historyTurns":6,"firstChunkChars":65,"chunkChars":160},"tts":{"speed":1.04},"avatar":{"maxFps":60,"pixelRatio":1.75,"portraitSize":627,"effectFps":40}},
+    "high": {"name":"High · M1 Pro","llm":{"model":"qwen3.5:9b","context":6144,"maxTokens":180,"keepAlive":"15m"},"conversation":{"historyTurns":8,"firstChunkChars":95,"chunkChars":220},"tts":{"speed":0.99},"avatar":{"maxFps":60,"pixelRatio":2,"portraitSize":627,"effectFps":48}}
   },
   "performanceProfile": "low",
   "stt": {
