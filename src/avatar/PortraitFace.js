@@ -15,6 +15,16 @@ const characters={
   pixel:{idle:1.3,listening:1.38,thinking:1.42,speaking:1.35,tilt:1.08},
   luma:{idle:.9,listening:1.03,thinking:.78,speaking:.86,tilt:.9}
 };
+// Each portrait shares the renderer, but its movement vocabulary belongs to
+// the companion. Nova is intentionally more responsive and conversational:
+// she makes brief eye-contact gestures instead of looping one large idle pose.
+const expressiveProfiles={
+  robot:{microInterval:[5.5,10],microLift:.006,microYaw:.018,microRoll:.012,eye:'#ff9d4d'},
+  nova:{microInterval:[2.6,5.1],microLift:.012,microYaw:.042,microRoll:.03,eye:'#ffb3d4'},
+  butler:{microInterval:[6,11],microLift:.004,microYaw:.012,microRoll:.008,eye:'#9edfff'},
+  pixel:{microInterval:[2.1,4],microLift:.01,microYaw:.035,microRoll:.028,eye:'#dcff81'},
+  luma:{microInterval:[3.4,6.5],microLift:.008,microYaw:.028,microRoll:.02,eye:'#9fe7ff'}
+};
 const expressionPose={
   relaxed:{lift:0,pitch:0,yaw:0,roll:0},
   happy:{lift:.008,pitch:-.012,yaw:-.02,roll:.018},
@@ -31,6 +41,10 @@ const expressionPose={
 export class PortraitFace {
   constructor(bot,performance={}){
     this.performance={portraitSize:512,effectFps:24,...performance};
+    // The portrait canvas is deliberately updated less often than the WebGL
+    // transform. It keeps the illustrated face responsive without turning an
+    // otherwise static 2.5D card into a full-resolution canvas animation.
+    this.performance.effectFps=THREE.MathUtils.clamp(Number.isFinite(this.performance.effectFps)?this.performance.effectFps:24,1,60);
     this.bot=bot;this.scene=new THREE.Group();this.root=new THREE.Group();this.scene.add(this.root);this.root.position.y=1.30;
     const portraits={robot:'rivet',nova:'nova',butler:'sterling',pixel:'pixel',luma:'luma'};
     this.canvas=document.createElement('canvas');this.canvas.width=this.performance.portraitSize;this.canvas.height=this.performance.portraitSize;
@@ -47,7 +61,8 @@ export class PortraitFace {
       luma:{speaker:[314,339,80,54,'vertical','#73d8ff'],eyes:[[192,242,82,24],[435,242,82,24]]}
     }[bot]||null;
     this.character=characters[bot]||characters.robot;
-    this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.lastEmotion='relaxed';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.expressionKick=0;this.nextGaze=1.8;this.gaze=0;this.gazeTarget=0;this.transitionKick=0;this.dragKick=0;this.ambientKick=0;this.nextAmbient=2;this.ambientTarget={lift:0,roll:0};this.surpriseJump=0;
+    this.profile=expressiveProfiles[bot]||expressiveProfiles.robot;
+    this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.lastEmotion='relaxed';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.expressionKick=0;this.nextGaze=1.8;this.gaze=0;this.gazeTarget=0;this.transitionKick=0;this.dragKick=0;this.ambientKick=0;this.nextAmbient=2;this.ambientTarget={lift:0,roll:0};this.surpriseJump=0;this.nextMicroGesture=1.2;this.microGesture={lift:0,yaw:0,roll:0,scale:0};this.microTarget={...this.microGesture};this.nextIdleEyePaintAt=0;
     this.image=new Image();this.image.decoding='async';
     this.image.onload=()=>{this.imageReady=true;this.paintHardware(0,0);};
     this.image.src=`/assets/bots/${portraits[bot]||'rivet'}-portrait.png`;
@@ -56,7 +71,20 @@ export class PortraitFace {
     const gazeRange=state==='THINKING'?.4:state==='LISTENING'?.3:state==='CURIOUS'?.1:.9;
     if(t>this.nextGaze){this.gazeTarget=(Math.random()-.5)*gazeRange;this.nextGaze=t+(state==='THINKING'?.8:2.6)+Math.random()*4.2;}
     if(t>this.nextAmbient){this.ambientKick=1;this.ambientTarget={lift:(Math.random()-.5)*.01,roll:(Math.random()-.5)*.02};this.nextAmbient=t+5+Math.random()*10;}
+    if(t>this.nextMicroGesture&&!attention.dragging){
+      const [minimum,maximum]=this.profile.microInterval;
+      // A short lean, glance, or reset: enough to feel present without ever
+      // competing with spoken content or looking like an idle-loop animation.
+      this.microTarget={
+        lift:(Math.random()-.5)*this.profile.microLift,
+        yaw:(Math.random()-.5)*this.profile.microYaw,
+        roll:(Math.random()-.5)*this.profile.microRoll,
+        scale:(Math.random()-.5)*.006
+      };
+      this.nextMicroGesture=t+minimum+Math.random()*(maximum-minimum);
+    }
     this.gaze=THREE.MathUtils.lerp(this.gaze,this.gazeTarget,Math.min(1,.035+motion*.075));
+    for(const key of Object.keys(this.microGesture))this.microGesture[key]=THREE.MathUtils.lerp(this.microGesture[key],this.microTarget[key],Math.min(1,.012+motion*.04));
     this.reaction=Math.max(0,this.reaction-.035);this.transitionKick=Math.max(0,this.transitionKick-.045);this.expressionKick*=.88;this.dragKick=Math.max(0,this.dragKick-.06);this.ambientKick*=.96;this.surpriseJump*=.85;
     const speaking=state==='SPEAKING',listening=state==='LISTENING',thinking=state==='THINKING';
     const eased=smoothstep(transition),from=poses[previousState]||poses.IDLE,to=poses[state]||poses.IDLE;
@@ -71,19 +99,24 @@ export class PortraitFace {
     const expression={lift:blend(oldExpression,newExpression,emotionMix,'lift'),pitch:blend(oldExpression,newExpression,emotionMix,'pitch'),yaw:blend(oldExpression,newExpression,emotionMix,'yaw'),roll:blend(oldExpression,newExpression,emotionMix,'roll')};
     const characterGesture=state==='THINKING'?Math.sin(t*4.4*temperament)*.011*this.character.tilt:state==='LISTENING'?Math.sin(t*2.2*temperament)*.008*this.character.tilt:0;
     const proximity=attention.dragging?0:1;
-    this.root.position.y=1.30+(breath*(speaking ? .011 : .006)+pose.lift+speechBeat*.006+expression.lift+this.transitionKick*.01+this.expressionKick*.006+this.ambientKick*this.ambientTarget.lift+this.surpriseJump*.02-attention.y*.008*proximity+this.dragKick*.01)*motion;
-    this.root.scale.setScalar(1+(pose.scale+Math.sin(t*.8*temperament)*.0018+speechBeat*.003+this.dragKick*.006)*motion);
+    this.root.position.y=1.30+(breath*(speaking ? .011 : .006)+pose.lift+speechBeat*.006+expression.lift+this.transitionKick*.01+this.expressionKick*.006+this.ambientKick*this.ambientTarget.lift+this.microGesture.lift+this.surpriseJump*.02-attention.y*.008*proximity+this.dragKick*.01)*motion;
+    this.root.scale.setScalar(1+(pose.scale+Math.sin(t*.8*temperament)*.0018+speechBeat*.003+this.microGesture.scale+this.dragKick*.006)*motion);
     this.root.rotation.set(
       (pose.pitch+breath*.006+speechBeat*.014+this.reaction*.018+expression.pitch-attention.y*.018*proximity)*motion,
-      (pose.yaw+this.gaze*.03+attentive+thoughtful+characterGesture+expression.yaw+attention.x*.038*proximity)*motion,
-      (pose.roll+Math.sin(t*.56*temperament)*.006+(listening ? .008 : 0)+expression.roll+this.ambientKick*this.ambientTarget.roll)*motion
+      (pose.yaw+this.gaze*.03+attentive+thoughtful+characterGesture+expression.yaw+this.microGesture.yaw+attention.x*.038*proximity)*motion,
+      (pose.roll+Math.sin(t*.56*temperament)*.006+(listening ? .008 : 0)+expression.roll+this.microGesture.roll+this.ambientKick*this.ambientTarget.roll)*motion
     );
 
     this.mouthValue=THREE.MathUtils.lerp(this.mouthValue,mouth,Math.min(1,.18+motion*.35));
-    const enoughTime=performance.now()-this.lastPaintAt>=1000/this.performance.effectFps;
-    if(this.imageReady&&enoughTime&&(Math.abs(this.mouthValue-this.lastLevel)>.018||Math.abs(blink-this.lastBlink)>.04||state!==this.lastState||emotion!==this.lastEmotion||emotion!=='relaxed'||speaking||listening||thinking))this.paintHardware(this.mouthValue,blink,state,t,emotion);
+    const now=performance.now();
+    const enoughTime=now-this.lastPaintAt>=1000/this.performance.effectFps;
+    // Nova gets a restrained idle eye shimmer (capped at 12 fps). It lets her
+    // look present between turns while avoiding a permanent 24 fps canvas
+    // repaint for every companion and every static state.
+    const novaIdleEyes=this.bot==='nova'&&state==='IDLE'&&emotion==='relaxed'&&now>=this.nextIdleEyePaintAt;
+    if(this.imageReady&&enoughTime&&(Math.abs(this.mouthValue-this.lastLevel)>.018||Math.abs(blink-this.lastBlink)>.04||state!==this.lastState||emotion!==this.lastEmotion||emotion!=='relaxed'||speaking||listening||thinking||novaIdleEyes))this.paintHardware(this.mouthValue,blink,state,t,emotion,now);
   }
-  configure(options={}){if(Number.isFinite(options.effectFps))this.performance.effectFps=options.effectFps;}
+  configure(options={}){if(Number.isFinite(options.effectFps))this.performance.effectFps=THREE.MathUtils.clamp(options.effectFps,1,60);}
   react(state,previousState='IDLE'){
     this.reaction=state==='SPEAKING'||state==='LISTENING'?1:.45;
     this.transitionKick=state==='LISTENING'||(previousState==='THINKING'&&state==='SPEAKING')?1:.45;
@@ -96,7 +129,7 @@ export class PortraitFace {
     if(emotion==='curious')this.gazeTarget=0.12;
   }
   setDragging(active){if(active)this.dragKick=1;}
-  paintHardware(level,blink,state='IDLE',t=0,emotion='relaxed'){
+  paintHardware(level,blink,state='IDLE',t=0,emotion='relaxed',now=performance.now()){
     const ctx=this.context,hardware=this.hardware;if(!hardware)return;
     const size=this.canvas.width,scale=size/627;
     ctx.clearRect(0,0,size,size);ctx.drawImage(this.image,0,0,size,size);ctx.save();ctx.scale(scale,scale);
@@ -141,6 +174,23 @@ export class PortraitFace {
       ctx.beginPath();ctx.arc(x,y,Math.max(width,height)*(.53+.05*Math.sin(t*5)),0,Math.PI*2);ctx.stroke();
       for(const [eyeX,eyeY] of hardware.eyes){ctx.fillStyle=color;ctx.beginPath();ctx.arc(eyeX,eyeY,3+Math.sin(t*6)*1.5,0,Math.PI*2);ctx.fill();}ctx.restore();
     }
+    if(this.bot==='nova'){
+      // Nova's image is intentionally kept intact. These lightweight overlays
+      // add living eye contact and state cues inside the existing lenses.
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=this.profile.eye;
+      const shimmer=state==='SPEAKING'?.64+.24*Math.sin(t*7):state==='LISTENING'?.48+.18*Math.sin(t*4):.26;
+      for(const [eyeX,eyeY,rx,ry] of hardware.eyes){
+        const glintX=eyeX+this.gaze*rx*.32;
+        ctx.globalAlpha=shimmer;ctx.beginPath();ctx.arc(glintX,eyeY-ry*.18,Math.max(2,rx*.075),0,Math.PI*2);ctx.fill();
+        if(state==='LISTENING'){
+          ctx.globalAlpha=.24+.14*Math.sin(t*5);ctx.lineWidth=1.5;ctx.strokeStyle=this.profile.eye;
+          ctx.beginPath();ctx.ellipse(eyeX,eyeY,rx*.82,ry*.78,0,0,Math.PI*2);ctx.stroke();
+        }else if(state==='THINKING'){
+          ctx.globalAlpha=.32;ctx.fillRect(eyeX-rx*.55+(Math.sin(t*3+eyeX)*.5+.5)*rx*.8,eyeY-1,rx*.22,2);
+        }
+      }
+      ctx.restore();
+    }
     if(state==='THINKING'){
       ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=color;ctx.globalAlpha=.75;
       for(const [eyeX,eyeY,rx] of hardware.eyes){const sweep=eyeX-rx*.46+(Math.sin(t*3)+1)*rx*.46;ctx.fillRect(sweep,eyeY-2,3,4);}ctx.restore();
@@ -168,7 +218,8 @@ export class PortraitFace {
     else if(state==='SPEAKING'){ctx.fillRect(x-6,panelY-2,3,4);ctx.fillRect(x-1,panelY-4,3,8);ctx.fillRect(x+4,panelY-2,3,4);}
     else{ctx.fillRect(x-4,panelY,3,2);ctx.fillRect(x-1,panelY+2,3,2);ctx.fillRect(x+2,panelY-2,3,2);}ctx.restore();
     ctx.restore();
-    this.texture.needsUpdate=true;this.lastLevel=level;this.lastBlink=blink;this.lastState=state;this.lastEmotion=emotion;this.lastTime=t;this.lastPaintAt=performance.now();
+    this.texture.needsUpdate=true;this.lastLevel=level;this.lastBlink=blink;this.lastState=state;this.lastEmotion=emotion;this.lastTime=t;this.lastPaintAt=now;
+    if(this.bot==='nova')this.nextIdleEyePaintAt=now+1000/Math.min(this.performance.effectFps,12);
   }
   dispose(){this.scene.traverse(object=>{object.geometry?.dispose();if(object.material){const materials=Array.isArray(object.material)?object.material:[object.material];materials.forEach(material=>{material.map?.dispose();material.dispose();});}});}
 }

@@ -1,6 +1,7 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('desktop',{
   mode: mode=>ipcRenderer.invoke('window-mode',mode),
+  widgetChat: expanded=>ipcRenderer.invoke('widget-chat',Boolean(expanded)),
   startDrag:()=>ipcRenderer.send('widget-drag-start'),
   stopDrag:()=>ipcRenderer.send('widget-drag-stop'),
   minimize:()=>ipcRenderer.send('window-minimize'),

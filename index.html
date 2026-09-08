@@ -5,10 +5,17 @@
   <div class="widget-toolbar">
     <button id="widget-mic" aria-label="Start conversation" title="Start conversation" disabled></button>
     <button id="widget-stop" aria-label="Stop speaking" title="Stop speaking" hidden></button>
+    <button id="widget-chat-toggle" aria-label="Open chat" title="Open chat" aria-expanded="false" aria-controls="widget-chat"></button>
+    <button id="widget-awareness" aria-label="Screen awareness off" title="Screen awareness off" aria-pressed="false"></button>
     <button id="expand" aria-label="Open conversation" title="Open conversation"></button>
     <button id="widget-more" aria-label="More options" title="More options" aria-expanded="false" aria-controls="widget-menu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
   </div>
 </div>
+<section id="widget-chat" aria-label="Widget chat">
+  <div class="widget-chat-heading"><span>Chat</span><button id="widget-chat-close" aria-label="Collapse chat" title="Collapse chat">⌄</button></div>
+  <div id="widget-messages" aria-live="polite"><p class="hint">Talk naturally or type a message.</p></div>
+  <form id="widget-text-form"><input id="widget-text" placeholder="Message companion…" maxlength="2000" aria-label="Message"><button>Send</button></form>
+</section>
 <section id="widget-menu" aria-label="Companion options" hidden>
   <div class="menu-heading">COMPANION<button id="menu-close" aria-label="Close options">×</button></div>
   <button id="widget-bot">Choose companion <span>↗</span></button>

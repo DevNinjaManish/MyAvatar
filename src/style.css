@@ -216,7 +216,7 @@ label {
   background:var(--accent);
   color:#163329;
   font-weight:600}
-#widget-tools,#widget-drag,#widget-menu {
+#widget-tools,#widget-drag,#widget-menu,#widget-chat {
   display:none}
 
 /* Compact companion: portrait, identity, and actions each own their space. */
@@ -291,6 +291,40 @@ body.widget #widget-tools {
   order:1;
   margin-top:10px;
   gap:8px}
+body.widget #widget-chat {
+  display:none}
+body.widget.widget-chat-open main {
+  width:160px;
+  height:160px;
+  box-shadow:0 4px 10px #0004}
+body.widget.widget-chat-open #widget-tools {
+  margin-top:7px;
+  gap:5px}
+body.widget.widget-chat-open .widget-caption {height:21px;padding:3px 9px}
+body.widget.widget-chat-open .widget-toolbar {padding:3px}
+body.widget.widget-chat-open .widget-toolbar button {width:31px;height:31px;padding:6px}
+body.widget.widget-chat-open #widget-chat {
+  display:flex;
+  order:2;
+  flex:1;
+  min-height:0;
+  width:100%;
+  margin-top:8px;
+  padding:10px;
+  flex-direction:column;
+  border:1px solid #ffffff20;
+  border-radius:15px;
+  background:#192124f5;
+  box-shadow:0 5px 14px #0003}
+.widget-chat-heading {display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-size:11px;font-weight:650}
+#widget-chat-close {width:24px;height:20px;padding:0;border:0;background:transparent;color:var(--muted);font-size:17px;line-height:1}
+#widget-messages {flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:3px}
+#widget-messages .message {padding:7px 0;font-size:11px;line-height:1.45}
+#widget-messages .role {margin-bottom:2px;font-size:9px}
+#widget-messages .hint {margin:0;padding:4px 0;font-size:10px;line-height:1.45}
+#widget-text-form {margin-top:7px;gap:5px}
+#widget-text {min-width:0;width:100%;padding:7px 8px;border-radius:8px;font-size:11px}
+#widget-text-form button {padding:7px 9px;border:0;border-radius:8px;background:var(--accent);color:#163329;font-size:10px;font-weight:650}
 .widget-caption {
   max-width:100%;
   height:24px;
@@ -361,6 +395,7 @@ body[data-state=error] #widget-status:before {
   color:#173c2e}
 .widget-toolbar #widget-stop {
   color:#ffd3c0}
+.widget-toolbar #widget-awareness[aria-pressed=true] {background:#3b3948;color:#ddd0ff}
 
 /* Secondary views stay rectangular and within the native window. */
 body.widget #widget-menu,body.widget #bot-library {

@@ -24,7 +24,18 @@ const socket=new WebSocket(`ws://127.0.0.1:8765/ws?token=${import.meta.env.VITE_
 const send=data=>{if(socket.readyState!==WebSocket.OPEN)throw Error('Local service is disconnected. Restart the app.');socket.send(JSON.stringify(data));};
 const error=e=>$('error').textContent=e.message||e;
 socket.onopen=()=>{$('status').textContent='Preparing…';};socket.onclose=()=>{$('mic').disabled=true;interrupt(false);if(!$('error').textContent)error('Local service disconnected. Restart with npm start.');};
-function message(role,text){const p=document.createElement('div');p.className='message';const label=document.createElement('div');label.className='role';label.textContent=role==='You'?role:`${emotionEmoji[expressionEmotion]||'◌'} ${role}`;const body=document.createElement('div');body.textContent=text;p.append(label,body);$('messages').append(p);p.scrollIntoView();return body;}
+function appendMessage(container,role,text,compact=false){
+ const item=document.createElement('div');item.className='message';
+ const label=document.createElement('div');label.className='role';label.textContent=role==='You'?role:`${emotionEmoji[expressionEmotion]||'◌'} ${role}`;
+ const body=document.createElement('div');body.textContent=text;item.append(label,body);container.append(item);
+ if(compact)container.scrollTop=container.scrollHeight;else item.scrollIntoView();
+ return body;
+}
+function message(role,text){return {full:appendMessage($('messages'),role,text),widget:appendMessage($('widget-messages'),role,text,true)};}
+function clearMessages(){
+ $('messages').replaceChildren();$('widget-messages').replaceChildren();
+ const hint=document.createElement('p');hint.className='hint';hint.textContent='Talk naturally or type a message.';$('widget-messages').append(hint);
+}
 function actionRequest(request){
  const card=document.createElement('div');card.className='action-request';
  const label=request.action.kind==='set_volume'?'change system volume to '+request.action.value+'%':request.action.kind.replace('_',' ')+' '+request.action.value;
@@ -73,11 +84,11 @@ function playGreeting(m){
  audio.enqueue(m.audio,()=>state.set('SPEAKING'),()=>{state.set('IDLE');avatar.setExpression('relaxed');startListeningSoon();}).catch(e=>{error(e);startListeningSoon();});
 }
 socket.onmessage=event=>{
- const m=JSON.parse(event.data);if(m.type==='preparing'){document.body.classList.add('model-loading');$('status').lastChild.textContent=m.stage||'Preparing local models…';$('onboarding-status').textContent=m.stage||'Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){document.body.classList.remove('model-loading');$('mic').disabled=false;$('onboarding-status').textContent='Local models are ready. When you continue, macOS will ask to use your microphone.';state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){document.body.classList.remove('model-loading');$('mic').disabled=true;$('onboarding-status').textContent='Setup needs attention: '+m.message;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';$('performance').value=config.performanceProfile||'low';$('memory-enabled').checked=!!config.memory?.enabled;$('onboarding-bot').value=config.conversation.persona;$('onboarding-performance').value=config.performanceProfile||'low';performanceNote();avatar.configure(config.avatar);avatar.showRobot(config.conversation.persona);syncBotUI();openOnboarding();return;}if(m.type==='bot_history'){$('messages').replaceChildren();for(const item of m.history)message(item.role==='user'?'You':config.bots[config.conversation.persona]?.name||'Companion',item.content);return;}if(m.type==='greeting'){playGreeting(m);return;}if(m.type==='action_request'){actionRequest(m);return;}if(m.turn!==turn)return;
+ const m=JSON.parse(event.data);if(m.type==='preparing'){document.body.classList.add('model-loading');$('status').lastChild.textContent=m.stage||'Preparing local models…';$('onboarding-status').textContent=m.stage||'Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){document.body.classList.remove('model-loading');$('mic').disabled=false;$('onboarding-status').textContent='Local models are ready. When you continue, macOS will ask to use your microphone.';state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){document.body.classList.remove('model-loading');$('mic').disabled=true;$('onboarding-status').textContent='Setup needs attention: '+m.message;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';$('performance').value=config.performanceProfile||'low';$('memory-enabled').checked=!!config.memory?.enabled;$('onboarding-bot').value=config.conversation.persona;$('onboarding-performance').value=config.performanceProfile||'low';performanceNote();avatar.configure(config.avatar);avatar.showRobot(config.conversation.persona);syncBotUI();openOnboarding();return;}if(m.type==='bot_history'){clearMessages();for(const item of m.history)message(item.role==='user'?'You':config.bots[config.conversation.persona]?.name||'Companion',item.content);return;}if(m.type==='greeting'){playGreeting(m);return;}if(m.type==='action_request'){actionRequest(m);return;}if(m.turn!==turn)return;
  if(m.type==='state')state.set(m.state);
  if(m.type==='transcript'){if(inputKind==='speech')metrics.speech_to_stt_ms=Math.round(performance.now()-started);message('You',m.text);assistantNode=message(config.bots?.[config.conversation.persona]?.name||'Companion','');}
  if(m.type==='first_token')firstToken=performance.now();
- if(m.type==='token'&&assistantNode){assistantNode.textContent+=m.text;assistantNode.scrollIntoView();}
+ if(m.type==='token'&&assistantNode){assistantNode.full.textContent+=m.text;assistantNode.full.scrollIntoView();assistantNode.widget.textContent+=m.text;$('widget-messages').scrollTop=$('widget-messages').scrollHeight;}
  if(m.type==='emotion')avatar.setExpression(m.emotion);
  if(m.type==='audio'){
    const current=turn;pendingAudio++;
@@ -121,8 +132,12 @@ $('mic').onclick=async()=>{
 };
 $('interaction').onchange=()=>{interrupt();updateMicLabel();};
 $('stop').onclick=()=>interrupt();
-$('text-form').onsubmit=async event=>{event.preventDefault();try{const text=$('text').value.trim();if(!text)return;if($('mic').disabled)throw Error('Wait for local voice preparation to finish.');interrupt();await audio.ready();$('text').value='';begin({text});}catch(e){error(e);}};
-$('clear').onclick=()=>{interrupt();send({type:'clear'});$('messages').replaceChildren();};
+async function submitText(input){
+ try{const text=input.value.trim();if(!text)return;if($('mic').disabled)throw Error('Wait for local voice preparation to finish.');interrupt();await audio.ready();input.value='';begin({text});}catch(e){error(e);}
+}
+$('text-form').onsubmit=event=>{event.preventDefault();submitText($('text'));};
+$('widget-text-form').onsubmit=event=>{event.preventDefault();submitText($('widget-text'));};
+$('clear').onclick=()=>{interrupt();send({type:'clear'});clearMessages();};
 $('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidden;};
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
@@ -151,6 +166,7 @@ setInterval(()=>{$('fps').textContent=`${avatar.fps} FPS · ${(config?.bots?.[co
 
 function windowMode(mode){
  document.body.classList.toggle('widget',mode==='widget');$('bot-library').hidden=true;
+ if(mode!=='widget')setWidgetChat(false,false);
  closeWidgetMenu(false);
  $('stage').setAttribute('role','img');
  $('stage').setAttribute('aria-label',(config?.bots?.[config.conversation.persona]?.name||'Companion')+' avatar');
@@ -163,6 +179,12 @@ $('collapse').onclick=()=>window.desktop?.mode('widget');
 $('close-window').onclick=()=>window.desktop?.close();
 $('widget-mic').onclick=()=>{if(!$('mic').disabled)$('mic').click();};
 $('widget-stop').onclick=()=>$('stop').click();
+$('widget-awareness').onclick=()=>{
+ const enabled=$('widget-awareness').getAttribute('aria-pressed')!=='true';
+ $('widget-awareness').setAttribute('aria-pressed',String(enabled));
+ $('widget-awareness').setAttribute('aria-label',enabled?'Screen awareness on':'Screen awareness off');
+ $('widget-awareness').title=enabled?'Screen awareness on':'Screen awareness off';
+};
 $('widget-settings').onclick=openSettings;
 $('widget-minimize').onclick=()=>window.desktop?.minimize();
 $('widget-close').onclick=()=>window.desktop?.close();
@@ -185,6 +207,7 @@ window.addEventListener('pointerdown',event=>{if(!$('widget-menu').hidden&&!$('w
 
 window.addEventListener('keydown',event=>{
   if(event.metaKey&&event.shiftKey&&event.key.toLowerCase()==='m'){event.preventDefault();if(!$('mic').disabled)$('mic').click();}
+  if(event.key==='Escape'&&document.body.classList.contains('widget-chat-open')){setWidgetChat(false);return;}
   if(event.key==='Escape'&&!$('widget-menu').hidden){closeWidgetMenu();return;}
   if(event.key==='Escape'&&!$('bot-library').hidden){closeBotLibrary();return;}
   if(event.key==='Escape'&&!$('settings').open){interrupt();if(window.desktop)window.desktop.mode('widget');}
@@ -257,10 +280,24 @@ $('bot-select').onchange=()=>switchBot($('bot-select').value);
 const widgetIcons={
  'widget-mic':'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M9 22h6"/>',
  'widget-stop':'<rect x="6" y="6" width="12" height="12" rx="3"/>',
+ 'widget-chat-toggle':'<path d="M5 5h14v10H9l-4 4V5Z"/><path d="M8 9h8M8 12h5"/>',
+ 'widget-awareness':'<path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>',
  'widget-bot':'<path d="M4 8h15l-4-4M20 16H5l4 4"/>',
  'widget-settings':'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.1 2.1-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V20h-3v-.08A1.7 1.7 0 0 0 10.68 18.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.1-2.1.06-.06A1.7 1.7 0 0 0 7.04 15a1.7 1.7 0 0 0-1.56-1.04H5v-3h.08A1.7 1.7 0 0 0 6.6 9.92a1.7 1.7 0 0 0-.34-1.88L6.2 7.98l2.1-2.1.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.28 4.7V4h3v.08a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.1 2.1-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04H20v3h-.08A1.7 1.7 0 0 0 18.4 15Z"/>',
  'widget-minimize':'<path d="M5 12h14"/>',
  'expand':'<path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/>',
  'widget-close':'<path d="m7 7 10 10M17 7 7 17"/>'
 };
-for(const [id,paths] of Object.entries(widgetIcons).filter(([id])=>['widget-mic','widget-stop','expand'].includes(id)))$(id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
+for(const [id,paths] of Object.entries(widgetIcons).filter(([id])=>['widget-mic','widget-stop','widget-chat-toggle','widget-awareness','expand'].includes(id)))$(id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
+
+function setWidgetChat(open,focus=true){
+ const shouldOpen=Boolean(open)&&document.body.classList.contains('widget');
+ document.body.classList.toggle('widget-chat-open',shouldOpen);
+ $('widget-chat-toggle').setAttribute('aria-expanded',String(shouldOpen));
+ $('widget-chat-toggle').setAttribute('aria-label',shouldOpen?'Close chat':'Open chat');
+ $('widget-chat-toggle').title=shouldOpen?'Close chat':'Open chat';
+ window.desktop?.widgetChat(shouldOpen);
+ if(focus){if(shouldOpen)$('widget-text').focus();else $('widget-chat-toggle').focus();}
+}
+$('widget-chat-toggle').onclick=()=>setWidgetChat(!document.body.classList.contains('widget-chat-open'));
+$('widget-chat-close').onclick=()=>setWidgetChat(false);

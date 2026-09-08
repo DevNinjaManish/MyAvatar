@@ -5,7 +5,7 @@ app.whenReady().then(async()=>{
   session.defaultSession.setPermissionRequestHandler((wc,permission,callback)=>callback(local(wc.getURL())&&permission==='media'));
   if(process.platform==='darwin')await systemPreferences.askForMediaAccess('microphone');
   const area=screen.getPrimaryDisplay().workArea;
-  const widgetWidth=260,widgetHeight=338;
+  const widgetWidth=260,widgetHeight=338,widgetChatHeight=570;
   const win=new BrowserWindow({width:widgetWidth,height:widgetHeight,x:area.x+area.width-270,y:area.y+80,minWidth:widgetWidth,minHeight:widgetHeight,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
@@ -38,6 +38,14 @@ app.whenReady().then(async()=>{
     if(next==='full'){widgetBounds=win.getBounds();mode='full';win.setResizable(true);win.setMinimumSize(800,560);win.setSize(1120,720);win.center();notify();}
     else{mode='widget';win.setMinimumSize(widgetWidth,widgetHeight);if(win.isFullScreen()){win.once('leave-full-screen',()=>{win.setResizable(false);win.setBounds({...widgetBounds,width:widgetWidth,height:widgetHeight});notify();});win.setFullScreen(false);}else{win.setResizable(false);win.setBounds({...widgetBounds,width:widgetWidth,height:widgetHeight});notify();}}
     return mode;
+  });
+  ipcMain.handle('widget-chat',async(event,expanded)=>{
+    if(event.sender!==win.webContents||mode!=='widget'||win.isDestroyed())return false;
+    stopDrag();
+    const bounds=win.getBounds();
+    win.setBounds({...bounds,width:widgetWidth,height:expanded?widgetChatHeight:widgetHeight});
+    widgetBounds=win.getBounds();
+    return expanded;
   });
   ipcMain.on('window-close',event=>{if(event.sender===win.webContents)win.close();});
   ipcMain.on('window-minimize',event=>{if(event.sender===win.webContents)win.minimize();});
