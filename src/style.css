@@ -47,6 +47,10 @@ body.widget #widget-drag:hover span{background:#e1e8e3cc}
 #widget-emoji{display:grid;place-items:center;width:14px;height:14px;border-radius:50%;background:#ffffff12;color:#ffddab;font-size:10px;line-height:1}
 #widget-tools .widget-caption #widget-status{background:none;padding:0;font-size:9px;color:#afd6c7}
 #widget-status:before{content:'·';margin-right:6px;color:#ffffff66}
+#model-loader{display:none;width:9px;height:9px;margin-right:7px;border:2px solid #9de2cd44;border-top-color:#9de2cd;border-radius:50%;vertical-align:-1px}
+body.model-loading #model-loader{display:inline-block;animation:model-spin .8s linear infinite}
+body.model-loading #widget-status{color:#ffe0a8}body.model-loading #stage:after{border-color:#9de2cd55;animation:loading-ring 1.4s ease-in-out infinite}
+@keyframes model-spin{to{transform:rotate(360deg)}}@keyframes loading-ring{50%{transform:scale(.96);opacity:.35}}
 #bot-library{position:absolute;z-index:30;top:62px;left:50%;transform:translateX(-50%);width:264px;padding:13px;border-radius:20px;background:#19212bf5;border:1px solid #d8dde332;box-shadow:0 10px 35px #0008;-webkit-app-region:no-drag}
 .library-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-left:4px}
 .library-heading strong{font-size:13px;font-weight:600}
