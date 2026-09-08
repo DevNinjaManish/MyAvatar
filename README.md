@@ -79,7 +79,7 @@ Widget size remains fixed in both modes. Switching mode gives a greeting, then r
 
 ## Use and privacy
 
-On first launch, onboarding explains the local-only design, lets you choose a companion and performance mode, then asks for microphone access only when you begin a conversation. Speak, then pause briefly to submit a turn. Stop ends playback and microphone capture. The state display shows Listening, Thinking, and Speaking.
+On first launch, onboarding explains the local-only design, lets you choose a companion and performance mode, then asks for microphone access only when you begin a conversation. Speak, then pause briefly to submit a turn. In the widget, the microphone button starts listening and then becomes the mute/unmute toggle; End voice conversation remains available in More. Stop ends playback. The state display shows Listening, Thinking, and Speaking. Local setup, microphone, connection, and runtime errors also appear in widget chat with an unread badge, so compact mode does not hide failures.
 
 The widget eye enables screen awareness. It takes an immediate snapshot and, while left on, observes again only after an idle interval. Screen images are sent only to the configured Ollama service on `127.0.0.1`, discarded after the turn, and never added to conversation memory. Derived comments are stored in ignored `data/screen-awareness/events.jsonl`.
 

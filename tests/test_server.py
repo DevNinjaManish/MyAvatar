@@ -30,6 +30,7 @@ class Pipeline(unittest.TestCase):
                 self.assertIn('audio',kinds)
                 self.assertIn('metrics',kinds)
                 self.assertEqual(next(e for e in events if e['type']=='emotion')['emotion'],'happy')
+                self.assertEqual(''.join(e['text'] for e in events if e['type']=='token'),'Hello. How are you?')
                 self.assertEqual(kinds[-1],'done')
 
     def test_tts_failure_surfaces_without_deadlock(self):

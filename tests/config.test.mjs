@@ -3,6 +3,7 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 
 const config=JSON.parse(readFileSync(new URL('../config.json',import.meta.url),'utf8'));
+const markup=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const expectedBots=['robot','nova','butler','pixel','luma'];
 
 test('companion configuration is complete and unique',()=>{
@@ -30,4 +31,10 @@ test('Balanced remains recommended while High is an optional 9B mode',()=>{
   assert.match(config.performanceProfiles.medium.name,/Recommended/);
   assert.match(config.performanceProfiles.high.llm.model,/:9b$/);
   assert.equal(config.performanceProfile,'medium');
+});
+
+test('widget uses one microphone control for listening and mute',()=>{
+  assert.equal((markup.match(/id="widget-mic"/g)||[]).length,1);
+  assert.doesNotMatch(markup,/id="widget-mute"/);
+  assert.match(markup,/id="widget-end-conversation"/);
 });

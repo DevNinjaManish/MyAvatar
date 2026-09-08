@@ -250,8 +250,8 @@ async def ws(socket:WebSocket):
                     if first is None:
                         first=time.perf_counter();metrics['stt_to_first_token_ms']=round((first-stt_end)*1000)
                         await send('first_token',turn)
-                    answer+=token;pending+=token
-                    await send('token',turn,text=token)
+                    pending+=token
+                    visible=token
                     if not tag_checked:
                         if pending.lstrip().startswith('[') and ']' not in pending and len(pending)<50:continue
                         action_match=re.match(r'^\s*\[action:(.*?)\]\s*',pending)
@@ -268,13 +268,18 @@ async def ws(socket:WebSocket):
                                     ok=await loop.run_in_executor(None,run_action,action)
                                     await send('action_result',turn,requestId=request_id,ok=ok)
                                 else:await send('action_result',turn,requestId=request_id,ok=False,denied=True)
-                            continue
+                            if not pending.strip():continue
+                            if pending.lstrip().startswith('[') and ']' not in pending and len(pending)<50:continue
                         emotion_match=re.match(r'^\s*\[(happy|sad|relaxed|surprised|curious)\]\s*',pending)
                         if emotion_match:
                             emotion=emotion_match[1]
                             turn_config['current_emotion']=emotion
                             await send('emotion',turn,emotion=emotion);pending=pending[emotion_match.end():]
                         tag_checked=True
+                        visible=pending
+                    if visible:
+                        answer+=visible
+                        await send('token',turn,text=visible)
                     while True:
                         chunk,pending=split_ready(pending,first=chunks_sent==0,first_chars=turn_config['conversation'].get('firstChunkChars',56),chunk_chars=turn_config['conversation'].get('chunkChars',140))
                         if not chunk:break

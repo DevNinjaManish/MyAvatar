@@ -4,12 +4,14 @@ import {AudioEngine,toBase64} from './audio/engine.js';
 import {AppState} from './conversation/state.js';
 const $=id=>document.getElementById(id);
 const avatar=new Avatar($('stage'));const audio=new AudioEngine(v=>avatar.setMouth(v));const state=new AppState();
-const emotionEmoji={happy:'✦',sad:'◔',relaxed:'◌',surprised:'!',listening:'◉',thinking:'⋯',speaking:'♫'};
+const emotionEmoji={happy:'😊',sad:'😔',relaxed:'😌',surprised:'😮',curious:'🤔',listening:'👂',thinking:'💭',speaking:'🔊'};
+const emotionLabel={happy:'Happy',sad:'Sad',relaxed:'Relaxed',surprised:'Surprised',curious:'Curious'};
 let expressionEmotion='relaxed';
 function showEmoji(emotion){$('widget-emoji').textContent=emotionEmoji[emotion]||emotionEmoji.relaxed;$('widget-emoji').title=emotion;}
 avatar.onExpression=emotion=>{expressionEmotion=emotion;showEmoji(emotion);};
 let inputKind="text";
 let liveOn=false,micMuted=false,resumeTimer,latestWidgetReply=null,widgetUnread=0;
+let lastWidgetError='',lastWidgetErrorAt=0;
 let avatarInteractionTimer=0,lastAvatarInteraction=0,avatarInteractionIndex=0;
 let screenAwareness=false,screenTimer=0,lastScreenObservation=0,lastUserActivity=performance.now();
 let turn=0,recording=false,starting=false,complete=false,decodeChain=Promise.resolve(),pendingAudio=0,assistantNode,metrics={},started,firstToken,firstAudio,config,thinkingTimer;
@@ -24,20 +26,41 @@ state.addEventListener('change',()=>{
 });
 const socket=new WebSocket(`ws://127.0.0.1:8765/ws?token=${import.meta.env.VITE_API_TOKEN||'development'}`);
 const send=data=>{if(socket.readyState!==WebSocket.OPEN)throw Error('Local service is disconnected. Restart the app.');socket.send(JSON.stringify(data));};
-const error=e=>$('error').textContent=e.message||e;
+const error=e=>{
+ const text=String(e?.message||e||'Unknown error');$('error').textContent=text;
+ const now=Date.now();if(text===lastWidgetError&&now-lastWidgetErrorAt<5000)return text;
+ lastWidgetError=text;lastWidgetErrorAt=now;
+ const item=document.createElement('div');item.className='message system-error';
+ const label=document.createElement('div');label.className='role';label.textContent=`⚠ System · ${new Date(now).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+ const body=document.createElement('div');body.textContent=text;item.append(label,body);$('widget-messages').append(item);$('widget-messages').scrollTop=$('widget-messages').scrollHeight;
+ if(!document.body.classList.contains('widget-chat-open')){widgetUnread++;syncWidgetUnread();}
+ return text;
+};
 socket.onopen=()=>{$('status').textContent='Preparing…';};socket.onclose=()=>{$('mic').disabled=true;interrupt(false);if(!$('error').textContent)error('Local service disconnected. Restart with npm start.');};
-function appendMessage(container,role,text,compact=false){
+function parseEmotionText(text){
+ const match=String(text).match(/^\s*\[(happy|sad|relaxed|surprised|curious)\]\s*/i);
+ return match?{emotion:match[1].toLowerCase(),text:String(text).slice(match[0].length)}:{emotion:null,text:String(text)};
+}
+function setMessageEmotion(body,role,emotion){
+ if(!body?.roleNode||role==='You')return;
+ const mood=emotionLabel[emotion]||emotionLabel.relaxed;
+ body.roleNode.textContent=`${emotionEmoji[emotion]||emotionEmoji.relaxed} ${mood} · ${role}`;
+ body.roleNode.dataset.emotion=emotion||'relaxed';
+}
+function appendMessage(container,role,text,compact=false,emotion='relaxed'){
  const item=document.createElement('div');item.className='message '+(role==='You'?'user':'assistant');
- const label=document.createElement('div');label.className='role';label.textContent=role==='You'?role:`${emotionEmoji[expressionEmotion]||'◌'} ${role}`;
+ const label=document.createElement('div');label.className='role';label.textContent=role;
  const body=document.createElement('div');body.textContent=text;item.append(label,body);container.append(item);
+ body.roleNode=label;setMessageEmotion(body,role,emotion);
  if(compact)container.scrollTop=container.scrollHeight;else item.scrollIntoView();
  return body;
 }
 function syncWidgetUnread(){
  $('widget-chat-toggle').dataset.unread=widgetUnread?String(Math.min(widgetUnread,9)):'';
 }
-function message(role,text){
- const nodes={full:appendMessage($('messages'),role,text),widget:appendMessage($('widget-messages'),role,text,true)};
+function message(role,text,emotion=expressionEmotion){
+ const parsed=role==='You'?{emotion:null,text:String(text)}:parseEmotionText(text);emotion=parsed.emotion||emotion;
+ const nodes={full:appendMessage($('messages'),role,parsed.text,false,emotion),widget:appendMessage($('widget-messages'),role,parsed.text,true,emotion)};
  if(role!=='You'){
    latestWidgetReply=nodes.widget;$('widget-copy-last').disabled=!text;
    if(!document.body.classList.contains('widget-chat-open')){widgetUnread++;syncWidgetUnread();}
@@ -106,7 +129,7 @@ async function beginUserTurn(data){
 }
 function startListeningSoon(){if($('interaction').value!=='live'||$('mic').disabled||liveOn||recording)return;setTimeout(()=>{$('mic').click();},180);}
 function playGreeting(m){
- interrupt(false);message(config.bots?.[config.conversation.persona]?.name||'Companion',m.text);state.set('SPEAKING');avatar.setExpression('happy');
+ interrupt(false);message(config.bots?.[config.conversation.persona]?.name||'Companion',m.text,'happy');state.set('SPEAKING');avatar.setExpression('happy');
  audio.enqueue(m.audio,()=>state.set('SPEAKING'),()=>{state.set('IDLE');avatar.setExpression('relaxed');startListeningSoon();}).catch(e=>{error(e);startListeningSoon();});
 }
 socket.onmessage=event=>{
@@ -115,7 +138,7 @@ socket.onmessage=event=>{
  if(m.type==='transcript'){if(inputKind==='speech')metrics.speech_to_stt_ms=Math.round(performance.now()-started);message('You',m.text);assistantNode=message(config.bots?.[config.conversation.persona]?.name||'Companion','');}
  if(m.type==='first_token')firstToken=performance.now();
  if(m.type==='token'&&assistantNode){assistantNode.full.textContent+=m.text;assistantNode.full.scrollIntoView();assistantNode.widget.textContent+=m.text;latestWidgetReply=assistantNode.widget;$('widget-copy-last').disabled=false;$('widget-messages').scrollTop=$('widget-messages').scrollHeight;}
- if(m.type==='emotion')avatar.setExpression(m.emotion);
+ if(m.type==='emotion'){avatar.setExpression(m.emotion);if(assistantNode){setMessageEmotion(assistantNode.full,config.bots?.[config.conversation.persona]?.name||'Companion',m.emotion);setMessageEmotion(assistantNode.widget,config.bots?.[config.conversation.persona]?.name||'Companion',m.emotion);}}
  if(m.type==='audio'){
    const current=turn;pendingAudio++;
    decodeChain=decodeChain.then(async()=>{if(current!==turn)return;await audio.enqueue(m.audio,()=>{if(current!==turn)return;state.set('SPEAKING');if(!firstAudio){firstAudio=performance.now();metrics.token_to_audio_ms=Math.round(firstAudio-firstToken);metrics.end_to_first_audio_ms=Math.round(firstAudio-started);displayMetrics();}},()=>{if(current===turn)finish();});}).catch(e=>{if(current===turn){interrupt();error(e);}}).finally(()=>{if(current===turn){pendingAudio--;finish();}});
@@ -126,9 +149,8 @@ socket.onmessage=event=>{
 };
 function updateMicLabel(){
  $('mic').textContent=liveOn?'Mic on · end conversation':recording?'Finish & send':$('interaction').value==='live'?'Start live conversation':'Start microphone';
- $('widget-mic').title=liveOn?'End live conversation':recording?'Finish and send':'Start live conversation';
- $('widget-mic').setAttribute('aria-pressed',String(liveOn||recording));
  $('detail').textContent=micMuted?'Microphone muted · conversation remains active':$('interaction').value==='live'?'Mic stays on · pause to send · listening resumes after the reply':'Click once to talk, again to send · microphone is off until enabled';
+ syncWidgetStatus();
 }
 $('mic').onclick=async()=>{
  if(starting)return;
@@ -211,14 +233,15 @@ if(window.desktop){windowMode('widget');window.desktop.onMode(windowMode);}else{
 $('expand').onclick=()=>window.desktop?.mode('full');
 $('collapse').onclick=()=>window.desktop?.mode('widget');
 $('close-window').onclick=()=>window.desktop?.close();
-$('widget-mic').onclick=()=>{if(!$('mic').disabled)$('mic').click();};
-$('widget-mute').onclick=()=>{
- if(!liveOn)return;
+$('widget-mic').onclick=()=>{
+ if($('mic').disabled)return;
+ if(!liveOn){$('mic').click();return;}
  micMuted=!micMuted;audio.setListening(!micMuted);
  if(micMuted&&state.value==='LISTENING')state.set('IDLE');
  else if(!micMuted&&state.value==='IDLE')state.set('LISTENING');
- updateMicLabel();syncWidgetStatus();
+ updateMicLabel();
 };
+$('widget-end-conversation').onclick=()=>{if(liveOn)interrupt(true,true);closeWidgetMenu(false);};
 $('widget-stop').onclick=()=>$('stop').click();
 $('widget-awareness').onclick=async()=>{
  screenAwareness=!screenAwareness;syncScreenAwareness();
@@ -236,13 +259,14 @@ function syncWidgetStatus(){
  $('widget-status').textContent=failed?'Needs attention':preparing?'Preparing…':state.value==='IDLE'?($('mic').disabled?'Connecting…':'Ready'):$('status').textContent;
  document.body.dataset.state=failed?'error':preparing?'preparing':state.value.toLowerCase();
  $('widget-mic').disabled=$('mic').disabled;
- $('widget-mic').classList.toggle('active',recording||liveOn);
- $('widget-mic').setAttribute('aria-label',liveOn?'End conversation':recording?'Finish and send':'Start conversation');
- $('widget-mute').disabled=!liveOn;
- $('widget-mute').classList.toggle('muted',micMuted);
- $('widget-mute').setAttribute('aria-pressed',String(micMuted));
- $('widget-mute').setAttribute('aria-label',!liveOn?'Microphone mute unavailable':micMuted?'Unmute microphone':'Mute microphone');
- $('widget-mute').title=!liveOn?'Start a conversation to use mute':micMuted?'Unmute microphone':'Mute microphone';
+ $('widget-mic').classList.toggle('active',(recording||liveOn)&&!micMuted);
+ $('widget-mic').classList.toggle('muted',micMuted);
+ const micLabel=recording?'Finish and send':!liveOn?'Start conversation':micMuted?'Unmute microphone':'Mute microphone';
+ $('widget-mic').setAttribute('aria-label',micLabel);$('widget-mic').title=micLabel;
+ $('widget-mic').setAttribute('aria-pressed',String(liveOn?micMuted:recording));
+ const micIcon=micMuted?'widget-mute':'widget-mic';
+ if($('widget-mic').dataset.icon!==micIcon){$('widget-mic').dataset.icon=micIcon;$('widget-mic').innerHTML=iconSvg(widgetIcons[micIcon]);}
+ $('widget-end-conversation').hidden=!liveOn;
  if(micMuted)$('widget-status').textContent='Muted';
  $('widget-stop').hidden=state.value!=='SPEAKING';
 }
@@ -270,7 +294,7 @@ window.addEventListener('pointerdown',event=>{if(!$('widget-menu').hidden&&!$('w
 
 
 window.addEventListener('keydown',event=>{
-  if(event.metaKey&&event.shiftKey&&event.key.toLowerCase()==='m'){event.preventDefault();if(!$('mic').disabled)$('mic').click();}
+  if(event.metaKey&&event.shiftKey&&event.key.toLowerCase()==='m'){event.preventDefault();if(!$('widget-mic').disabled)$('widget-mic').click();}
   if(event.key==='Escape'&&document.body.classList.contains('widget-chat-open')){setWidgetChat(false);return;}
   if(event.key==='Escape'&&!$('widget-menu').hidden){closeWidgetMenu();return;}
   if(event.key==='Escape'&&!$('bot-library').hidden){closeBotLibrary();return;}
@@ -371,7 +395,8 @@ const widgetIcons={
  'expand':'<path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/>',
  'widget-close':'<path d="m7 7 10 10M17 7 7 17"/>'
 };
-for(const [id,paths] of Object.entries(widgetIcons).filter(([id])=>['widget-mic','widget-mute','widget-stop','widget-chat-toggle','widget-awareness','expand'].includes(id)))$(id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
+const iconSvg=paths=>'<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
+for(const [id,paths] of Object.entries(widgetIcons).filter(([id])=>['widget-mic','widget-stop','widget-chat-toggle','widget-awareness','expand'].includes(id)))$(id).innerHTML=iconSvg(paths);
 
 function setWidgetChat(open,focus=true){
  const shouldOpen=Boolean(open)&&document.body.classList.contains('widget');
