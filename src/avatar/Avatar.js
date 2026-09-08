@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {PortraitFace} from './PortraitFace.js';
 
-/** Shared renderer and animation state for the four built-in robot portraits. */
+/** Shared renderer and animation state for the built-in robot portraits. */
 export class Avatar {
   constructor(container){
     this.container=container;this.performance={maxFps:45,pixelRatio:1.25,portraitSize:512,effectFps:24};
@@ -46,16 +46,19 @@ export class Avatar {
   update(){
     const elapsed=this.clock.getDelta(),dt=Math.min(elapsed,.05);this.time+=dt;
     if(this.time>this.nextBlink){this.blinkStart=this.time;this.nextBlink=this.time+2.7+Math.random()*3.8;}
-    const blink=Math.max(0,1-Math.abs((this.time-this.blinkStart-.09)/.09));
-    const mouthSpeed=this.mouthTarget>this.mouth?Math.min(1,dt*15):Math.min(1,dt*8);
+    const blinkLinear=Math.max(0,1-Math.abs((this.time-this.blinkStart-.1)/.1));
+    const blink=blinkLinear*blinkLinear*(3-2*blinkLinear);
+    const mouthRate=this.mouthTarget>this.mouth?15:8;
+    const mouthSpeed=1-Math.exp(-mouthRate*dt);
     this.mouth=THREE.MathUtils.lerp(this.mouth,this.mouthTarget,mouthSpeed);
-    this.attention.x=THREE.MathUtils.lerp(this.attention.x,this.attention.targetX,Math.min(1,dt*5));
-    this.attention.y=THREE.MathUtils.lerp(this.attention.y,this.attention.targetY,Math.min(1,dt*5));
+    const attentionEase=1-Math.exp(-5*dt);
+    this.attention.x=THREE.MathUtils.lerp(this.attention.x,this.attention.targetX,attentionEase);
+    this.attention.y=THREE.MathUtils.lerp(this.attention.y,this.attention.targetY,attentionEase);
     this.container.style.setProperty('--avatar-light-x',`${50+this.attention.x*12}%`);
     this.container.style.setProperty('--avatar-light-y',`${44+this.attention.y*9}%`);
     const transition=Math.min(1,(this.time-this.stateStarted)/(this.reducedMotion ? .01 : .32));
     const emotionTransition=Math.min(1,(this.time-this.emotionStarted)/(this.reducedMotion ? .01 : .22));
-    this.robot.update(this.time,blink,this.mouth,this.state,this.previousState,transition,this.emotion,this.previousEmotion,emotionTransition,this.reducedMotion?0:1,this.attention);
+    this.robot.update(this.time,blink,this.mouth,this.state,this.previousState,transition,this.emotion,this.previousEmotion,emotionTransition,this.reducedMotion?0:1,this.attention,dt);
     this.renderer.render(this.scene,this.camera);this.frames++;this.frameTime+=elapsed;
     if(this.frameTime>1){this.fps=Math.round(this.frames/this.frameTime);this.frames=0;this.frameTime=0;}
   }

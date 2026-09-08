@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 
 const smoothstep=value=>value*value*(3-2*value);
+const ease=(rate,dt)=>1-Math.exp(-rate*dt);
+const decay=(value,rate,dt)=>value*Math.exp(-rate*dt);
 const poses={
   IDLE:{lift:0,pitch:0,yaw:0,roll:0,scale:0},
   LISTENING:{lift:.014,pitch:-.026,yaw:.042,roll:.018,scale:.006},
@@ -67,7 +69,7 @@ export class PortraitFace {
     this.image.onload=()=>{this.imageReady=true;this.paintHardware(0,0);};
     this.image.src=`/assets/bots/${portraits[bot]||'rivet'}-portrait.png`;
   }
-  update(t,blink,mouth,state,previousState='IDLE',transition=1,emotion='relaxed',previousEmotion='relaxed',emotionTransition=1,motion=1,attention={x:0,y:0,dragging:false}){
+  update(t,blink,mouth,state,previousState='IDLE',transition=1,emotion='relaxed',previousEmotion='relaxed',emotionTransition=1,motion=1,attention={x:0,y:0,dragging:false},dt=1/60){
     const gazeRange=state==='THINKING'?.4:state==='LISTENING'?.3:state==='CURIOUS'?.1:.9;
     if(t>this.nextGaze){this.gazeTarget=(Math.random()-.5)*gazeRange;this.nextGaze=t+(state==='THINKING'?.8:2.6)+Math.random()*4.2;}
     if(t>this.nextAmbient){this.ambientKick=1;this.ambientTarget={lift:(Math.random()-.5)*.01,roll:(Math.random()-.5)*.02};this.nextAmbient=t+5+Math.random()*10;}
@@ -83,9 +85,9 @@ export class PortraitFace {
       };
       this.nextMicroGesture=t+minimum+Math.random()*(maximum-minimum);
     }
-    this.gaze=THREE.MathUtils.lerp(this.gaze,this.gazeTarget,Math.min(1,.035+motion*.075));
-    for(const key of Object.keys(this.microGesture))this.microGesture[key]=THREE.MathUtils.lerp(this.microGesture[key],this.microTarget[key],Math.min(1,.012+motion*.04));
-    this.reaction=Math.max(0,this.reaction-.035);this.transitionKick=Math.max(0,this.transitionKick-.045);this.expressionKick*=.88;this.dragKick=Math.max(0,this.dragKick-.06);this.ambientKick*=.96;this.surpriseJump*=.85;
+    this.gaze=THREE.MathUtils.lerp(this.gaze,this.gazeTarget,ease(5.4,dt));
+    for(const key of Object.keys(this.microGesture))this.microGesture[key]=THREE.MathUtils.lerp(this.microGesture[key],this.microTarget[key],ease(2.45,dt));
+    this.reaction=decay(this.reaction,2.1,dt);this.transitionKick=decay(this.transitionKick,2.8,dt);this.expressionKick=decay(this.expressionKick,7.5,dt);this.dragKick=decay(this.dragKick,3.8,dt);this.ambientKick=decay(this.ambientKick,2.45,dt);this.surpriseJump=decay(this.surpriseJump,9.5,dt);
     const speaking=state==='SPEAKING',listening=state==='LISTENING',thinking=state==='THINKING';
     const eased=smoothstep(transition),from=poses[previousState]||poses.IDLE,to=poses[state]||poses.IDLE;
     const pose={lift:blend(from,to,eased,'lift'),pitch:blend(from,to,eased,'pitch'),yaw:blend(from,to,eased,'yaw'),roll:blend(from,to,eased,'roll'),scale:blend(from,to,eased,'scale')};
@@ -107,10 +109,10 @@ export class PortraitFace {
       (pose.roll+Math.sin(t*.56*temperament)*.006+(listening ? .008 : 0)+expression.roll+this.microGesture.roll+this.ambientKick*this.ambientTarget.roll)*motion
     );
 
-    this.mouthValue=THREE.MathUtils.lerp(this.mouthValue,mouth,Math.min(1,.18+motion*.35));
+    this.mouthValue=THREE.MathUtils.lerp(this.mouthValue,mouth,ease(18,dt));
     const now=performance.now();
     const enoughTime=now-this.lastPaintAt>=1000/this.performance.effectFps;
-    // Nova gets a restrained idle eye shimmer (capped at 12 fps). It lets her
+    // Nova gets a restrained idle eye shimmer (capped at 24 fps). It lets her
     // look present between turns while avoiding a permanent 24 fps canvas
     // repaint for every companion and every static state.
     const novaIdleEyes=this.bot==='nova'&&state==='IDLE'&&emotion==='relaxed'&&now>=this.nextIdleEyePaintAt;
@@ -219,7 +221,7 @@ export class PortraitFace {
     else{ctx.fillRect(x-4,panelY,3,2);ctx.fillRect(x-1,panelY+2,3,2);ctx.fillRect(x+2,panelY-2,3,2);}ctx.restore();
     ctx.restore();
     this.texture.needsUpdate=true;this.lastLevel=level;this.lastBlink=blink;this.lastState=state;this.lastEmotion=emotion;this.lastTime=t;this.lastPaintAt=now;
-    if(this.bot==='nova')this.nextIdleEyePaintAt=now+1000/Math.min(this.performance.effectFps,12);
+    if(this.bot==='nova')this.nextIdleEyePaintAt=now+1000/Math.min(this.performance.effectFps,24);
   }
   dispose(){this.scene.traverse(object=>{object.geometry?.dispose();if(object.material){const materials=Array.isArray(object.material)?object.material:[object.material];materials.forEach(material=>{material.map?.dispose();material.dispose();});}});}
 }
