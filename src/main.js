@@ -9,8 +9,6 @@ let expressionEmotion='relaxed';
 function showEmoji(emotion){$('widget-emoji').textContent=emotionEmoji[emotion]||emotionEmoji.relaxed;$('widget-emoji').title=emotion;}
 avatar.onExpression=emotion=>{expressionEmotion=emotion;showEmoji(emotion);};
 let inputKind="text";
-let widgetHideTimer;
-function wakeWidgetControls(){if(!document.body.classList.contains('widget'))return;document.body.classList.remove('controls-hidden');clearTimeout(widgetHideTimer);widgetHideTimer=setTimeout(()=>document.body.classList.add('controls-hidden'),3200);}
 let liveOn=false,resumeTimer;
 let turn=0,recording=false,starting=false,complete=false,decodeChain=Promise.resolve(),pendingAudio=0,assistantNode,metrics={},started,firstToken,firstAudio,config;
 state.addEventListener('change',()=>{avatar.setState(state.value);$('status').textContent=state.value[0]+state.value.slice(1).toLowerCase();if(['LISTENING','THINKING','SPEAKING'].includes(state.value))showEmoji(state.value.toLowerCase());else showEmoji(expressionEmotion);});
@@ -74,7 +72,7 @@ $('stop').onclick=()=>interrupt();
 $('text-form').onsubmit=async event=>{event.preventDefault();try{const text=$('text').value.trim();if(!text)return;if($('mic').disabled)throw Error('Wait for local voice preparation to finish.');interrupt();await audio.ready();$('text').value='';begin({text});}catch(e){error(e);}};
 $('clear').onclick=()=>{interrupt();send({type:'clear'});$('messages').replaceChildren();};
 $('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidden;};
-function openSettings(){if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
+function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value});$('settings').close();window.desktop?.mode('widget');};
 function performanceNote(){$('performance-note').textContent=$('performance').value==='high'?'Uses the 9B model with smoother, more natural speech pacing. Best on the M1 Pro.':$('performance').value==='medium'?'Uses the installed 4B model for stronger replies. Best on 16 GB Macs.':'Uses the smallest local model and lower-power rendering.';}
@@ -89,12 +87,11 @@ setInterval(()=>{$('fps').textContent=`${avatar.fps} FPS · ${(config?.bots?.[co
 
 function windowMode(mode){
  document.body.classList.toggle('widget',mode==='widget');$('bot-library').hidden=true;
- if(mode==='widget')wakeWidgetControls();else document.body.classList.remove('controls-hidden');
- const isWidget=mode==='widget';
+ closeWidgetMenu(false);
  $('stage').setAttribute('role','img');
  $('stage').setAttribute('aria-label',(config?.bots?.[config.conversation.persona]?.name||'Companion')+' avatar');
  $('stage').tabIndex=-1;
- $('stage').title=isWidget?'Use Open for controls · drag the face or top handle to move':'';
+ $('stage').removeAttribute('title');
 }
 if(window.desktop){windowMode('widget');window.desktop.onMode(windowMode);}else{$('collapse').hidden=true;$('close-window').hidden=true;}
 $('expand').onclick=()=>window.desktop?.mode('full');
@@ -105,15 +102,30 @@ $('widget-stop').onclick=()=>$('stop').click();
 $('widget-settings').onclick=openSettings;
 $('widget-minimize').onclick=()=>window.desktop?.minimize();
 $('widget-close').onclick=()=>window.desktop?.close();
-new MutationObserver(()=>{$('widget-status').textContent=$('error').textContent?'Open controls · needs attention':$('status').textContent;$('widget-mic').disabled=$('mic').disabled;$('widget-mic').classList.toggle('active',recording||liveOn);}).observe($('status').parentElement,{subtree:true,childList:true,attributes:true});
+function syncWidgetStatus(){
+ const failed=!!$('error').textContent, preparing=document.body.classList.contains('model-loading');
+ $('widget-status').textContent=failed?'Needs attention':preparing?'Preparing…':state.value==='IDLE'?($('mic').disabled?'Connecting…':'Ready'):$('status').textContent;
+ document.body.dataset.state=failed?'error':preparing?'preparing':state.value.toLowerCase();
+ $('widget-mic').disabled=$('mic').disabled;
+ $('widget-mic').classList.toggle('active',recording||liveOn);
+ $('widget-mic').setAttribute('aria-label',liveOn?'End conversation':recording?'Finish and send':'Start conversation');
+ $('widget-stop').hidden=state.value!=='SPEAKING';
+}
+new MutationObserver(syncWidgetStatus).observe($('status').parentElement,{subtree:true,childList:true,attributes:true});
+function closeWidgetMenu(restoreFocus=true){$('widget-menu').hidden=true;$('widget-quality-panel').hidden=true;$('widget-quality').setAttribute('aria-expanded','false');$('widget-more').setAttribute('aria-expanded','false');if(restoreFocus)$('widget-more').focus();}
+$('widget-more').onclick=()=>{const opening=$('widget-menu').hidden;closeBotLibrary();closeWidgetMenu(false);if(opening){$('widget-menu').hidden=false;$('widget-more').setAttribute('aria-expanded','true');$('menu-close').focus();}};
+$('menu-close').onclick=()=>closeWidgetMenu();
+window.addEventListener('pointerdown',event=>{if(!$('widget-menu').hidden&&!$('widget-menu').contains(event.target)&&!$('widget-more').contains(event.target))closeWidgetMenu(false);});
+
 
 
 window.addEventListener('keydown',event=>{
   if(event.metaKey&&event.shiftKey&&event.key.toLowerCase()==='m'){event.preventDefault();if(!$('mic').disabled)$('mic').click();}
+  if(event.key==='Escape'&&!$('widget-menu').hidden){closeWidgetMenu();return;}
   if(event.key==='Escape'&&!$('bot-library').hidden){closeBotLibrary();return;}
   if(event.key==='Escape'&&!$('settings').open){interrupt();if(window.desktop)window.desktop.mode('widget');}
 });
-window.addEventListener('pointermove',wakeWidgetControls);
+
 
 
 // Pointer capture keeps the drag active as the native window follows the cursor.
@@ -124,6 +136,7 @@ for(const surface of [$('stage'),$('widget-drag')]){
     const id=pointer;pointer=null;
     window.desktop?.stopDrag();
     document.body.classList.remove('dragging');
+    avatar.setDragging(false);
     if(surface.hasPointerCapture(id))surface.releasePointerCapture(id);
   };
   surface.addEventListener('pointerdown',event=>{
@@ -131,6 +144,7 @@ for(const surface of [$('stage'),$('widget-drag')]){
     event.preventDefault();pointer=event.pointerId;
     surface.setPointerCapture(pointer);
     document.body.classList.add('dragging');
+    avatar.setDragging(true);
     window.desktop.startDrag();
   });
   surface.addEventListener('pointerup',endDrag);
@@ -142,9 +156,9 @@ for(const surface of [$('stage'),$('widget-drag')]){
 
 function syncBotUI(){
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
- $('widget-name').textContent=name;const profile=config.performanceProfile||'low';$('widget-quality').textContent=profile.toUpperCase();$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Low')+' · click to change';$('widget-quality-slider').value=profile==='high'?'2':profile==='medium'?'1':'0';$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
+ $('widget-name').textContent=name;const profile=config.performanceProfile||'low';$('widget-quality').textContent='Performance · '+profile[0].toUpperCase()+profile.slice(1);$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Low')+' · click to change';$('widget-quality-slider').value=profile==='high'?'2':profile==='medium'?'1':'0';$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
  $('stage').setAttribute('aria-label',name+' avatar');
- $('widget-drag').title='Drag here to move '+name;
+ $('widget-drag').setAttribute('aria-label','Drag to move '+name);
  document.body.dataset.bot=id;
 }
 function switchBot(id){
@@ -159,18 +173,18 @@ function openBotLibrary(){
    const button=document.createElement('button');button.className='bot-card '+id;
    const selected=id===config.conversation.persona;
    button.setAttribute('aria-pressed',String(selected));
-   const icon=document.createElement('span');icon.className='bot-mark';icon.textContent=({nova:'♡',robot:'⚙',butler:'◈',pixel:'✦'})[id]||'◌';
+   const icon=document.createElement('span');icon.className='bot-mark';icon.textContent=({nova:'♡',robot:'⚙',butler:'◈',pixel:'✦',luma:'◌'})[id]||'◌';
    const info=document.createElement('span');const name=document.createElement('b');name.textContent=bot.name+(selected?' · current':'');
-   const detail=document.createElement('small');detail.textContent=({nova:'Charming, playful assistant',robot:'Witty repair robot',butler:'Wise British-style butler',pixel:'Bold marketing intern'})[id]||'Custom companion';
+   const detail=document.createElement('small');detail.textContent=({nova:'Charming, playful assistant',robot:'Witty repair robot',butler:'Wise British-style butler',pixel:'Bold marketing intern',luma:'Product designer & creative director'})[id]||'Custom companion';
    info.append(name,detail);button.append(icon,info);
    button.onclick=()=>{if(!selected)switchBot(id);closeBotLibrary();};cards.append(button);
  }
- $('bot-library').hidden=false;$('library-close').focus();
+ closeWidgetMenu(false);$('bot-library').hidden=false;$('library-close').focus();
 }
-function closeBotLibrary(){$('bot-library').hidden=true;$('widget-bot').focus();}
+function closeBotLibrary(){$('bot-library').hidden=true;$('widget-more').focus();}
 $('widget-bot').onclick=()=>{$('bot-library').hidden?openBotLibrary():closeBotLibrary();};
-$('widget-quality').onclick=()=>{$('widget-quality-panel').hidden=!$('widget-quality-panel').hidden;};
-$('widget-quality-slider').onchange=()=>{const profile=['low','medium','high'][Number($('widget-quality-slider').value)];if(profile===config.performanceProfile)return;$('widget-quality-panel').hidden=true;interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:profile});};
+$('widget-quality').onclick=()=>{$('widget-quality-panel').hidden=!$('widget-quality-panel').hidden;$('widget-quality').setAttribute('aria-expanded',String(!$('widget-quality-panel').hidden));};
+$('widget-quality-slider').onchange=()=>{const profile=['low','medium','high'][Number($('widget-quality-slider').value)];if(profile===config.performanceProfile)return;closeWidgetMenu();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:profile});};
 $('library-close').onclick=closeBotLibrary;
 window.addEventListener('pointerdown',event=>{if(!$('bot-library').hidden&&!$('bot-library').contains(event.target)&&!$('widget-bot').contains(event.target))$('bot-library').hidden=true;});
 
@@ -185,4 +199,4 @@ const widgetIcons={
  'expand':'<path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/>',
  'widget-close':'<path d="m7 7 10 10M17 7 7 17"/>'
 };
-for(const [id,paths] of Object.entries(widgetIcons))$(id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
+for(const [id,paths] of Object.entries(widgetIcons).filter(([id])=>['widget-mic','widget-stop','expand'].includes(id)))$(id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';

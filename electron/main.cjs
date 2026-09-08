@@ -5,8 +5,8 @@ app.whenReady().then(async()=>{
   session.defaultSession.setPermissionRequestHandler((wc,permission,callback)=>callback(local(wc.getURL())&&permission==='media'));
   if(process.platform==='darwin')await systemPreferences.askForMediaAccess('microphone');
   const area=screen.getPrimaryDisplay().workArea;
-  const widgetSize=232;
-  const win=new BrowserWindow({width:widgetSize,height:widgetSize,x:area.x+area.width-270,y:area.y+80,minWidth:232,minHeight:232,title:'Rivet',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  const widgetWidth=260,widgetHeight=338;
+  const win=new BrowserWindow({width:widgetWidth,height:widgetHeight,x:area.x+area.width-270,y:area.y+80,minWidth:widgetWidth,minHeight:widgetHeight,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
   let widgetBounds=win.getBounds();let mode='widget';
@@ -36,12 +36,12 @@ app.whenReady().then(async()=>{
     stopDrag();
     if(next===mode)return mode;
     if(next==='full'){widgetBounds=win.getBounds();mode='full';win.setResizable(true);win.setMinimumSize(800,560);win.setSize(1120,720);win.center();notify();}
-    else{mode='widget';if(win.isFullScreen()){win.once('leave-full-screen',()=>{win.setResizable(false);win.setBounds({...widgetBounds,width:widgetSize,height:widgetSize});notify();});win.setFullScreen(false);}else{win.setResizable(false);win.setBounds({...widgetBounds,width:widgetSize,height:widgetSize});notify();}}
+    else{mode='widget';win.setMinimumSize(widgetWidth,widgetHeight);if(win.isFullScreen()){win.once('leave-full-screen',()=>{win.setResizable(false);win.setBounds({...widgetBounds,width:widgetWidth,height:widgetHeight});notify();});win.setFullScreen(false);}else{win.setResizable(false);win.setBounds({...widgetBounds,width:widgetWidth,height:widgetHeight});notify();}}
     return mode;
   });
   ipcMain.on('window-close',event=>{if(event.sender===win.webContents)win.close();});
   ipcMain.on('window-minimize',event=>{if(event.sender===win.webContents)win.minimize();});
-  win.on('leave-full-screen',()=>{if(mode==='full'){mode='widget';win.setResizable(false);win.setBounds(widgetBounds);notify();}});
+  win.on('leave-full-screen',()=>{if(mode==='full'){mode='widget';win.setMinimumSize(widgetWidth,widgetHeight);win.setResizable(false);win.setBounds(widgetBounds);notify();}});
   win.webContents.on('did-finish-load',notify);
   await win.loadURL('http://127.0.0.1:5173');
 });

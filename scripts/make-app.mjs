@@ -19,8 +19,18 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 LOG="$HOME/Library/Logs/MyAvatar-launcher.log"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 mkdir -p "$HOME/Library/Logs"
-if pgrep -f "$ROOT/scripts/start.mjs" >/dev/null; then
-  exit 0
+START_PROCESS='[n]ode scripts/start\\.mjs'
+if pgrep -f "$START_PROCESS" >/dev/null; then
+  # Keep an existing visible companion running, but recover when its services
+  # outlive Electron after the window was closed.
+  if pgrep -f "$ROOT/node_modules/electron/dist/[E]lectron.app/Contents/MacOS/Electron" >/dev/null; then
+    exit 0
+  fi
+  pkill -TERM -f "$START_PROCESS"
+  for _ in {1..30}; do
+    pgrep -f "$START_PROCESS" >/dev/null || break
+    sleep 0.1
+  done
 fi
 cd "$ROOT" || exit 1
 nohup /usr/bin/env npm start >> "$LOG" 2>&1 &
