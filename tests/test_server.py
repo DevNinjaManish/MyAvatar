@@ -16,7 +16,7 @@ class Pipeline(unittest.TestCase):
             for token in ['[ha','ppy] Hello. ','How are you?']:
                 yield token
                 await asyncio.sleep(.002)
-        with patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate',return_value=b'RIFFtest'):
+        with tempfile.TemporaryDirectory() as directory,patch('backend.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate',return_value=b'RIFFtest'):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
                 self.assertEqual(ws.receive_json()['type'],'config');self.assertEqual(ws.receive_json()['type'],'ready')
                 ws.send_json({'type':'turn','turn':1,'text':'Hello'})
@@ -57,6 +57,23 @@ class Pipeline(unittest.TestCase):
                 self.assertEqual(events[-1]['type'],'done')
                 generate.assert_not_called()
 
+    def test_screen_observation_passes_image_without_storing_raw_frame(self):
+        seen=[]
+        async def fake_stream(messages,config):
+            seen.extend(messages)
+            yield '[curious] You appear to be reviewing a design.'
+        with tempfile.TemporaryDirectory() as directory,patch('backend.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.app.SCREEN_EVENTS_PATH',Path(directory)/'events.jsonl'),patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate',return_value=b'RIFFtest'):
+            with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
+                ws.receive_json();ws.receive_json()
+                frame=base64.b64encode(b'PNG test frame').decode()
+                ws.send_json({'type':'turn','turn':7,'text':'Screen awareness','image':frame,'screenObservation':True,'screenSource':'Main display'})
+                while ws.receive_json()['type']!='done':pass
+                self.assertEqual(seen[-1]['images'],[frame])
+                event_file=Path(directory)/'events.jsonl'
+                saved=event_file.read_text()
+                self.assertIn('reviewing a design',saved)
+                self.assertNotIn(frame,saved)
+
 class Recording(unittest.TestCase):
     def test_silent_recording_does_not_hallucinate_text(self):
         import numpy as np
@@ -72,7 +89,7 @@ class Cancellation(unittest.TestCase):
                 yield 'Waiting'
                 await asyncio.sleep(10)
             else:yield 'New answer.'
-        with patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate',return_value=b'RIFFtest'):
+        with tempfile.TemporaryDirectory() as directory,patch('backend.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate',return_value=b'RIFFtest'):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
                 ws.receive_json();ws.receive_json()
                 ws.send_json({'type':'turn','turn':1,'text':'old'})
@@ -90,7 +107,7 @@ class Cancellation(unittest.TestCase):
 class BotSwitching(unittest.TestCase):
     def test_switch_updates_identity_voice_and_restores_separate_history(self):
         async def fake_stream(messages,config):yield 'Hello there.'
-        with patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate',return_value=b'RIFFtest'):
+        with tempfile.TemporaryDirectory() as directory,patch('backend.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate',return_value=b'RIFFtest'):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
                 ws.receive_json();ws.receive_json()
                 ws.send_json({'type':'bot','bot':'nova'})
@@ -116,7 +133,7 @@ class BotSwitching(unittest.TestCase):
                 config=ws.receive_json()['config']
                 self.assertIn('Luma',config['conversation']['system'])
                 self.assertEqual(config['tts']['voice'],'af_heart')
-                self.assertEqual(config['performanceProfile'],'medium')
+                self.assertEqual(config['performanceProfile'],'high')
                 self.assertEqual(config['audio']['mode'],'manual')
                 self.assertEqual(ws.receive_json()['type'],'bot_history')
 

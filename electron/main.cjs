@@ -1,4 +1,4 @@
-const {app,BrowserWindow,session,systemPreferences,ipcMain,screen}=require('electron');
+const {app,BrowserWindow,session,systemPreferences,ipcMain,screen,desktopCapturer}=require('electron');
 const path=require('node:path');
 app.whenReady().then(async()=>{
   const local=url=>{try{return new URL(url).origin==='http://127.0.0.1:5173';}catch{return false;}};
@@ -46,6 +46,17 @@ app.whenReady().then(async()=>{
     win.setBounds({...bounds,width:widgetWidth,height:expanded?widgetChatHeight:widgetHeight});
     widgetBounds=win.getBounds();
     return expanded;
+  });
+  ipcMain.handle('screen-capture',async event=>{
+    if(event.sender!==win.webContents||win.isDestroyed())return {ok:false,error:'Screen capture is unavailable.'};
+    if(process.platform==='darwin'&&systemPreferences.getMediaAccessStatus('screen')==='denied')return {ok:false,error:'Allow screen recording for MyAvatar in System Settings, then restart the app.'};
+    try{
+      const display=screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+      const sources=await desktopCapturer.getSources({types:['screen'],thumbnailSize:{width:960,height:540},fetchWindowIcons:false});
+      const source=sources.find(item=>item.display_id===String(display.id))||sources[0];
+      if(!source||source.thumbnail.isEmpty())return {ok:false,error:'No screen image was available.'};
+      return {ok:true,source:source.name,image:source.thumbnail.toDataURL()};
+    }catch(error){return {ok:false,error:error.message||'Screen capture failed.'};}
   });
   ipcMain.on('window-close',event=>{if(event.sender===win.webContents)win.close();});
   ipcMain.on('window-minimize',event=>{if(event.sender===win.webContents)win.minimize();});

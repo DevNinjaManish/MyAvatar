@@ -18,7 +18,7 @@ backend/tts/provider.py          persistent Kokoro ONNX engine
 backend/llm/provider.py          Ollama streaming HTTP client
 backend/conversation/chunks.py   sentence-sized synthesis chunks
 backend/app.py                  WebSocket/session history/cancellation/logging
-config.json                     provider, bot, and Fast/Balanced profile defaults
+config.json                     provider, bot, and Fast/Balanced/High profile defaults
 data/settings.json               ignored local bot/profile/microphone preferences
 scripts/start.mjs               starts and stops child services
 ```
@@ -26,6 +26,8 @@ scripts/start.mjs               starts and stops child services
 ## Flow
 
 Microphone → AudioWorklet → local turn detector (or manual capture) → resample to mono 16 kHz float PCM → local WebSocket → MLX Whisper → Ollama token stream → sentence queue → Kokoro WAV → Web Audio → analyser RMS → embedded robot speaker-grille equalizer.
+
+Opt-in screen awareness uses a narrow preload IPC call to capture a downscaled image of the active display. The frame is passed in memory to the local Ollama vision message, then discarded. Screen text is explicitly treated as untrusted and cannot emit action requests. Only the generated comment, companion, source label, and timestamp are written to the separate ignored screen-awareness log.
 
 STT and TTS each use a dedicated single-thread executor. The token producer and speech consumer run concurrently with bounded queueing. Models remain loaded across turns for lower latency. History is owned per connection. An optional whitelisted leading emotion tag sets the face without waiting for a separate classification call.
 

@@ -1,6 +1,6 @@
 # Observed local results — 2026-09-08
 
-Machine: Apple M1 Pro, 16 GB unified memory, macOS 26.6.2. These historical observations used Qwen3.5 4B, a 4096-token context, MLX Whisper base.en, and Kokoro ONNX. Current MyAvatar uses Fast (0.8B) and Balanced (4B) profiles. Treat the figures below as development reference points, not current guarantees.
+Machine: Apple M1 Pro, 16 GB unified memory, macOS 26.6.2. These historical observations used Qwen3.5 4B, a 4096-token context, MLX Whisper base.en, and Kokoro ONNX. Current MyAvatar uses Fast (0.8B), Balanced (4B), and optional High (9B) profiles. Treat the figures below as development reference points, not current guarantees.
 
 These are individual development observations, not percentile benchmarks. Generated speech was used as a controlled STT fixture. Actual room noise, microphone, answer length, model loading, competing apps, and thermals will change latency.
 

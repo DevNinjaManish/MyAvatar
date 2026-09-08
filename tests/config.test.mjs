@@ -18,9 +18,16 @@ test('companion configuration is complete and unique',()=>{
 
 test('performance profiles reference usable local models',()=>{
   for(const [id,profile] of Object.entries(config.performanceProfiles)){
-    assert.match(id,/^(low|medium)$/);
+    assert.match(id,/^(low|medium|high)$/);
     assert.match(profile.llm.model,/^huihui_ai\/qwen3\.5-abliterated:/);
     assert.ok(profile.llm.context>=2048);
     assert.ok(profile.avatar.maxFps>0);
   }
+});
+
+test('Balanced remains recommended while High is an optional 9B mode',()=>{
+  assert.deepEqual(Object.keys(config.performanceProfiles),['low','medium','high']);
+  assert.match(config.performanceProfiles.medium.name,/Recommended/);
+  assert.match(config.performanceProfiles.high.llm.model,/:9b$/);
+  assert.equal(config.performanceProfile,'medium');
 });

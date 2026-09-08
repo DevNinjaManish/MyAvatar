@@ -38,7 +38,7 @@ nohup /usr/bin/env npm start >> "$LOG" 2>&1 &
 chmodSync(resolve(macos,'MyAvatar'),0o755);
 
 rmSync(iconset,{recursive:true,force:true});mkdirSync(iconset);
-const source=resolve(root,'public/assets/bots/nova-portrait.png');
+const source=resolve(root,'public/assets/app-icon.png');
 for(const [pixels,name] of [[16,'icon_16x16.png'],[32,'icon_16x16@2x.png'],[32,'icon_32x32.png'],[64,'icon_32x32@2x.png'],[128,'icon_128x128.png'],[256,'icon_128x128@2x.png'],[256,'icon_256x256.png'],[512,'icon_256x256@2x.png'],[512,'icon_512x512.png'],[1024,'icon_512x512@2x.png']])run('sips',['-z',String(pixels),String(pixels),source,'--out',resolve(iconset,name)]);
 run('iconutil',['-c','icns',iconset,'-o',resolve(resources,'MyAvatar.icns')]);
 rmSync(iconset,{recursive:true,force:true});console.log(`Created ${app}. Double-click it to launch MyAvatar. Startup errors are written to ~/Library/Logs/MyAvatar-launcher.log.`);

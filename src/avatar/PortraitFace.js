@@ -54,6 +54,15 @@ export class PortraitFace {
     const map=new THREE.CanvasTexture(this.canvas);map.colorSpace=THREE.SRGBColorSpace;map.generateMipmaps=false;map.minFilter=THREE.LinearFilter;map.magFilter=THREE.LinearFilter;map.anisotropy=1;
     const portrait=new THREE.Mesh(new THREE.CircleGeometry(.625,48),new THREE.MeshBasicMaterial({map,transparent:true}));
     portrait.position.z=-.015;this.root.add(portrait);
+    // Nova has a matching transparent cutout behind the circular portrait.
+    // The circle covers its centre while the shoulders remain visible beyond
+    // the frame, preserving all live eye/speaker effects painted above it.
+    if(bot==='nova'){
+      const bustMap=new THREE.TextureLoader().load('/assets/bots/nova-bust.png');
+      bustMap.colorSpace=THREE.SRGBColorSpace;bustMap.generateMipmaps=false;bustMap.minFilter=THREE.LinearFilter;bustMap.magFilter=THREE.LinearFilter;
+      const bust=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshBasicMaterial({map:bustMap,transparent:true,depthWrite:false}));
+      bust.position.z=-.03;bust.renderOrder=-1;this.root.add(bust);
+    }
     // Source-pixel maps place the live effects within each illustrated device.
     this.hardware={
       robot:{speaker:[314,340,110,70,'vertical','#ff9d4d'],eyes:[[198,221,64,58],[407,221,48,48]]},

@@ -9,7 +9,9 @@ let expressionEmotion='relaxed';
 function showEmoji(emotion){$('widget-emoji').textContent=emotionEmoji[emotion]||emotionEmoji.relaxed;$('widget-emoji').title=emotion;}
 avatar.onExpression=emotion=>{expressionEmotion=emotion;showEmoji(emotion);};
 let inputKind="text";
-let liveOn=false,resumeTimer;
+let liveOn=false,micMuted=false,resumeTimer,latestWidgetReply=null,widgetUnread=0;
+let avatarInteractionTimer=0,lastAvatarInteraction=0,avatarInteractionIndex=0;
+let screenAwareness=false,screenTimer=0,lastScreenObservation=0,lastUserActivity=performance.now();
 let turn=0,recording=false,starting=false,complete=false,decodeChain=Promise.resolve(),pendingAudio=0,assistantNode,metrics={},started,firstToken,firstAudio,config,thinkingTimer;
 state.addEventListener('change',()=>{
   avatar.setState(state.value);
@@ -25,16 +27,27 @@ const send=data=>{if(socket.readyState!==WebSocket.OPEN)throw Error('Local servi
 const error=e=>$('error').textContent=e.message||e;
 socket.onopen=()=>{$('status').textContent='Preparing…';};socket.onclose=()=>{$('mic').disabled=true;interrupt(false);if(!$('error').textContent)error('Local service disconnected. Restart with npm start.');};
 function appendMessage(container,role,text,compact=false){
- const item=document.createElement('div');item.className='message';
+ const item=document.createElement('div');item.className='message '+(role==='You'?'user':'assistant');
  const label=document.createElement('div');label.className='role';label.textContent=role==='You'?role:`${emotionEmoji[expressionEmotion]||'◌'} ${role}`;
  const body=document.createElement('div');body.textContent=text;item.append(label,body);container.append(item);
  if(compact)container.scrollTop=container.scrollHeight;else item.scrollIntoView();
  return body;
 }
-function message(role,text){return {full:appendMessage($('messages'),role,text),widget:appendMessage($('widget-messages'),role,text,true)};}
+function syncWidgetUnread(){
+ $('widget-chat-toggle').dataset.unread=widgetUnread?String(Math.min(widgetUnread,9)):'';
+}
+function message(role,text){
+ const nodes={full:appendMessage($('messages'),role,text),widget:appendMessage($('widget-messages'),role,text,true)};
+ if(role!=='You'){
+   latestWidgetReply=nodes.widget;$('widget-copy-last').disabled=!text;
+   if(!document.body.classList.contains('widget-chat-open')){widgetUnread++;syncWidgetUnread();}
+ }
+ return nodes;
+}
 function clearMessages(){
  $('messages').replaceChildren();$('widget-messages').replaceChildren();
  const hint=document.createElement('p');hint.className='hint';hint.textContent='Talk naturally or type a message.';$('widget-messages').append(hint);
+ latestWidgetReply=null;widgetUnread=0;$('widget-copy-last').disabled=true;syncWidgetUnread();
 }
 function actionRequest(request){
  const card=document.createElement('div');card.className='action-request';
@@ -46,7 +59,7 @@ function actionRequest(request){
  allow.onclick=()=>decide('allow_once');deny.onclick=()=>decide('deny');card.append(allow,deny);$('messages').append(card);card.scrollIntoView();
 }
 function displayMetrics(){const labels={speech_to_stt_ms:'Speech → STT',stt_to_first_token_ms:inputKind==='speech'?'STT → token':'Text → token',token_to_audio_ms:'Token → audio',end_to_first_audio_ms:inputKind==='speech'?'Speech → audio':'Text → audio',end_to_end_ms:'Through playback'};$('metrics').textContent=Object.entries(labels).filter(([k])=>metrics[k]!=null).map(([k,label])=>`${label}: ${(metrics[k]/1000).toFixed(2)}s`).join(' · ');}
-function finish(){if(complete&&!audio.playing&&!audio.queue.length&&!pendingAudio){state.set('IDLE');metrics.end_to_end_ms=Math.round(performance.now()-started);displayMetrics();send({type:'metrics',turn,metrics});avatar.setExpression('relaxed');complete=false;if(liveOn){const current=turn;resumeTimer=setTimeout(()=>{if(liveOn&&turn===current){audio.setListening(true);state.set('LISTENING');}},config?.audio?.resumeDelayMs??250);}}}
+function finish(){if(complete&&!audio.playing&&!audio.queue.length&&!pendingAudio){state.set('IDLE');metrics.end_to_end_ms=Math.round(performance.now()-started);displayMetrics();send({type:'metrics',turn,metrics});avatar.setExpression('relaxed');complete=false;if(liveOn&&!micMuted){const current=turn;resumeTimer=setTimeout(()=>{if(liveOn&&!micMuted&&turn===current){audio.setListening(true);state.set('LISTENING');}},config?.audio?.resumeDelayMs??250);}}}
 function interrupt(notify=true, sessionStop=false){
   clearTimeout(resumeTimer);
   turn++;
@@ -57,6 +70,7 @@ function interrupt(notify=true, sessionStop=false){
   }
   if(sessionStop){
     liveOn=false;
+    micMuted=false;
     updateMicLabel();
   }
   audio.stop();
@@ -70,9 +84,9 @@ function interrupt(notify=true, sessionStop=false){
 function begin(data){
   if($('interaction').value!=='live')audio.setListening(false);
   turn++;inputKind=data.pcm?'speech':'text';metrics={input_kind:inputKind};started=performance.now()-(data.endDetectionMs||0);firstToken=null;firstAudio=null;complete=false;assistantNode=null;$('error').textContent='';$('metrics').textContent='';send({type:'turn',turn,...data});state.set('THINKING');
-  if($('interaction').value==='live'){
+  if($('interaction').value==='live'&&!data.screenObservation){
     setTimeout(()=> {
-      if(state.value==='THINKING'||state.value==='SPEAKING'){
+      if(!micMuted&&(state.value==='THINKING'||state.value==='SPEAKING')){
         audio.setListening(true);
       }
     }, 800);
@@ -88,7 +102,7 @@ socket.onmessage=event=>{
  if(m.type==='state')state.set(m.state);
  if(m.type==='transcript'){if(inputKind==='speech')metrics.speech_to_stt_ms=Math.round(performance.now()-started);message('You',m.text);assistantNode=message(config.bots?.[config.conversation.persona]?.name||'Companion','');}
  if(m.type==='first_token')firstToken=performance.now();
- if(m.type==='token'&&assistantNode){assistantNode.full.textContent+=m.text;assistantNode.full.scrollIntoView();assistantNode.widget.textContent+=m.text;$('widget-messages').scrollTop=$('widget-messages').scrollHeight;}
+ if(m.type==='token'&&assistantNode){assistantNode.full.textContent+=m.text;assistantNode.full.scrollIntoView();assistantNode.widget.textContent+=m.text;latestWidgetReply=assistantNode.widget;$('widget-copy-last').disabled=false;$('widget-messages').scrollTop=$('widget-messages').scrollHeight;}
  if(m.type==='emotion')avatar.setExpression(m.emotion);
  if(m.type==='audio'){
    const current=turn;pendingAudio++;
@@ -102,7 +116,7 @@ function updateMicLabel(){
  $('mic').textContent=liveOn?'Mic on · end conversation':recording?'Finish & send':$('interaction').value==='live'?'Start live conversation':'Start microphone';
  $('widget-mic').title=liveOn?'End live conversation':recording?'Finish and send':'Start live conversation';
  $('widget-mic').setAttribute('aria-pressed',String(liveOn||recording));
- $('detail').textContent=$('interaction').value==='live'?'Mic stays on · pause to send · listening resumes after the reply':'Click once to talk, again to send · microphone is off until enabled';
+ $('detail').textContent=micMuted?'Microphone muted · conversation remains active':$('interaction').value==='live'?'Mic stays on · pause to send · listening resumes after the reply':'Click once to talk, again to send · microphone is off until enabled';
 }
 $('mic').onclick=async()=>{
  if(starting)return;
@@ -120,7 +134,7 @@ $('mic').onclick=async()=>{
       begin({pcm:toBase64(new Uint8Array(pcm.buffer)),...meta});
     },config.audio?.vad);
     if(requestTurn!==turn){audio.stopRecord();return;}
-    liveOn=true;audio.setListening(true);
+    liveOn=true;micMuted=false;audio.setListening(true);
   }else{
     await audio.record(()=>$('mic').click());
     if(requestTurn!==turn){audio.stopRecord();return;}
@@ -133,16 +147,24 @@ $('mic').onclick=async()=>{
 $('interaction').onchange=()=>{interrupt();updateMicLabel();};
 $('stop').onclick=()=>interrupt();
 async function submitText(input){
- try{const text=input.value.trim();if(!text)return;if($('mic').disabled)throw Error('Wait for local voice preparation to finish.');interrupt();await audio.ready();input.value='';begin({text});}catch(e){error(e);}
+ try{const text=input.value.trim();if(!text)return;lastUserActivity=performance.now();if($('mic').disabled)throw Error('Wait for local voice preparation to finish.');interrupt();await audio.ready();$('text').value='';$('widget-text').value='';begin({text});}catch(e){error(e);}
 }
 $('text-form').onsubmit=event=>{event.preventDefault();submitText($('text'));};
 $('widget-text-form').onsubmit=event=>{event.preventDefault();submitText($('widget-text'));};
-$('clear').onclick=()=>{interrupt();send({type:'clear'});clearMessages();};
+for(const [source,target] of [[$('text'),$('widget-text')],[$('widget-text'),$('text')]])source.addEventListener('input',()=>{target.value=source.value;});
+function clearConversation(){interrupt();send({type:'clear'});clearMessages();}
+$('clear').onclick=clearConversation;
+$('widget-clear-chat').onclick=clearConversation;
+$('widget-copy-last').onclick=async()=>{
+ if(!latestWidgetReply?.textContent)return;
+ await navigator.clipboard.writeText(latestWidgetReply.textContent);
+ $('widget-copy-last').textContent='Copied';setTimeout(()=>{$('widget-copy-last').textContent='Copy';},900);
+};
 $('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidden;};
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value,memoryEnabled:$('memory-enabled').checked});$('settings').close();window.desktop?.mode('widget');};
-function performanceNote(){$('performance-note').textContent=$('performance').value==='medium'?'Balanced is recommended for natural everyday voice conversations.':'Fast minimizes memory and time to first response.';}
+function performanceNote(){$('performance-note').textContent=$('performance').value==='medium'?'Balanced is recommended for natural everyday voice conversations.':$('performance').value==='high'?'High uses the 9B model for harder work and may answer more slowly.':'Fast minimizes memory and time to first response.';}
 $('performance').onchange=performanceNote;
 function openOnboarding(){
  if(localStorage.getItem('myavatar.onboarding.complete')||$('onboarding').open)return;
@@ -178,12 +200,17 @@ $('expand').onclick=()=>window.desktop?.mode('full');
 $('collapse').onclick=()=>window.desktop?.mode('widget');
 $('close-window').onclick=()=>window.desktop?.close();
 $('widget-mic').onclick=()=>{if(!$('mic').disabled)$('mic').click();};
+$('widget-mute').onclick=()=>{
+ if(!liveOn)return;
+ micMuted=!micMuted;audio.setListening(!micMuted);
+ if(micMuted&&state.value==='LISTENING')state.set('IDLE');
+ else if(!micMuted&&state.value==='IDLE')state.set('LISTENING');
+ updateMicLabel();syncWidgetStatus();
+};
 $('widget-stop').onclick=()=>$('stop').click();
-$('widget-awareness').onclick=()=>{
- const enabled=$('widget-awareness').getAttribute('aria-pressed')!=='true';
- $('widget-awareness').setAttribute('aria-pressed',String(enabled));
- $('widget-awareness').setAttribute('aria-label',enabled?'Screen awareness on':'Screen awareness off');
- $('widget-awareness').title=enabled?'Screen awareness on':'Screen awareness off';
+$('widget-awareness').onclick=async()=>{
+ screenAwareness=!screenAwareness;syncScreenAwareness();
+ if(screenAwareness)await observeScreen();
 };
 $('widget-settings').onclick=openSettings;
 $('widget-minimize').onclick=()=>window.desktop?.minimize();
@@ -195,7 +222,28 @@ function syncWidgetStatus(){
  $('widget-mic').disabled=$('mic').disabled;
  $('widget-mic').classList.toggle('active',recording||liveOn);
  $('widget-mic').setAttribute('aria-label',liveOn?'End conversation':recording?'Finish and send':'Start conversation');
+ $('widget-mute').disabled=!liveOn;
+ $('widget-mute').classList.toggle('muted',micMuted);
+ $('widget-mute').setAttribute('aria-pressed',String(micMuted));
+ $('widget-mute').setAttribute('aria-label',!liveOn?'Microphone mute unavailable':micMuted?'Unmute microphone':'Mute microphone');
+ $('widget-mute').title=!liveOn?'Start a conversation to use mute':micMuted?'Unmute microphone':'Mute microphone';
+ if(micMuted)$('widget-status').textContent='Muted';
  $('widget-stop').hidden=state.value!=='SPEAKING';
+}
+function syncScreenAwareness(){
+ $('widget-awareness').setAttribute('aria-pressed',String(screenAwareness));
+ $('widget-awareness').setAttribute('aria-label',screenAwareness?'Screen awareness on':'Screen awareness off');
+ $('widget-awareness').title=screenAwareness?'Screen awareness on · click to pause':'Screen awareness off · click to start';
+ clearInterval(screenTimer);screenTimer=0;
+ if(screenAwareness)screenTimer=setInterval(()=>{if(performance.now()-lastUserActivity>45000&&performance.now()-lastScreenObservation>180000)observeScreen();},15000);
+}
+async function observeScreen(){
+ if(!screenAwareness||!window.desktop?.captureScreen||!['IDLE','LISTENING'].includes(state.value)||starting)return;
+ const capture=await window.desktop.captureScreen();
+ if(!capture?.ok){screenAwareness=false;syncScreenAwareness();error(capture?.error||'Screen awareness could not start.');return;}
+ const image=capture.image?.split(',',2)[1];if(!image)return;
+ lastScreenObservation=performance.now();audio.setListening(false);interrupt();await audio.ready();
+ begin({text:'Screen awareness',image,screenObservation:true,screenSource:capture.source||'Display'});
 }
 new MutationObserver(syncWidgetStatus).observe($('status').parentElement,{subtree:true,childList:true,attributes:true});
 function closeWidgetMenu(restoreFocus=true){$('widget-menu').hidden=true;$('widget-quality-panel').hidden=true;$('widget-quality').setAttribute('aria-expanded','false');$('widget-more').setAttribute('aria-expanded','false');if(restoreFocus)$('widget-more').focus();}
@@ -217,23 +265,25 @@ window.addEventListener('keydown',event=>{
 
 // Pointer capture keeps the drag active as the native window follows the cursor.
 for(const surface of [$('stage'),$('widget-drag')]){
-  let pointer=null;
-  const endDrag=()=>{
+  let pointer=null,origin=null,moved=false;
+  const endDrag=event=>{
     if(pointer===null)return;
     const id=pointer;pointer=null;
     window.desktop?.stopDrag();
     document.body.classList.remove('dragging');
     avatar.setDragging(false);
     if(surface.hasPointerCapture(id))surface.releasePointerCapture(id);
+    if(surface===$('stage')&&!moved&&event?.type==='pointerup')interactWithAvatar();
   };
   surface.addEventListener('pointerdown',event=>{
     if(!window.desktop||!document.body.classList.contains('widget')||event.button!==0)return;
-    event.preventDefault();pointer=event.pointerId;
+    event.preventDefault();pointer=event.pointerId;origin={x:event.clientX,y:event.clientY};moved=false;
     surface.setPointerCapture(pointer);
     document.body.classList.add('dragging');
     avatar.setDragging(true);
     window.desktop.startDrag();
   });
+  surface.addEventListener('pointermove',event=>{if(pointer!==null&&origin&&Math.hypot(event.clientX-origin.x,event.clientY-origin.y)>5)moved=true;});
   surface.addEventListener('pointerup',endDrag);
   surface.addEventListener('pointercancel',endDrag);
   surface.addEventListener('lostpointercapture',endDrag);
@@ -241,12 +291,27 @@ for(const surface of [$('stage'),$('widget-drag')]){
   window.addEventListener('beforeunload',endDrag);
 }
 
+function interactWithAvatar(){
+ if(state.value!=='IDLE'||performance.now()-lastAvatarInteraction<550)return;
+ lastAvatarInteraction=performance.now();lastUserActivity=lastAvatarInteraction;
+ const reactions={robot:['curious','happy'],nova:['happy','curious','surprised'],butler:['curious','happy'],pixel:['surprised','happy','curious'],luma:['curious','happy']};
+ const choices=reactions[config?.conversation?.persona]||['happy'];
+ const emotion=choices[avatarInteractionIndex++%choices.length];
+ document.body.classList.remove('avatar-touched');void $('stage').offsetWidth;document.body.classList.add('avatar-touched');
+ clearTimeout(avatarInteractionTimer);avatar.setExpression(emotion);
+ avatarInteractionTimer=setTimeout(()=>{document.body.classList.remove('avatar-touched');if(state.value==='IDLE')avatar.setExpression('relaxed');},900);
+}
+
 function syncBotUI(){
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
- $('widget-name').textContent=name;const profile=config.performanceProfile||'medium';$('widget-quality').textContent='Performance · '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended');$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended')+' · click to change';$('widget-quality-slider').value=profile==='medium'?'1':'0';$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
+ $('widget-name').textContent=name;const profile=config.performanceProfile||'medium';$('widget-quality').textContent='Performance · '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended');$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended')+' · click to change';$('widget-quality-slider').value=String({low:0,medium:1,high:2}[profile]??1);$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
  $('stage').setAttribute('aria-label',name+' avatar');
  $('widget-drag').setAttribute('aria-label','Drag to move '+name);
  document.body.dataset.bot=id;
+ $('widget-bot-icon').src=`/assets/bots/${({robot:'rivet',nova:'nova',butler:'sterling',pixel:'pixel',luma:'luma'})[id]||'rivet'}-portrait.png`;
+ $('widget-bot-icon').alt=name;
+ $('widget-picker-toggle').title=`Choose companion · current: ${name}`;
+ $('widget-picker-toggle').setAttribute('aria-label',$('widget-picker-toggle').title);
 }
 function switchBot(id){
  if(!config?.bots?.[id]||socket.readyState!==1)return;
@@ -260,25 +325,27 @@ function openBotLibrary(){
    const button=document.createElement('button');button.className='bot-card '+id;
    const selected=id===config.conversation.persona;
    button.setAttribute('aria-pressed',String(selected));
-   const icon=document.createElement('span');icon.className='bot-mark';icon.textContent=({nova:'♡',robot:'⚙',butler:'◈',pixel:'✦',luma:'◌'})[id]||'◌';
+   const icon=document.createElement('img');icon.className='bot-mark';icon.src=`/assets/bots/${({robot:'rivet',nova:'nova',butler:'sterling',pixel:'pixel',luma:'luma'})[id]||'rivet'}-portrait.png`;icon.alt='';
    const info=document.createElement('span');const name=document.createElement('b');name.textContent=bot.name+(selected?' · current':'');
    const detail=document.createElement('small');detail.textContent=({nova:'Charming, playful assistant',robot:'Witty repair robot',butler:'Wise British-style butler',pixel:'Bold marketing intern',luma:'Product designer & creative director'})[id]||'Custom companion';
    info.append(name,detail);button.append(icon,info);
    button.onclick=()=>{if(!selected)switchBot(id);closeBotLibrary();};cards.append(button);
  }
- closeWidgetMenu(false);$('bot-library').hidden=false;$('library-close').focus();
+ closeWidgetMenu(false);$('bot-library').hidden=false;$('widget-picker-toggle').setAttribute('aria-expanded','true');$('library-close').focus();
 }
-function closeBotLibrary(){$('bot-library').hidden=true;$('widget-more').focus();}
+function closeBotLibrary(){$('bot-library').hidden=true;$('widget-picker-toggle').setAttribute('aria-expanded','false');}
 $('widget-bot').onclick=()=>{$('bot-library').hidden?openBotLibrary():closeBotLibrary();};
+$('widget-picker-toggle').onclick=()=>{$('bot-library').hidden?openBotLibrary():closeBotLibrary();};
 $('widget-quality').onclick=()=>{$('widget-quality-panel').hidden=!$('widget-quality-panel').hidden;$('widget-quality').setAttribute('aria-expanded',String(!$('widget-quality-panel').hidden));};
-$('widget-quality-slider').onchange=()=>{const profile=['low','medium'][Number($('widget-quality-slider').value)];if(profile===config.performanceProfile)return;closeWidgetMenu();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:profile});};
+$('widget-quality-slider').onchange=()=>{const profile=['low','medium','high'][Number($('widget-quality-slider').value)];if(profile===config.performanceProfile)return;closeWidgetMenu();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:profile});};
 $('library-close').onclick=closeBotLibrary;
-window.addEventListener('pointerdown',event=>{if(!$('bot-library').hidden&&!$('bot-library').contains(event.target)&&!$('widget-bot').contains(event.target))$('bot-library').hidden=true;});
+window.addEventListener('pointerdown',event=>{if(!$('bot-library').hidden&&!$('bot-library').contains(event.target)&&!$('widget-bot').contains(event.target)&&!$('widget-picker-toggle').contains(event.target))closeBotLibrary();});
 
 $('bot-select').onchange=()=>switchBot($('bot-select').value);
 
 const widgetIcons={
  'widget-mic':'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M9 22h6"/>',
+ 'widget-mute':'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 10.5 6.1M12 19v3M9 22h6M3 3l18 18"/>',
  'widget-stop':'<rect x="6" y="6" width="12" height="12" rx="3"/>',
  'widget-chat-toggle':'<path d="M5 5h14v10H9l-4 4V5Z"/><path d="M8 9h8M8 12h5"/>',
  'widget-awareness':'<path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>',
@@ -288,7 +355,7 @@ const widgetIcons={
  'expand':'<path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/>',
  'widget-close':'<path d="m7 7 10 10M17 7 7 17"/>'
 };
-for(const [id,paths] of Object.entries(widgetIcons).filter(([id])=>['widget-mic','widget-stop','widget-chat-toggle','widget-awareness','expand'].includes(id)))$(id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
+for(const [id,paths] of Object.entries(widgetIcons).filter(([id])=>['widget-mic','widget-mute','widget-stop','widget-chat-toggle','widget-awareness','expand'].includes(id)))$(id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
 
 function setWidgetChat(open,focus=true){
  const shouldOpen=Boolean(open)&&document.body.classList.contains('widget');
@@ -296,6 +363,7 @@ function setWidgetChat(open,focus=true){
  $('widget-chat-toggle').setAttribute('aria-expanded',String(shouldOpen));
  $('widget-chat-toggle').setAttribute('aria-label',shouldOpen?'Close chat':'Open chat');
  $('widget-chat-toggle').title=shouldOpen?'Close chat':'Open chat';
+ if(shouldOpen){widgetUnread=0;syncWidgetUnread();}
  window.desktop?.widgetChat(shouldOpen);
  if(focus){if(shouldOpen)$('widget-text').focus();else $('widget-chat-toggle').focus();}
 }

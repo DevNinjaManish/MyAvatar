@@ -12,6 +12,8 @@ No paid API is required. The app binds only to `127.0.0.1`; microphone audio, co
 - State-aware portrait hardware: speaker equalizers illuminate only while a companion is speaking.
 - Short greetings and automatic hands-free listening after launch, bot changes, and performance changes.
 - Persistent selected bot, microphone mode, and performance mode in ignored local settings.
+- Opt-in screen awareness with brief companion comments; raw frames are discarded and only derived comments enter the local activity log.
+- Click reactions and an icon-based companion picker in the compact widget.
 
 ## Bots
 
@@ -43,11 +45,13 @@ npm run setup
 
 Check that the Mac, local services, models, and speech assets are ready with `npm run doctor`. The report stays on the Mac and identifies missing prerequisites.
 
-Download the Fast and Balanced models. Fast uses about 1 GB; Balanced uses about 3.3 GB. Speech assets add roughly 500 MB.
+Download Fast and Balanced for the normal experience. High is optional. Fast uses about 1 GB, Balanced about 3.3 GB, and High about 6.6 GB. Speech assets add roughly 500 MB.
 
 ```sh
 ollama pull huihui_ai/qwen3.5-abliterated:0.8b
 ollama pull huihui_ai/qwen3.5-abliterated:4b
+# Optional power mode
+ollama pull huihui_ai/qwen3.5-abliterated:9b
 .venv/bin/python scripts/download_models.py
 ```
 
@@ -69,12 +73,15 @@ Open **Settings** from the widget or expanded view.
 | --- | --- | --- |
 | Fast | `huihui_ai/qwen3.5-abliterated:0.8b`, 2K context, 45 FPS | Lowest latency and memory use |
 | Balanced · Recommended | `huihui_ai/qwen3.5-abliterated:4b`, 4K context, 60 FPS | Natural everyday voice conversations |
+| High · Power | `huihui_ai/qwen3.5-abliterated:9b`, 6K context, 60 FPS | Harder planning, coding, and writing on Macs with enough memory |
 
 Widget size remains fixed in both modes. Switching mode gives a greeting, then resumes hands-free listening.
 
 ## Use and privacy
 
 On first launch, onboarding explains the local-only design, lets you choose a companion and performance mode, then asks for microphone access only when you begin a conversation. Speak, then pause briefly to submit a turn. Stop ends playback and microphone capture. The state display shows Listening, Thinking, and Speaking.
+
+The widget eye enables screen awareness. It takes an immediate snapshot and, while left on, observes again only after an idle interval. Screen images are sent only to the configured Ollama service on `127.0.0.1`, discarded after the turn, and never added to conversation memory. Derived comments are stored in ignored `data/screen-awareness/events.jsonl`.
 
 [`config.json`](config.json) contains provider defaults, bot prompts, voices, profiles, and VAD tuning. Runtime choices save to ignored `data/settings.json`; no API key is stored. Conversation memory is off by default and can be enabled in Settings; it stays in ignored local files.
 

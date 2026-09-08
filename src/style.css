@@ -100,6 +100,17 @@ main {
   background:radial-gradient(circle at var(--avatar-light-x,50%) var(--avatar-light-y,44%),#b9f6e018 0%,transparent 38%);
   transition:background-position .3s ease;
   z-index:0}
+#stage::after {
+  content:'';
+  position:absolute;
+  inset:12%;
+  z-index:2;
+  pointer-events:none;
+  border:1px solid color-mix(in srgb,var(--accent) 65%,transparent);
+  border-radius:50%;
+  opacity:0;
+  transform:scale(.72)}
+body.avatar-touched #stage::after {animation:avatar-touch .72s cubic-bezier(.2,.7,.2,1)}
 #stage canvas {
   position:relative;
   z-index:1}
@@ -302,7 +313,7 @@ body.widget.widget-chat-open #widget-tools {
   gap:5px}
 body.widget.widget-chat-open .widget-caption {height:21px;padding:3px 9px}
 body.widget.widget-chat-open .widget-toolbar {padding:3px}
-body.widget.widget-chat-open .widget-toolbar button {width:31px;height:31px;padding:6px}
+body.widget.widget-chat-open .widget-toolbar button {width:27px;height:31px;padding:5px}
 body.widget.widget-chat-open #widget-chat {
   display:flex;
   order:2;
@@ -317,6 +328,9 @@ body.widget.widget-chat-open #widget-chat {
   background:#192124f5;
   box-shadow:0 5px 14px #0003}
 .widget-chat-heading {display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-size:11px;font-weight:650}
+.widget-chat-actions {display:flex;align-items:center;gap:3px}
+.widget-chat-actions button {height:22px;padding:2px 5px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:9px}
+.widget-chat-actions button:hover:not(:disabled) {background:#ffffff10;color:var(--ink)}
 #widget-chat-close {width:24px;height:20px;padding:0;border:0;background:transparent;color:var(--muted);font-size:17px;line-height:1}
 #widget-messages {flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:3px}
 #widget-messages .message {padding:7px 0;font-size:11px;line-height:1.45}
@@ -335,7 +349,18 @@ body.widget.widget-chat-open #widget-chat {
   border-radius:20px;
   background:#192124f5;
   border:1px solid var(--line);
-  box-shadow:0 2px 6px #0002}
+  box-shadow:0 2px 6px #0002;
+  color:var(--ink);
+  cursor:pointer}
+.widget-caption:hover {background:#202b2ff5;border-color:#ffffff30}
+#widget-bot-icon {
+  width:18px;
+  height:18px;
+  margin-left:-5px;
+  border-radius:50%;
+  object-fit:cover;
+  box-shadow:0 0 0 1px #ffffff28}
+.picker-chevron {margin-left:-5px;color:var(--muted);font-size:10px}
 #widget-name {
   font-size:12px;
   font-weight:650;
@@ -376,11 +401,11 @@ body[data-state=error] #widget-status:before {
   background:#192124f5;
   box-shadow:0 4px 10px #0003}
 .widget-toolbar button {
-  width:36px;
-  height:36px;
+  width:29px;
+  height:32px;
   border:0;
   border-radius:50%;
-  padding:8px;
+  padding:6px;
   display:grid;
   place-items:center;
   background:transparent;
@@ -393,9 +418,14 @@ body[data-state=error] #widget-status:before {
 .widget-toolbar #widget-mic.active {
   background:var(--accent);
   color:#173c2e}
+.widget-toolbar #widget-mute.muted {
+  background:#613c42;
+  color:#ffd1d6}
 .widget-toolbar #widget-stop {
   color:#ffd3c0}
-.widget-toolbar #widget-awareness[aria-pressed=true] {background:#3b3948;color:#ddd0ff}
+.widget-toolbar #widget-awareness[aria-pressed=true] {background:#3b3948;color:#ddd0ff;box-shadow:0 0 10px #c7afff45}
+#widget-chat-toggle {position:relative}
+#widget-chat-toggle[data-unread]:not([data-unread=''])::after {content:attr(data-unread);position:absolute;right:-2px;top:-3px;min-width:13px;height:13px;padding:0 3px;display:grid;place-items:center;border-radius:8px;background:#f09ab9;color:#301923;font-size:8px;font-weight:750;box-shadow:0 0 0 2px #192124}
 
 /* Secondary views stay rectangular and within the native window. */
 body.widget #widget-menu,body.widget #bot-library {
@@ -492,13 +522,14 @@ body.widget #widget-menu {
 .bot-mark {
   width:28px;
   height:32px;
-  display:grid;
-  place-items:center;
+  display:block;
   border-radius:9px;
   background:#39514e;
   color:#c5e7d9;
+  object-fit:cover;
   flex-shrink:0;
-  font-size:18px}
+  font-size:18px;
+  box-shadow:0 0 0 1px #ffffff24}
 .nova .bot-mark {
   background:#513b49;
   color:#f0c6db}
@@ -546,6 +577,11 @@ body.widget .bot-mark {width:25px;height:27px;border-radius:8px;font-size:15px}
 }
 @keyframes companion-speak {
   50% {transform:scale(1.05);opacity:.9}
+}
+@keyframes avatar-touch {
+  0% {opacity:.8;transform:scale(.72)}
+  70% {opacity:.24}
+  100% {opacity:0;transform:scale(1.04)}
 }
 
 #onboarding {
