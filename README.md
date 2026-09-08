@@ -46,7 +46,7 @@ Check that the Mac, local services, models, and speech assets are ready with `np
 Download the Fast and Balanced models. Fast uses about 1 GB; Balanced uses about 3.3 GB. Speech assets add roughly 500 MB.
 
 ```sh
-ollama pull huihui_ai/qwen3.5-abliterated:0.8B
+ollama pull huihui_ai/qwen3.5-abliterated:0.8b
 ollama pull huihui_ai/qwen3.5-abliterated:4B
 .venv/bin/python scripts/download_models.py
 ```
@@ -67,7 +67,7 @@ Open **Settings** from the widget or expanded view.
 
 | Mode | LLM | Best for |
 | --- | --- | --- |
-| Fast | `huihui_ai/qwen3.5-abliterated:0.8B`, 2K context, 45 FPS | Lowest latency and memory use |
+| Fast | `huihui_ai/qwen3.5-abliterated:0.8b`, 2K context, 45 FPS | Lowest latency and memory use |
 | Balanced · Recommended | `huihui_ai/qwen3.5-abliterated:4B`, 4K context, 60 FPS | Natural everyday voice conversations |
 
 Widget size remains fixed in both modes. Switching mode gives a greeting, then resumes hands-free listening.

@@ -190,6 +190,14 @@ async def ws(socket:WebSocket):
                 while True:
                     chunk=await queue.get()
                     if chunk is None:return
+                    spoken=speech_text(chunk)
+                    # A streamed model reply can contain only a decorative symbol or
+                    # an internal tag after chunking. Kokoro cannot synthesize an
+                    # empty string, so treat it as a silent fragment instead of
+                    # failing the whole turn.
+                    if not spoken:
+                        log.debug('Skipped an empty speech fragment')
+                        continue
                     synth_start=time.perf_counter()
                     # Apply emotion-based speed modifier to the current TTS config
                     current_tts=copy.deepcopy(turn_config['tts'])
@@ -197,7 +205,7 @@ async def ws(socket:WebSocket):
                         emotion=turn_config['current_emotion']
                         mod={ 'happy':1.1, 'surprised':1.2, 'sad':0.85, 'relaxed':0.95, 'curious':1.05 }.get(emotion, 1.0)
                         current_tts['speed']=current_tts.get('speed',1.0)*mod
-                    wav=await loop.run_in_executor(tts_pool,speech.generate,speech_text(chunk),current_tts)
+                    wav=await loop.run_in_executor(tts_pool,speech.generate,spoken,current_tts)
                     if 'first_tts_ms' not in metrics:
                         metrics['first_tts_ms']=round((time.perf_counter()-synth_start)*1000)
                         metrics['server_first_audio_ms']=round((time.perf_counter()-start)*1000)

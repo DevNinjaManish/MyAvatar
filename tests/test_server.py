@@ -44,6 +44,19 @@ class Pipeline(unittest.TestCase):
                         self.assertIn('bad voice',e['message']);break
                 else:self.fail('No error received')
 
+    def test_symbol_only_speech_fragment_is_skipped(self):
+        async def fake_stream(messages,config):
+            yield '✨'
+        with patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate') as generate:
+            with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
+                ws.receive_json();ws.receive_json();ws.send_json({'type':'turn','turn':3,'text':'Hi'})
+                events=[]
+                for _ in range(20):
+                    event=ws.receive_json();events.append(event)
+                    if event['type'] in ('done','error'):break
+                self.assertEqual(events[-1]['type'],'done')
+                generate.assert_not_called()
+
 class Recording(unittest.TestCase):
     def test_silent_recording_does_not_hallucinate_text(self):
         import numpy as np

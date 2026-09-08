@@ -23,7 +23,7 @@ START_PROCESS='[n]ode scripts/start\\.mjs'
 if pgrep -f "$START_PROCESS" >/dev/null; then
   # Keep an existing visible companion running, but recover when its services
   # outlive Electron after the window was closed.
-  if pgrep -f "$ROOT/node_modules/electron/dist/[E]lectron.app/Contents/MacOS/Electron" >/dev/null; then
+  if pgrep -f "$ROOT/node_modules/electron/dist/[E]lectron.app/Contents/MacOS/Electron $ROOT" >/dev/null; then
     exit 0
   fi
   pkill -TERM -f "$START_PROCESS"
