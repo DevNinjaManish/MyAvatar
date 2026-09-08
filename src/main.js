@@ -92,6 +92,18 @@ function begin(data){
     }, 800);
   }
 }
+async function beginUserTurn(data){
+  if(screenAwareness&&!data.image&&window.desktop?.captureScreen){
+    const capture=await window.desktop.captureScreen();
+    if(capture?.ok){
+      const image=capture.image?.split(',',2)[1];
+      if(image){data={...data,image,screenSource:capture.source||'Display'};lastScreenObservation=performance.now();}
+    }else{
+      screenAwareness=false;syncScreenAwareness();error(capture?.error||'Screen awareness could not capture this turn.');
+    }
+  }
+  begin(data);
+}
 function startListeningSoon(){if($('interaction').value!=='live'||$('mic').disabled||liveOn||recording)return;setTimeout(()=>{$('mic').click();},180);}
 function playGreeting(m){
  interrupt(false);message(config.bots?.[config.conversation.persona]?.name||'Companion',m.text);state.set('SPEAKING');avatar.setExpression('happy');
@@ -122,7 +134,7 @@ $('mic').onclick=async()=>{
  if(starting)return;
  try{
   if(liveOn){interrupt(true,true);return;}
-  if(recording){const pcm=audio.stopRecord();recording=false;updateMicLabel();begin({pcm:toBase64(new Uint8Array(pcm.buffer))});return;}
+  if(recording){const pcm=audio.stopRecord();recording=false;updateMicLabel();await beginUserTurn({pcm:toBase64(new Uint8Array(pcm.buffer))});return;}
   interrupt();starting=true;$('mic').disabled=true;$('error').textContent='';
   const requestTurn=turn;
   if($('interaction').value==='live'){
@@ -131,7 +143,7 @@ $('mic').onclick=async()=>{
       if(state.value==='SPEAKING'){
         interrupt();
       }
-      begin({pcm:toBase64(new Uint8Array(pcm.buffer)),...meta});
+      beginUserTurn({pcm:toBase64(new Uint8Array(pcm.buffer)),...meta}).catch(error);
     },config.audio?.vad);
     if(requestTurn!==turn){audio.stopRecord();return;}
     liveOn=true;micMuted=false;audio.setListening(true);
@@ -147,7 +159,7 @@ $('mic').onclick=async()=>{
 $('interaction').onchange=()=>{interrupt();updateMicLabel();};
 $('stop').onclick=()=>interrupt();
 async function submitText(input){
- try{const text=input.value.trim();if(!text)return;lastUserActivity=performance.now();if($('mic').disabled)throw Error('Wait for local voice preparation to finish.');interrupt();await audio.ready();$('text').value='';$('widget-text').value='';begin({text});}catch(e){error(e);}
+ try{const text=input.value.trim();if(!text)return;lastUserActivity=performance.now();if($('mic').disabled)throw Error('Wait for local voice preparation to finish.');interrupt();await audio.ready();$('text').value='';$('widget-text').value='';await beginUserTurn({text});}catch(e){error(e);}
 }
 $('text-form').onsubmit=event=>{event.preventDefault();submitText($('text'));};
 $('widget-text-form').onsubmit=event=>{event.preventDefault();submitText($('widget-text'));};
@@ -210,7 +222,11 @@ $('widget-mute').onclick=()=>{
 $('widget-stop').onclick=()=>$('stop').click();
 $('widget-awareness').onclick=async()=>{
  screenAwareness=!screenAwareness;syncScreenAwareness();
- if(screenAwareness)await observeScreen();
+ if(screenAwareness){
+   if(!['IDLE','LISTENING'].includes(state.value))interrupt();
+   $('status').textContent='Looking at your screen…';
+   await observeScreen();
+ }
 };
 $('widget-settings').onclick=openSettings;
 $('widget-minimize').onclick=()=>window.desktop?.minimize();
@@ -243,7 +259,7 @@ async function observeScreen(){
  if(!capture?.ok){screenAwareness=false;syncScreenAwareness();error(capture?.error||'Screen awareness could not start.');return;}
  const image=capture.image?.split(',',2)[1];if(!image)return;
  lastScreenObservation=performance.now();audio.setListening(false);interrupt();await audio.ready();
- begin({text:'Screen awareness',image,screenObservation:true,screenSource:capture.source||'Display'});
+ begin({text:'Look at the current screen and briefly say what I appear to be doing.',image,screenObservation:true,screenSource:capture.source||'Display'});
 }
 new MutationObserver(syncWidgetStatus).observe($('status').parentElement,{subtree:true,childList:true,attributes:true});
 function closeWidgetMenu(restoreFocus=true){$('widget-menu').hidden=true;$('widget-quality-panel').hidden=true;$('widget-quality').setAttribute('aria-expanded','false');$('widget-more').setAttribute('aria-expanded','false');if(restoreFocus)$('widget-more').focus();}

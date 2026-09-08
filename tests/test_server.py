@@ -74,6 +74,27 @@ class Pipeline(unittest.TestCase):
                 self.assertIn('reviewing a design',saved)
                 self.assertNotIn(frame,saved)
 
+    def test_screen_question_uses_image_and_remains_in_conversation_history(self):
+        seen=[]
+        async def fake_stream(messages,config):
+            seen.extend(messages)
+            yield 'You have a code review open.'
+        with tempfile.TemporaryDirectory() as directory,patch('backend.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.app.SCREEN_EVENTS_PATH',Path(directory)/'events.jsonl'),patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate',return_value=b'RIFFtest'):
+            with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
+                ws.receive_json();ws.receive_json()
+                frame=base64.b64encode(b'current screen').decode()
+                ws.send_json({'type':'turn','turn':8,'text':'What is on my screen?','image':frame,'screenSource':'Main display'})
+                while ws.receive_json()['type']!='done':pass
+                self.assertEqual(seen[-1]['images'],[frame])
+                self.assertIn('answer the user’s request directly',seen[0]['content'])
+                ws.send_json({'type':'bot','bot':'robot'})
+                ws.receive_json();ws.receive_json()
+                ws.send_json({'type':'bot','bot':'nova'})
+                ws.receive_json()
+                history=ws.receive_json()['history']
+                self.assertEqual(history[-2]['content'],'What is on my screen?')
+                self.assertEqual(history[-1]['content'],'You have a code review open.')
+
 class Recording(unittest.TestCase):
     def test_silent_recording_does_not_hallucinate_text(self):
         import numpy as np

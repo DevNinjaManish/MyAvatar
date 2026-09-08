@@ -34,6 +34,60 @@ const expressionPose={
   sad:{lift:-.007,pitch:.012,yaw:.012,roll:-.01},
   curious:{lift:.01,pitch:.01,yaw:.03,roll:-.02}
 };
+const personaMotion=(bot,state,t,mouth)=>{
+  const speaking=state==='SPEAKING',listening=state==='LISTENING',thinking=state==='THINKING';
+  const energy=Math.max(.2,mouth);
+  switch(bot){
+    case 'robot':
+      // Rivet surveys problems in short, precise mechanical passes and gives
+      // compact confirmation nods while explaining a fix.
+      return {
+        lift:speaking?Math.sin(t*5.2)*.003*energy:0,
+        pitch:thinking?Math.sin(t*6.4)*.006:speaking?-Math.abs(Math.sin(t*3.8))*.007*energy:0,
+        yaw:thinking?Math.sin(t*2.8)*.018:listening?Math.sin(t*1.3)*.005:0,
+        roll:thinking?Math.sin(t*5.6)*.004:0,scale:0
+      };
+    case 'nova':
+      // Nova maintains social eye contact, leans toward the user, and speaks
+      // with a gentle conversational sway rather than a mechanical rhythm.
+      return {
+        lift:listening?.005*Math.sin(t*1.45):speaking?.004*Math.sin(t*2.1):0,
+        pitch:listening?-.008+.003*Math.sin(t*1.8):speaking?.006*Math.sin(t*1.7)*energy:0,
+        yaw:thinking?.014*Math.sin(t*.9):speaking?.009*Math.sin(t*1.3)*energy:0,
+        roll:.006*Math.sin(t*(speaking?1.9:.72)),scale:listening?.003:0
+      };
+    case 'butler':
+      // Sterling stays composed. His motion is economical: an attentive lean
+      // and slow, deliberate nods at the end of spoken phrases.
+      return {
+        lift:0,
+        pitch:listening?-.005:speaking?-Math.abs(Math.sin(t*1.65))*.005*energy:thinking?.003*Math.sin(t*.7):0,
+        yaw:thinking?.006*Math.sin(t*.55):0,
+        roll:listening?-.003:thinking?.004*Math.sin(t*.48):0,scale:0
+      };
+    case 'pixel':
+      // Pixel anticipates, bounces, and changes direction quickly. The motion
+      // remains continuous so the energy never reads as visual jitter.
+      return {
+        lift:(speaking?Math.abs(Math.sin(t*4.2))*.008*energy:listening?Math.sin(t*2.8)*.005:Math.sin(t*1.9)*.002),
+        pitch:speaking?Math.sin(t*4.2)*.008*energy:listening?-.009:0,
+        yaw:thinking?Math.sin(t*3.1)*.016:speaking?Math.sin(t*2.8)*.01*energy:0,
+        roll:Math.sin(t*(thinking?2.4:1.7))*(thinking?.01:.006),
+        scale:listening?.004+Math.sin(t*2.8)*.002:speaking?Math.abs(Math.sin(t*4.2))*.003*energy:0
+      };
+    case 'luma':
+      // Luma inspects a composition from several angles, pausing in thoughtful
+      // asymmetry before returning to centre.
+      return {
+        lift:thinking?.003*Math.sin(t*.8):0,
+        pitch:thinking?.006*Math.sin(t*.72):listening?-.004:0,
+        yaw:thinking?.013*Math.cos(t*.62):listening?.006*Math.sin(t*.9):0,
+        roll:thinking?.014*Math.sin(t*.78):speaking?.005*Math.sin(t*1.2):.003*Math.sin(t*.45),
+        scale:thinking?.002*Math.sin(t*.8):0
+      };
+    default:return {lift:0,pitch:0,yaw:0,roll:0,scale:0};
+  }
+};
 
 /**
  * Art-directed 2.5D face used for the compact widget.
@@ -118,13 +172,14 @@ export class PortraitFace {
     const emotionMix=smoothstep(emotionTransition),oldExpression=expressionPose[previousEmotion]||expressionPose.relaxed,newExpression=expressionPose[emotion]||expressionPose.relaxed;
     const expression={lift:blend(oldExpression,newExpression,emotionMix,'lift'),pitch:blend(oldExpression,newExpression,emotionMix,'pitch'),yaw:blend(oldExpression,newExpression,emotionMix,'yaw'),roll:blend(oldExpression,newExpression,emotionMix,'roll')};
     const characterGesture=state==='THINKING'?Math.sin(t*4.4*temperament)*.011*this.character.tilt:state==='LISTENING'?Math.sin(t*2.2*temperament)*.008*this.character.tilt:0;
+    const signature=personaMotion(this.bot,state,t,this.mouthValue);
     const proximity=attention.dragging?0:1;
-    this.root.position.y=1.30+(breath*(speaking ? .011 : .006)+pose.lift+speechBeat*.006+expression.lift+this.transitionKick*.01+this.expressionKick*.006+this.ambientKick*this.ambientTarget.lift+this.microGesture.lift+this.surpriseJump*.02-attention.y*.008*proximity+this.dragKick*.01)*motion;
-    this.root.scale.setScalar(1+(pose.scale+Math.sin(t*.8*temperament)*.0018+speechBeat*.003+this.microGesture.scale+this.dragKick*.006)*motion);
+    this.root.position.y=1.30+(breath*(speaking ? .011 : .006)+pose.lift+signature.lift+speechBeat*.006+expression.lift+this.transitionKick*.01+this.expressionKick*.006+this.ambientKick*this.ambientTarget.lift+this.microGesture.lift+this.surpriseJump*.02-attention.y*.008*proximity+this.dragKick*.01)*motion;
+    this.root.scale.setScalar(1+(pose.scale+signature.scale+Math.sin(t*.8*temperament)*.0018+speechBeat*.003+this.microGesture.scale+this.dragKick*.006)*motion);
     this.root.rotation.set(
-      (pose.pitch+breath*.006+speechBeat*.014+this.reaction*.018+expression.pitch-attention.y*.018*proximity)*motion,
-      (pose.yaw+this.gaze*.03+attentive+thoughtful+characterGesture+expression.yaw+this.microGesture.yaw+attention.x*.038*proximity)*motion,
-      (pose.roll+Math.sin(t*.56*temperament)*.006+(listening ? .008 : 0)+expression.roll+this.microGesture.roll+this.ambientKick*this.ambientTarget.roll)*motion
+      (pose.pitch+signature.pitch+breath*.006+speechBeat*.014+this.reaction*.018+expression.pitch-attention.y*.018*proximity)*motion,
+      (pose.yaw+signature.yaw+this.gaze*.03+attentive+thoughtful+characterGesture+expression.yaw+this.microGesture.yaw+attention.x*.038*proximity)*motion,
+      (pose.roll+signature.roll+Math.sin(t*.56*temperament)*.006+(listening ? .008 : 0)+expression.roll+this.microGesture.roll+this.ambientKick*this.ambientTarget.roll)*motion
     );
     if(this.bust){
       // A small counter-shift separates the torso from the face like two
