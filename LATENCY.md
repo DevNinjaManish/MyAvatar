@@ -48,6 +48,8 @@ Recent live logs before tuning recorded 5.17–5.89 seconds from speech end to p
 
 Changes: first speech chunk capped near 56 characters (or an earlier clause), later chunks at 140 characters; prompts request a short opening and concise replies; Kokoro speed 1.06; silence detection 600 ms instead of 950 ms; post-playback microphone gate 250 ms instead of 550 ms; Ollama keep-alive 30 minutes instead of five. All values are configurable in config.json. Shorter silence detection can submit a turn during a long mid-sentence pause; raise audio.vad.silenceMs if that happens.
 
+Live listening now maintains an adaptive local noise floor in addition to the fixed threshold. It requires sustained onset, ignores impulse-like clicks, rejects sub-280 ms bursts, and high-pass filters microphone input at 95 Hz before VAD and STT. Browser echo cancellation, noise suppression, and automatic gain control remain enabled. The 500 ms end-of-turn silence is deliberately slightly longer than the earlier 450 ms value to reduce accidental submissions in noisy rooms; this is a robustness change and is not presented as a latency improvement.
+
 Two completed synthetic-audio tests of the updated running service:
 
 | Measurement | Run 1 | Run 2 |

@@ -41,11 +41,16 @@
   "audio": {
     "mode": "live",
     "vad": {
-      "threshold": 0.004,
-      "silenceMs": 450,
-      "minSpeechMs": 180,
+      "threshold": 0.0055,
+      "silenceMs": 500,
+      "minSpeechMs": 280,
       "maxSpeechMs": 20000,
-      "preRollMs": 250
+      "preRollMs": 250,
+      "onsetMs": 140,
+      "onsetGraceMs": 30,
+      "noiseMultiplier": 2.2,
+      "noiseMargin": 0.0015,
+      "maxThreshold": 0.035
     },
     "resumeDelayMs": 250
   },

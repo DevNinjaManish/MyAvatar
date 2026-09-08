@@ -8,8 +8,8 @@ electron/preload.cjs              narrow window-mode IPC bridge
 src/avatar/Avatar.js             shared scene and portrait lifecycle
 src/avatar/PortraitFace.js       portrait texture, speaker-grille LEDs, camera shutter animation
 public/assets/bots/              included Rivet, Nova, Sterling, Pixel, and Luma portraits
-src/audio/engine.js              capture, resampling, audio queue, analyser
-src/audio/vad.js                 bounded local turn detector and silence trimming
+src/audio/engine.js              noise-suppressed capture, high-pass filter, resampling, playback analyser
+src/audio/vad.js                 adaptive noise floor, transient rejection, turn detection, silence trimming
 public/capture-worklet.js        microphone PCM extraction
 src/conversation/state.js        IDLE / LISTENING / THINKING / SPEAKING
 src/main.js                     UI and turn orchestration
@@ -47,4 +47,4 @@ The widget ships five original robot portraits: Rivet, Nova, Sterling, Pixel, an
 
 The expanded controls window and circular widget share one renderer/audio session without reconnecting or losing conversation history.
 
-Hands-free mode keeps one MediaStream open until the user turns it off. Capture gates close before transcription and remain closed throughout response generation/playback. The gate reopens after playback plus a short echo-settling interval. This is sequential hands-free conversation, not full-duplex voice barge-in. Silence buffering is bounded, brief noises are rejected, and Stop/disconnect/error close the stream.
+Hands-free mode keeps one MediaStream open until the user turns it off. Capture gates close before transcription and remain closed throughout response generation/playback. The gate reopens after playback plus a short echo-settling interval. This is sequential hands-free conversation, not full-duplex voice barge-in. Browser voice processing and a 95 Hz high-pass filter reduce echo and low-frequency room noise. The detector learns a local ambient floor, requires sustained speech onset, rejects impulse clicks and brief bursts, and bounds silence buffering. Stop, disconnect, and errors close the stream.

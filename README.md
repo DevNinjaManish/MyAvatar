@@ -83,7 +83,7 @@ On first launch, onboarding explains the local-only design, lets you choose a co
 
 The widget eye enables screen awareness. It takes an immediate snapshot and, while left on, observes again only after an idle interval. Screen images are sent only to the configured Ollama service on `127.0.0.1`, discarded after the turn, and never added to conversation memory. Derived comments are stored in ignored `data/screen-awareness/events.jsonl`.
 
-[`config.json`](config.json) contains provider defaults, bot prompts, voices, profiles, and VAD tuning. Runtime choices save to ignored `data/settings.json`; no API key is stored. Conversation memory is off by default and can be enabled in Settings; it stays in ignored local files.
+[`config.json`](config.json) contains provider defaults, bot prompts, voices, profiles, and VAD tuning. Voice activation adapts to steady ambient noise and rejects short clicks and bumps; unusually quiet microphones or loud rooms can be tuned with `audio.vad.threshold`, `noiseMultiplier`, and `minSpeechMs`. Runtime choices save to ignored `data/settings.json`; no API key is stored. Conversation memory is off by default and can be enabled in Settings; it stays in ignored local files.
 
 ## Validation
 

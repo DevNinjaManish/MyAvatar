@@ -11,16 +11,19 @@ export class AudioEngine{
   async record(onTimeout,onFrame){
     const captureGeneration=++this.captureGeneration;
     await this.ready();if(captureGeneration!==this.captureGeneration)return;let timedOut=false;let timeout;
-    const request=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+    const request=navigator.mediaDevices.getUserMedia({audio:{channelCount:{ideal:1},echoCancellation:{ideal:true},noiseSuppression:{ideal:true},autoGainControl:{ideal:true}}});
     request.then(stream=>{if(timedOut)stream.getTracks().forEach(track=>track.stop());},()=>{});
     let stream;
     try{stream=await Promise.race([request,new Promise((_,reject)=>{timeout=setTimeout(()=>{timedOut=true;reject(Error('Microphone permission is pending. Allow microphone access for Electron in macOS System Settings → Privacy & Security → Microphone, then try again.'));},15000);})]);}finally{clearTimeout(timeout);}
     if(captureGeneration!==this.captureGeneration){stream.getTracks().forEach(track=>track.stop());return;}
     this.stream=stream;this.chunks=[];this.input=this.ctx.createMediaStreamSource(this.stream);
+    // Remove desk rumble, HVAC vibration, and handling noise before VAD/STT.
+    // Browser echo cancellation and noise suppression remain enabled upstream.
+    this.highpass=this.ctx.createBiquadFilter();this.highpass.type='highpass';this.highpass.frequency.value=95;this.highpass.Q.value=.7;
     if(!this.workletLoaded){await this.ctx.audioWorklet.addModule('/capture-worklet.js');this.workletLoaded=true;}
     if(captureGeneration!==this.captureGeneration)return;
     this.recorder=new AudioWorkletNode(this.ctx,'capture');this.recorder.port.onmessage=e=>{if(onFrame)onFrame(e.data);else this.chunks.push(e.data);};
-    this.silent=this.ctx.createGain();this.silent.gain.value=0;this.input.connect(this.recorder).connect(this.silent).connect(this.ctx.destination);
+    this.silent=this.ctx.createGain();this.silent.gain.value=0;this.input.connect(this.highpass).connect(this.recorder).connect(this.silent).connect(this.ctx.destination);
     if(onTimeout)this.timer=setTimeout(onTimeout,59000);
   }
   async startLive(onUtterance,settings={}){
@@ -35,7 +38,7 @@ export class AudioEngine{
   stopRecord(){
     this.captureGeneration++;this.setListening(false);
     if(this.recorder){this.recorder.port.onmessage=null;this.recorder.port.close();}
-    clearTimeout(this.timer);this.recorder?.disconnect();this.input?.disconnect();this.silent?.disconnect();this.stream?.getTracks().forEach(t=>t.stop());
+    clearTimeout(this.timer);this.recorder?.disconnect();this.highpass?.disconnect();this.input?.disconnect();this.silent?.disconnect();this.stream?.getTracks().forEach(t=>t.stop());
     const chunks=this.chunks||[];const pcm=new Float32Array(chunks.reduce((n,c)=>n+c.length,0));let offset=0;for(const chunk of chunks){pcm.set(chunk,offset);offset+=chunk.length;}this.chunks=[];
     return resample(pcm,this.ctx?.sampleRate||16000);
   }
