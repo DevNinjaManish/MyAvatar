@@ -26,9 +26,12 @@ body.nova #widget-tools button.active{background:#a34963}
 /* A single quiet control strip leaves the face unobstructed. */
 body.widget #widget-tools{bottom:18px;gap:6px;pointer-events:none}
 .widget-toolbar{display:flex;align-items:center;gap:3px;padding:4px 6px;border-radius:24px;background:#101b24d9;border:1px solid #ffffff18;box-shadow:0 3px 12px #0002;pointer-events:auto}
+.widget-toolbar{backdrop-filter:blur(10px)}
 #widget-tools .widget-toolbar button,#widget-tools .widget-toolbar #widget-bot{display:grid;place-items:center;width:32px;height:32px;padding:7px;border:0;border-radius:50%;background:transparent;color:#d8e4e2;opacity:.72}
 #widget-tools .widget-toolbar button:hover,#widget-tools .widget-toolbar button:focus-visible{opacity:1;background:#ffffff20;outline:1px solid #ffffff44}
 #widget-tools .widget-toolbar button.active{opacity:1;background:#84d7b8;color:#162e25}
+#widget-tools .widget-toolbar button:nth-last-child(-n+2){opacity:.5}
+#widget-tools .widget-toolbar:hover button:nth-last-child(-n+2){opacity:.9}
 #widget-tools svg{width:18px;height:18px;pointer-events:none}
 #widget-tools #widget-status{font-size:9px;padding:2px 7px;background:#111b2388;opacity:.8}
 body.widget.nova #stage{background:radial-gradient(ellipse,#493442,#231f2d)}

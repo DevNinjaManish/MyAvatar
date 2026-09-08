@@ -34,7 +34,7 @@ app.whenReady().then(async()=>{
     if(event.sender!==win.webContents||!['widget','full'].includes(next))return mode;
     stopDrag();
     if(next===mode)return mode;
-    if(next==='full'){widgetBounds=win.getBounds();mode='full';win.setResizable(true);win.setFullScreen(true);notify();}
+    if(next==='full'){widgetBounds=win.getBounds();mode='full';win.setResizable(true);win.setMinimumSize(800,560);win.setSize(1120,720);win.center();notify();}
     else{mode='widget';if(win.isFullScreen()){win.once('leave-full-screen',()=>{win.setResizable(false);win.setBounds(widgetBounds);notify();});win.setFullScreen(false);}else{win.setResizable(false);win.setBounds(widgetBounds);notify();}}
     return mode;
   });

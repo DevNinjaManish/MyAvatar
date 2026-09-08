@@ -164,6 +164,11 @@ async def ws(socket:WebSocket):
                 await send('bot_history',history=history)
             elif msg['type']=='settings':
                 config.setdefault('audio',{})['mode']='manual' if msg.get('interaction')=='manual' else 'live'
+                profile_name=msg.get('performanceProfile')
+                profile=config.get('performanceProfiles',{}).get(profile_name)
+                if profile:
+                    config['performanceProfile']=profile_name
+                    for section in ('llm','conversation','avatar'):config[section].update(profile.get(section,{}))
                 await send('config',config=config)
             elif msg['type']=='metrics':timing.info(json.dumps(msg))
     except WebSocketDisconnect:pass

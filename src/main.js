@@ -18,7 +18,7 @@ function finish(){if(complete&&!audio.playing&&!audio.queue.length&&!pendingAudi
 function interrupt(notify=true){clearTimeout(resumeTimer);turn++;if(recording||liveOn){audio.stopRecord();recording=false;liveOn=false;updateMicLabel();}audio.stop();pendingAudio=0;decodeChain=Promise.resolve();complete=false;state.set('IDLE');avatar.setExpression('relaxed');if(notify&&socket.readyState===1)send({type:'stop'});}
 function begin(data){audio.setListening(false);turn++;inputKind=data.pcm?'speech':'text';metrics={input_kind:inputKind};started=performance.now()-(data.endDetectionMs||0);firstToken=null;firstAudio=null;complete=false;assistantNode=null;$('error').textContent='';$('metrics').textContent='';send({type:'turn',turn,...data});state.set('THINKING');}
 socket.onmessage=event=>{
- const m=JSON.parse(event.data);if(m.type==='preparing'){$('status').textContent='Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){$('mic').disabled=false;state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){$('mic').disabled=true;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';avatar.configure(config.avatar);avatar.showRobot(config.conversation.persona);syncBotUI();return;}if(m.type==='bot_history'){$('messages').replaceChildren();for(const item of m.history)message(item.role==='user'?'You':config.bots[config.conversation.persona]?.name||'Companion',item.content);return;}if(m.turn!==turn)return;
+ const m=JSON.parse(event.data);if(m.type==='preparing'){$('status').textContent='Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){$('mic').disabled=false;state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){$('mic').disabled=true;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';$('performance').value=config.performanceProfile||'low';performanceNote();avatar.configure(config.avatar);avatar.showRobot(config.conversation.persona);syncBotUI();return;}if(m.type==='bot_history'){$('messages').replaceChildren();for(const item of m.history)message(item.role==='user'?'You':config.bots[config.conversation.persona]?.name||'Companion',item.content);return;}if(m.turn!==turn)return;
  if(m.type==='state')state.set(m.state);
  if(m.type==='transcript'){if(inputKind==='speech')metrics.speech_to_stt_ms=Math.round(performance.now()-started);message('You',m.text);assistantNode=message(config.bots?.[config.conversation.persona]?.name||'Companion','');}
  if(m.type==='first_token')firstToken=performance.now();
@@ -64,7 +64,9 @@ $('text-form').onsubmit=async event=>{event.preventDefault();try{const text=$('t
 $('clear').onclick=()=>{interrupt();send({type:'clear'});$('messages').replaceChildren();};
 $('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidden;};
 $('settings-toggle').onclick=()=>$('settings').showModal();
-$('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value});$('settings').close();};
+$('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value});$('settings').close();};
+function performanceNote(){$('performance-note').textContent=$('performance').value==='medium'?'Uses the installed 4B model for stronger replies. Best on 16 GB Macs.':'Uses the smallest local model and lower-power rendering.';}
+$('performance').onchange=performanceNote;
 window.addEventListener('beforeunload',()=>{audio.stream?.getTracks().forEach(t=>t.stop());audio.stop();});
 // Public animation interface for experiments and automated shell validation.
 window.avatar=avatar;window.appState=state;
