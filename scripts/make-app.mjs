@@ -17,6 +17,7 @@ writeFileSync(resolve(app,'Contents/Info.plist'),`<?xml version="1.0" encoding="
 writeFileSync(resolve(macos,'MyAvatar'),`#!/bin/zsh
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 LOG="$HOME/Library/Logs/MyAvatar-launcher.log"
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 mkdir -p "$HOME/Library/Logs"
 if pgrep -f "$ROOT/scripts/start.mjs" >/dev/null; then
   exit 0
