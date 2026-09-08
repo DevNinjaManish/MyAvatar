@@ -14,3 +14,5 @@ logs/
 *.key
 
 assets/source/
+.myavatar-icon.iconset
+MyAvatar.app

@@ -16,30 +16,43 @@ No paid API is required at runtime. The app runs its service only on `127.0.0.1`
 
 ## Requirements
 
-- macOS on Apple Silicon; the project was developed on an M1 Pro with 16 GB unified memory.
+- macOS on Apple Silicon. The default profile targets 16 GB MacBook Airs as well as the M1 Pro development machine.
 - Node.js 22.12 or newer.
 - Python 3.11 and [uv](https://docs.astral.sh/uv/).
 - [Ollama](https://ollama.com/).
 
 ## Setup
 
+Install the three prerequisites once:
+
 ```sh
 brew install node uv
 brew install --cask ollama
 open -a Ollama
-
-cd /Users/Manish/GitHub/MyAvatar
-npm ci
-uv venv --python 3.11
-uv pip install -r requirements.lock
 ```
 
-Download the local models. The default Ollama model is roughly 3.4 GB; the speech weights add roughly 500 MB.
+Then clone and prepare the project with one command:
 
 ```sh
-ollama pull qwen3.5:4b
+git clone https://github.com/DevNinjaManish/MyAvatar.git
+cd MyAvatar
+npm run setup
+```
+
+Download the local models. The default Ollama model is roughly 1.0 GB; the speech weights add roughly 500 MB.
+
+```sh
+ollama pull qwen3.5:0.8b
 .venv/bin/python scripts/download_models.py
 ```
+
+Create a double-clickable Mac launcher after setup:
+
+```sh
+npm run app
+```
+
+This creates `MyAvatar.app` in the cloned folder. Keep it in that folder and double-click it whenever you want to launch the companion. It starts the local services and opens the widget without a Terminal command.
 
 ## Run
 
@@ -63,7 +76,7 @@ Use the widget bot-library icon or the full-window selector to switch. Each bot 
 
 ## Configuration
 
-[`config.json`](config.json) holds all local providers, model names, bot prompts, voices, VAD settings, and conversation tuning. The default model is swappable. Restart the app after editing persistent configuration.
+[`config.json`](config.json) holds all local providers, model names, bot prompts, voices, VAD settings, and conversation tuning. The fixed Air-friendly profile uses Qwen 3.5 0.8B, a 2,048-token context, four history turns, a 45 FPS renderer, a 1.25 device-pixel cap, and a 512 px portrait texture. This keeps unified-memory and GPU use low. Restart the app after editing persistent configuration.
 
 The project never stores an API key. A random per-launch token protects the loopback WebSocket between Electron and the local Python service; it is generated in memory and is not written to disk or committed.
 

@@ -32,7 +32,7 @@ async def warm_models():
     log.info('Speech models ready. Preparing Ollama model...')
     import httpx
     async with httpx.AsyncClient(timeout=180) as client:
-        response=await client.post(config['llm']['url']+'/api/generate',json={'model':config['llm']['model'],'prompt':'','stream':False,'keep_alive':config['llm'].get('keepAlive','30m'),'options':{'num_ctx':config['llm']['context']}})
+        response=await client.post(config['llm']['url']+'/api/generate',json={'model':config['llm']['model'],'prompt':'','stream':False,'think':False,'keep_alive':config['llm'].get('keepAlive','30m'),'options':{'num_ctx':config['llm']['context']}})
         if response.status_code==404:raise RuntimeError('LLM model missing. Run: ollama pull '+config['llm']['model'])
         response.raise_for_status()
     log.info('All local models ready.')
@@ -164,17 +164,7 @@ async def ws(socket:WebSocket):
                 await send('bot_history',history=history)
             elif msg['type']=='settings':
                 config.setdefault('audio',{})['mode']='manual' if msg.get('interaction')=='manual' else 'live'
-                persona=str(msg.get('persona','woman'))[:40]
-                changed=persona!=config['conversation']['persona']
-                config['conversation']['persona']=persona
-                history=bot_histories.setdefault(persona,[])
-                config['llm']['model']=str(msg['model'])[:100]
-                config['tts']['voice']=str(msg['voice'])[:60]
-                config['conversation']['system']=str(msg['system'])[:4000]
-                if persona in config.get('bots',{}):
-                    config['bots'][persona].update(voice=config['tts']['voice'],system=config['conversation']['system'])
                 await send('config',config=config)
-                if changed:await send('bot_history',history=history)
             elif msg['type']=='metrics':timing.info(json.dumps(msg))
     except WebSocketDisconnect:pass
     finally:

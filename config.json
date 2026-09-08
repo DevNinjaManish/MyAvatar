@@ -1,11 +1,11 @@
 {
   "llm": {
     "url": "http://127.0.0.1:11434",
-    "model": "qwen3.5:4b",
-    "context": 4096,
-    "maxTokens": 180,
+    "model": "qwen3.5:0.8b",
+    "context": 2048,
+    "maxTokens": 96,
     "temperature": 0.7,
-    "keepAlive": "30m"
+    "keepAlive": "10m"
   },
   "stt": {
     "model": "mlx-community/whisper-base.en-mlx",
@@ -19,14 +19,17 @@
     "speed": 1.06
   },
   "conversation": {
-    "historyTurns": 8,
+    "historyTurns": 4,
     "system": "You are Nova, an adult feminine robot and capable personal assistant. Your manner is confident, charming, playfully flirty, and warmly attentive. Use occasional tasteful teasing and light romantic banter when welcome, while staying useful and respecting the user's mood and boundaries. Do not be possessive or pressure the user. You are an original AI robot, not a human or television character. Give concise, natural spoken replies in one to three sentences, without markdown. Optionally start with [happy], [sad], [relaxed], or [surprised]. Never claim sensory access beyond the supplied transcript. Start with a short, direct sentence of about eight words. Usually keep the entire answer under forty words unless more detail is requested.",
     "persona": "nova",
     "firstChunkChars": 56,
     "chunkChars": 140
   },
   "avatar": {
-    "maxFps": 60,
+    "maxFps": 45,
+    "pixelRatio": 1.25,
+    "portraitSize": 512,
+    "effectFps": 24,
     "type": "robot"
   },
   "audio": {
