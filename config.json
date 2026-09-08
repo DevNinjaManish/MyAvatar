@@ -49,6 +49,7 @@
     },
     "resumeDelayMs": 250
   },
+  "memory": {"enabled": false},
   "bots": {
     "robot": {
       "name": "Rivet",

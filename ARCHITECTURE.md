@@ -37,7 +37,7 @@ Microphone is opened only on user activation and tracks stop when recording ends
 
 ## Scope
 
-This is a small source-run desktop V1. There is no database, container, agent framework, remote service, or persistent memory. Future VAD and memory should fit in audio/conversation without changing the avatar interface.
+This is a small source-run desktop V1. There is no database, container, agent framework, or remote service. Optional conversation memory uses local JSON files and is disabled by default. Future VAD and memory should fit in audio/conversation without changing the avatar interface.
 
 ## Current appearance
 

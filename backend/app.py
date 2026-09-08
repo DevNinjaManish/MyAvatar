@@ -41,26 +41,29 @@ def load_config():
         config['conversation'].update(persona=bot,system=config['bots'][bot]['system'])
         config['tts']['voice']=config['bots'][bot]['voice']
     if preferences.get('interaction') in ('live','manual'):config['audio']['mode']=preferences['interaction']
+    if isinstance(preferences.get('memoryEnabled'),bool):config.setdefault('memory',{})['enabled']=preferences['memoryEnabled']
     config['_greetingIndexes']=preferences.get('greetingIndexes',{})
     return config
 
 def save_preferences(config):
     PREFERENCES_PATH.parent.mkdir(exist_ok=True)
-    PREFERENCES_PATH.write_text(json.dumps({'persona':config['conversation']['persona'],'performanceProfile':config.get('performanceProfile','low'),'interaction':config['audio']['mode'],'greetingIndexes':config.get('_greetingIndexes',{})}))
+    PREFERENCES_PATH.write_text(json.dumps({'persona':config['conversation']['persona'],'performanceProfile':config.get('performanceProfile','low'),'interaction':config['audio']['mode'],'memoryEnabled':config.get('memory',{}).get('enabled',False),'greetingIndexes':config.get('_greetingIndexes',{})}))
 
-def run_action(action_str):
-    """Execute a macOS command via AppleScript. Format: 'command(args)'"""
+def parse_action(action_str):
+    """Parse only the narrow local actions MyAvatar currently supports."""
+    match=re.fullmatch(r"\s*(open_app|close_app)\('([A-Za-z0-9 ._-]{1,80})'\)\s*",action_str)
+    if match:return {'kind':match[1],'value':match[2]}
+    match=re.fullmatch(r'\s*set_volume\((\d{1,3})\)\s*',action_str)
+    if match and 0<=int(match[1])<=100:return {'kind':'set_volume','value':int(match[1])}
+    return None
+
+def run_action(action):
+    """Run a previously approved, validated macOS action."""
     try:
-        match = re.match(r'(\w+)\((.*)\)', action_str)
-        if not match: return False
-        cmd, args = match.groups()
-        args = args.strip("'\"")
-
-        script = ''
-        if cmd == 'open_app': script = f'tell application "{args}" to activate'
-        elif cmd == 'close_app': script = f'tell application "{args}" to quit'
-        elif cmd == 'set_volume': script = f'set volume output volume {args}'
-
+        if action['kind']=='open_app':script=f'tell application "{action["value"]}" to activate'
+        elif action['kind']=='close_app':script=f'tell application "{action["value"]}" to quit'
+        elif action['kind']=='set_volume':script=f'set volume output volume {action["value"]}'
+        else:return False
         if script:
             subprocess.run(['osascript', '-e', script], check=True)
             return True
@@ -110,10 +113,11 @@ async def ws(socket:WebSocket):
     await socket.accept()
     config=load_config()
     bot_id=config['conversation']['persona']
-    history=load_history(bot_id)
+    memory_enabled=config.get('memory',{}).get('enabled',False)
+    history=load_history(bot_id) if memory_enabled else []
     log.info(f'Loaded history for {bot_id}: {len(history)} turns')
     bot_histories={bot_id:history}
-    task=None
+    task=None;approvals={}
     async def send(kind, turn=None, **data): await socket.send_json({'type':kind,'turn':turn,**data})
     async def greet():
         if os.environ.get('MYAVATAR_TOKEN','development')=='development':return
@@ -221,9 +225,18 @@ async def ws(socket:WebSocket):
                         if pending.lstrip().startswith('[') and ']' not in pending and len(pending)<50:continue
                         action_match=re.match(r'^\s*\[action:(.*?)\]\s*',pending)
                         if action_match:
-                            action_str=action_match.group(1)
-                            loop.run_in_executor(None,run_action,action_str)
+                            action=parse_action(action_match.group(1))
                             pending=pending[action_match.end():]
+                            if action:
+                                request_id=random.token_hex(12);approval=loop.create_future();approvals[request_id]=(approval,action)
+                                await send('action_request',turn,requestId=request_id,action=action)
+                                try:allowed=await asyncio.wait_for(approval,45)
+                                except asyncio.TimeoutError:allowed=False
+                                approvals.pop(request_id,None)
+                                if allowed:
+                                    ok=await loop.run_in_executor(None,run_action,action)
+                                    await send('action_result',turn,requestId=request_id,ok=ok)
+                                else:await send('action_result',turn,requestId=request_id,ok=False,denied=True)
                             continue
                         emotion_match=re.match(r'^\s*\[(happy|sad|relaxed|surprised|curious)\]\s*',pending)
                         if emotion_match:
@@ -246,7 +259,7 @@ async def ws(socket:WebSocket):
                 if not speaker.done():speaker.cancel()
             history.extend([{'role':'user','content':text},{'role':'assistant','content':answer}])
             del history[:-turn_config['conversation']['historyTurns']*2]
-            save_history(bot_id, history)
+            if memory_enabled:save_history(bot_id, history)
             metrics['server_generation_ms']=round((time.perf_counter()-start)*1000)
             timing.info(json.dumps({'turn':turn,**metrics}))
             await send('metrics',turn,metrics=metrics)
@@ -280,13 +293,15 @@ async def ws(socket:WebSocket):
             if msg['type']=='turn':task=asyncio.create_task(respond(msg))
             elif msg['type']=='clear':
                 history.clear()
-                clear_history(config['conversation']['persona'])
+                if memory_enabled:clear_history(config['conversation']['persona'])
             elif msg['type']=='bot':
                 bot_id=msg.get('bot')
                 profile=config.get('bots',{}).get(bot_id)
                 if not profile:continue
-                history=load_history(bot_id)
-                bot_histories[bot_id]=history
+                history=bot_histories.get(bot_id)
+                if history is None:
+                    history=load_history(bot_id) if memory_enabled else []
+                    bot_histories[bot_id]=history
                 config['conversation'].update(persona=bot_id,system=profile['system'])
                 config['tts']['voice']=profile['voice']
                 config['avatar']['type']='robot'
@@ -296,11 +311,15 @@ async def ws(socket:WebSocket):
                 await greet()
             elif msg['type']=='settings':
                 config.setdefault('audio',{})['mode']='manual' if msg.get('interaction')=='manual' else 'live'
+                memory_enabled=bool(msg.get('memoryEnabled',memory_enabled));config.setdefault('memory',{})['enabled']=memory_enabled
                 profile_name=msg.get('performanceProfile')
                 apply_profile(config,profile_name)
                 save_preferences(config)
                 await send('config',config=config)
                 await greet()
+            elif msg['type']=='action_decision':
+                pending=approvals.get(msg.get('requestId'))
+                if pending and not pending[0].done():pending[0].set_result(msg.get('decision')=='allow_once')
             elif msg['type']=='onboarding':
                 bot_id=msg.get('bot')
                 profile=config.get('bots',{}).get(bot_id)

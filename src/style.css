@@ -531,3 +531,7 @@ body.widget .bot-mark {width:25px;height:27px;border-radius:8px;font-size:15px}
 #onboarding-status {min-height:18px;margin:0}
 #onboarding-start {background:var(--accent);color:#173c2e;font-weight:700}
 #onboarding-later {border-color:transparent;background:transparent;color:var(--muted)}
+.setting-check {align-items:center}
+.setting-check input {width:auto}
+.action-request {margin:12px 0;padding:12px;border:1px solid #d7bf7555;border-radius:12px;background:#d7bf750d;color:var(--ink)}
+.action-request button {margin:10px 8px 0 0;padding:7px 10px;font-size:12px}

@@ -79,7 +79,7 @@ Widget size remains fixed in both modes. Switching mode gives a greeting, then r
 
 On first launch, onboarding explains the local-only design, lets you choose a companion and performance mode, then asks for microphone access only when you begin a conversation. Speak, then pause briefly to submit a turn. Stop ends playback and microphone capture. The state display shows Listening, Thinking, and Speaking.
 
-[`config.json`](config.json) contains provider defaults, bot prompts, voices, profiles, and VAD tuning. Runtime choices save to ignored `data/settings.json`; no API key is stored.
+[`config.json`](config.json) contains provider defaults, bot prompts, voices, profiles, and VAD tuning. Runtime choices save to ignored `data/settings.json`; no API key is stored. Conversation memory is off by default and can be enabled in Settings; it stays in ignored local files.
 
 ## Validation
 
