@@ -138,7 +138,7 @@ for(const surface of [$('stage'),$('widget-drag')]){
 
 function syncBotUI(){
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
- $('widget-name').textContent=name;$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
+ $('widget-name').textContent=name;$('widget-quality').textContent=(config.performanceProfile||'low').toUpperCase();$('widget-quality').title='Performance: '+(config.performanceProfiles?.[config.performanceProfile]?.name||'Low');$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
  $('stage').setAttribute('aria-label',name+' avatar');
  $('widget-drag').title='Drag here to move '+name;
  document.body.dataset.bot=id;
