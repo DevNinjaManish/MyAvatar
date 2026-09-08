@@ -6,6 +6,7 @@ models/*
 !models/.gitkeep
 public/assets/*.vrm
 logs/
+data/
 .DS_Store
 .env
 .env.*

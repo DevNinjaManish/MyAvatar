@@ -17,8 +17,14 @@ function displayMetrics(){const labels={speech_to_stt_ms:'Speech → STT',stt_to
 function finish(){if(complete&&!audio.playing&&!audio.queue.length&&!pendingAudio){state.set('IDLE');metrics.end_to_end_ms=Math.round(performance.now()-started);displayMetrics();send({type:'metrics',turn,metrics});avatar.setExpression('relaxed');complete=false;if(liveOn){const current=turn;resumeTimer=setTimeout(()=>{if(liveOn&&turn===current){audio.setListening(true);state.set('LISTENING');}},config?.audio?.resumeDelayMs??250);}}}
 function interrupt(notify=true){clearTimeout(resumeTimer);turn++;if(recording||liveOn){audio.stopRecord();recording=false;liveOn=false;updateMicLabel();}audio.stop();pendingAudio=0;decodeChain=Promise.resolve();complete=false;state.set('IDLE');avatar.setExpression('relaxed');if(notify&&socket.readyState===1)send({type:'stop'});}
 function begin(data){audio.setListening(false);turn++;inputKind=data.pcm?'speech':'text';metrics={input_kind:inputKind};started=performance.now()-(data.endDetectionMs||0);firstToken=null;firstAudio=null;complete=false;assistantNode=null;$('error').textContent='';$('metrics').textContent='';send({type:'turn',turn,...data});state.set('THINKING');}
+function startListeningSoon(){if($('interaction').value!=='live'||$('mic').disabled||liveOn||recording)return;setTimeout(()=>{$('mic').click();},180);}
+function playGreeting(m){
+ interrupt(false);message(config.bots?.[config.conversation.persona]?.name||'Companion',m.text);state.set('SPEAKING');avatar.setExpression('happy');
+ audio.enqueue(m.audio,()=>state.set('SPEAKING'),()=>{state.set('IDLE');avatar.setExpression('relaxed');startListeningSoon();}).catch(error);
+}
 socket.onmessage=event=>{
  const m=JSON.parse(event.data);if(m.type==='preparing'){$('status').textContent='Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){$('mic').disabled=false;state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){$('mic').disabled=true;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';$('performance').value=config.performanceProfile||'low';performanceNote();avatar.configure(config.avatar);avatar.showRobot(config.conversation.persona);syncBotUI();return;}if(m.type==='bot_history'){$('messages').replaceChildren();for(const item of m.history)message(item.role==='user'?'You':config.bots[config.conversation.persona]?.name||'Companion',item.content);return;}if(m.turn!==turn)return;
+ if(m.type==='greeting'){playGreeting(m);return;}if(m.turn!==turn)return;
  if(m.type==='state')state.set(m.state);
  if(m.type==='transcript'){if(inputKind==='speech')metrics.speech_to_stt_ms=Math.round(performance.now()-started);message('You',m.text);assistantNode=message(config.bots?.[config.conversation.persona]?.name||'Companion','');}
  if(m.type==='first_token')firstToken=performance.now();
@@ -63,7 +69,8 @@ $('stop').onclick=()=>interrupt();
 $('text-form').onsubmit=async event=>{event.preventDefault();try{const text=$('text').value.trim();if(!text)return;if($('mic').disabled)throw Error('Wait for local voice preparation to finish.');interrupt();await audio.ready();$('text').value='';begin({text});}catch(e){error(e);}};
 $('clear').onclick=()=>{interrupt();send({type:'clear'});$('messages').replaceChildren();};
 $('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidden;};
-$('settings-toggle').onclick=()=>$('settings').showModal();
+function openSettings(){if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
+$('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value});$('settings').close();};
 function performanceNote(){$('performance-note').textContent=$('performance').value==='medium'?'Uses the installed 4B model for stronger replies. Best on 16 GB Macs.':'Uses the smallest local model and lower-power rendering.';}
 $('performance').onchange=performanceNote;
@@ -89,6 +96,7 @@ $('collapse').onclick=()=>window.desktop?.mode('widget');
 $('close-window').onclick=()=>window.desktop?.close();
 $('widget-mic').onclick=()=>{if(!$('mic').disabled)$('mic').click();};
 $('widget-stop').onclick=()=>$('stop').click();
+$('widget-settings').onclick=openSettings;
 $('widget-minimize').onclick=()=>window.desktop?.minimize();
 $('widget-close').onclick=()=>window.desktop?.close();
 new MutationObserver(()=>{$('widget-status').textContent=$('error').textContent?'Open controls · needs attention':$('status').textContent;$('widget-mic').disabled=$('mic').disabled;$('widget-mic').classList.toggle('active',recording||liveOn);}).observe($('status').parentElement,{subtree:true,childList:true,attributes:true});
@@ -163,6 +171,7 @@ const widgetIcons={
  'widget-mic':'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M9 22h6"/>',
  'widget-stop':'<rect x="6" y="6" width="12" height="12" rx="3"/>',
  'widget-bot':'<path d="M4 8h15l-4-4M20 16H5l4 4"/>',
+ 'widget-settings':'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.1 2.1-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V20h-3v-.08A1.7 1.7 0 0 0 10.68 18.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.1-2.1.06-.06A1.7 1.7 0 0 0 7.04 15a1.7 1.7 0 0 0-1.56-1.04H5v-3h.08A1.7 1.7 0 0 0 6.6 9.92a1.7 1.7 0 0 0-.34-1.88L6.2 7.98l2.1-2.1.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.28 4.7V4h3v.08a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.1 2.1-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04H20v3h-.08A1.7 1.7 0 0 0 18.4 15Z"/>',
  'widget-minimize':'<path d="M5 12h14"/>',
  'expand':'<path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/>',
  'widget-close':'<path d="m7 7 10 10M17 7 7 17"/>'

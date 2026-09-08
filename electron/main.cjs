@@ -5,7 +5,8 @@ app.whenReady().then(async()=>{
   session.defaultSession.setPermissionRequestHandler((wc,permission,callback)=>callback(local(wc.getURL())&&permission==='media'));
   if(process.platform==='darwin')await systemPreferences.askForMediaAccess('microphone');
   const area=screen.getPrimaryDisplay().workArea;
-  const win=new BrowserWindow({width:340,height:340,x:area.x+area.width-380,y:area.y+80,minWidth:300,minHeight:300,title:'Rivet',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  const widgetSize=340;
+  const win=new BrowserWindow({width:widgetSize,height:widgetSize,x:area.x+area.width-380,y:area.y+80,minWidth:300,minHeight:300,title:'Rivet',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
   let widgetBounds=win.getBounds();let mode='widget';
@@ -35,7 +36,7 @@ app.whenReady().then(async()=>{
     stopDrag();
     if(next===mode)return mode;
     if(next==='full'){widgetBounds=win.getBounds();mode='full';win.setResizable(true);win.setMinimumSize(800,560);win.setSize(1120,720);win.center();notify();}
-    else{mode='widget';if(win.isFullScreen()){win.once('leave-full-screen',()=>{win.setResizable(false);win.setBounds(widgetBounds);notify();});win.setFullScreen(false);}else{win.setResizable(false);win.setBounds(widgetBounds);notify();}}
+    else{mode='widget';if(win.isFullScreen()){win.once('leave-full-screen',()=>{win.setResizable(false);win.setBounds({...widgetBounds,width:widgetSize,height:widgetSize});notify();});win.setFullScreen(false);}else{win.setResizable(false);win.setBounds({...widgetBounds,width:widgetSize,height:widgetSize});notify();}}
     return mode;
   });
   ipcMain.on('window-close',event=>{if(event.sender===win.webContents)win.close();});

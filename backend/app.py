@@ -1,4 +1,4 @@
-import asyncio, base64, json, logging, os, time, copy
+import asyncio, base64, json, logging, os, time, copy, random
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -9,6 +9,7 @@ from backend.conversation.chunks import split_ready
 
 app=FastAPI()
 Path('logs').mkdir(exist_ok=True)
+PREFERENCES_PATH=Path('data/settings.json')
 logging.basicConfig(level=logging.INFO,handlers=[logging.StreamHandler()])
 timing=logging.getLogger('avatar.timing');timing.propagate=False
 file_handler=logging.FileHandler('logs/latency.jsonl');file_handler.setFormatter(logging.Formatter('%(message)s'));timing.addHandler(file_handler);timing.setLevel(logging.INFO)
@@ -20,8 +21,31 @@ tts_pool=ThreadPoolExecutor(1)
 
 warm_task=None
 
-async def warm_models():
+def apply_profile(config,name):
+    profile=config.get('performanceProfiles',{}).get(name)
+    if not profile:return
+    config['performanceProfile']=name
+    for section in ('llm','conversation','avatar'):config[section].update(profile.get(section,{}))
+
+def load_config():
     config=json.loads(Path('config.json').read_text())
+    try:preferences=json.loads(PREFERENCES_PATH.read_text())
+    except FileNotFoundError:preferences={}
+    profile=preferences.get('performanceProfile')
+    if profile:apply_profile(config,profile)
+    bot=preferences.get('persona')
+    if bot in config.get('bots',{}):
+        config['conversation'].update(persona=bot,system=config['bots'][bot]['system'])
+        config['tts']['voice']=config['bots'][bot]['voice']
+    if preferences.get('interaction') in ('live','manual'):config['audio']['mode']=preferences['interaction']
+    return config
+
+def save_preferences(config):
+    PREFERENCES_PATH.parent.mkdir(exist_ok=True)
+    PREFERENCES_PATH.write_text(json.dumps({'persona':config['conversation']['persona'],'performanceProfile':config.get('performanceProfile','low'),'interaction':config['audio']['mode']}))
+
+async def warm_models():
+    config=load_config()
     loop=asyncio.get_running_loop()
     log.info('Preparing local speech models (first launch can take a minute)...')
     wav=await loop.run_in_executor(tts_pool,speech.generate,'Hello, I am Rivet.',config['tts'])
@@ -52,11 +76,24 @@ async def ws(socket:WebSocket):
     if socket.headers.get('origin') not in ('http://127.0.0.1:5173','http://localhost:5173',None):
         await socket.close(code=1008); return
     await socket.accept()
-    config=json.loads(Path('config.json').read_text())
+    config=load_config()
     history=[]
     bot_histories={config['conversation']['persona']:history}
     task=None
     async def send(kind, turn=None, **data): await socket.send_json({'type':kind,'turn':turn,**data})
+    async def greet():
+        if os.environ.get('MYAVATAR_TOKEN','development')=='development':return
+        bot=config.get('conversation',{}).get('persona','nova')
+        lines={
+            'nova':['Hello, darling. What are we making happen today?','I am here. Give me something interesting.','Hi. I missed your excellent timing.'],
+            'robot':['Back online. What needs fixing?','Rivet ready. Try not to break anything expensive.','Diagnostics clear. What are we tackling?'],
+            'butler':['Good to see you. How may I help?','At your service. What shall we handle first?','Welcome back. I am ready when you are.'],
+            'pixel':['Okay, I am in. What is the vibe?','Hey. Give me the brief, I will make it work.','I am ready. Let us make it less boring.']
+        }
+        text=random.choice(lines.get(bot,lines['nova']))
+        loop=asyncio.get_running_loop()
+        wav=await loop.run_in_executor(tts_pool,speech.generate,text,config['tts'])
+        await send('greeting',text=text,audio=base64.b64encode(wav).decode())
     async def respond(msg):
         turn_config=copy.deepcopy(config)
         turn=msg['turn'];start=time.perf_counter();metrics={};loop=asyncio.get_running_loop()
@@ -142,6 +179,7 @@ async def ws(socket:WebSocket):
                 await send('setup_error',message=str(e))
                 return
         await send('ready')
+        await greet()
         while True:
             msg=await socket.receive_json()
             if msg['type'] in ('stop','turn','settings','clear','bot'):
@@ -160,16 +198,17 @@ async def ws(socket:WebSocket):
                 config['conversation'].update(persona=bot_id,system=profile['system'])
                 config['tts']['voice']=profile['voice']
                 config['avatar']['type']='robot'
+                save_preferences(config)
                 await send('config',config=config)
                 await send('bot_history',history=history)
+                await greet()
             elif msg['type']=='settings':
                 config.setdefault('audio',{})['mode']='manual' if msg.get('interaction')=='manual' else 'live'
                 profile_name=msg.get('performanceProfile')
-                profile=config.get('performanceProfiles',{}).get(profile_name)
-                if profile:
-                    config['performanceProfile']=profile_name
-                    for section in ('llm','conversation','avatar'):config[section].update(profile.get(section,{}))
+                apply_profile(config,profile_name)
+                save_preferences(config)
                 await send('config',config=config)
+                await greet()
             elif msg['type']=='metrics':timing.info(json.dumps(msg))
     except WebSocketDisconnect:pass
     finally:
