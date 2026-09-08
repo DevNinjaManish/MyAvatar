@@ -12,4 +12,4 @@ Thanks for improving MyAvatar. Keep the project local-first: do not add paid-run
 
 ## Pull requests
 
-Describe the user-visible change, configuration changes, and validation. Preserve the four original bot identities and keep new visual assets free of third-party character likenesses or logos.
+Describe the user-visible change, configuration changes, and validation. Preserve the five original bot identities and keep new visual assets free of third-party character likenesses or logos.

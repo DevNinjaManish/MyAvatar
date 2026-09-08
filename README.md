@@ -1,6 +1,6 @@
 # MyAvatar
 
-MyAvatar is a free, local-first macOS robot companion. Four original bots use MLX Whisper for speech-to-text, Ollama for conversation, Kokoro for speech, and an animated Electron widget for presence.
+MyAvatar is a free, local-first macOS robot companion. Five original bots use MLX Whisper for speech-to-text, Ollama for conversation, Kokoro for speech, and an animated Electron widget for presence.
 
 No paid API is required. The app binds only to `127.0.0.1`; microphone audio, conversation, and inference stay on the Mac.
 
@@ -9,6 +9,7 @@ No paid API is required. The app binds only to `127.0.0.1`; microphone audio, co
 - Draggable compact widget plus a clean expanded controls workspace.
 - Local microphone conversation with automatic turn detection and a manual fallback.
 - Live speaker-hardware lip sync, camera shutters, breathing, listening pulses, thinking scans, and speaking motion.
+- State-aware portrait hardware: speaker equalizers illuminate only while a companion is speaking.
 - Short greetings and automatic hands-free listening after launch, bot changes, and performance changes.
 - Persistent selected bot, microphone mode, and performance mode in ignored local settings.
 
@@ -20,6 +21,7 @@ No paid API is required. The app binds only to `127.0.0.1`; microphone audio, co
 | Nova | Charming proactive personal assistant for planning and everyday work |
 | Sterling | Calm executive assistant for priorities, plans, and communication |
 | Pixel | Marketing strategy, campaigns, content, positioning, and growth ideas |
+| Luma | Product design, UX critique, visual systems, and creative direction |
 
 ## Quick start
 
@@ -39,13 +41,15 @@ cd MyAvatar
 npm run setup
 ```
 
-Download models. Low mode uses a 1 GB LLM; speech assets add roughly 500 MB.
+Download the Low and Medium models. Low mode uses a 1 GB LLM; speech assets add roughly 500 MB. High mode is optional and needs the larger 9B model.
 
 ```sh
 ollama pull qwen3.5:0.8b
 ollama pull qwen3.5:4b
 .venv/bin/python scripts/download_models.py
 ```
+
+To enable **High** mode, also run the qwen3.5:9b Ollama pull command.
 
 Create a double-click launcher:
 
@@ -65,6 +69,7 @@ Open **Settings** from the widget or expanded view.
 | --- | --- | --- |
 | Low | `qwen3.5:0.8b`, 2K context, 45 FPS | Apple Silicon MacBook Air and low-power use |
 | Medium | `qwen3.5:4b`, 4K context, 60 FPS | 16 GB Apple Silicon Macs |
+| High | `qwen3.5:9b`, 6K context, 60 FPS | Apple Silicon Macs with ample memory |
 
 Widget size remains fixed in both modes. Switching mode gives a greeting, then resumes hands-free listening.
 

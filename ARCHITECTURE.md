@@ -7,7 +7,7 @@ electron/main.cjs                 circular transparent widget / expanded control
 electron/preload.cjs              narrow window-mode IPC bridge
 src/avatar/Avatar.js             shared scene and portrait lifecycle
 src/avatar/PortraitFace.js       portrait texture, speaker-grille LEDs, camera shutter animation
-public/assets/bots/              included Rivet, Nova, Sterling, and Pixel portraits
+public/assets/bots/              included Rivet, Nova, Sterling, Pixel, and Luma portraits
 src/audio/engine.js              capture, resampling, audio queue, analyser
 src/audio/vad.js                 bounded local turn detector and silence trimming
 public/capture-worklet.js        microphone PCM extraction
@@ -18,7 +18,7 @@ backend/tts/provider.py          persistent Kokoro ONNX engine
 backend/llm/provider.py          Ollama streaming HTTP client
 backend/conversation/chunks.py   sentence-sized synthesis chunks
 backend/app.py                  WebSocket/session history/cancellation/logging
-config.json                     provider, bot, and Low/Medium profile defaults
+config.json                     provider, bot, and Low/Medium/High profile defaults
 data/settings.json               ignored local bot/profile/microphone preferences
 scripts/start.mjs               starts and stops child services
 ```
@@ -41,7 +41,7 @@ This is a small source-run desktop V1. There is no database, container, agent fr
 
 ## Current appearance
 
-The widget ships four original robot portraits: Rivet, Nova, Sterling, and Pixel. Each portrait contains only functional robot hardware such as camera optics, speaker grilles, microphone ports, status lights, panel seams, and service modules. Dynamic equalizers and camera shutters are drawn into the matching illustrated hardware texture rather than floated over the widget as UI. No television artwork, character model, show dialogue, or imitated actor voice is used. This records design choices, not a legal clearance or guarantee.
+The widget ships five original robot portraits: Rivet, Nova, Sterling, Pixel, and Luma. Each portrait contains only functional robot hardware such as camera optics, speaker grilles, microphone ports, status lights, panel seams, and service modules. Dynamic equalizers and camera shutters are drawn into the matching illustrated hardware texture rather than floated over the widget as UI. Equalizers are gated to the speaking state so a listening companion does not appear to be talking. No television artwork, character model, show dialogue, or imitated actor voice is used. This records design choices, not a legal clearance or guarantee.
 
 The expanded controls window and circular widget share one renderer/audio session without reconnecting or losing conversation history.
 

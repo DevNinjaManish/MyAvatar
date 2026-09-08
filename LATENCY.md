@@ -1,6 +1,6 @@
 # Observed local results — 2026-09-08
 
-Machine: Apple M1 Pro, 16 GB unified memory, macOS 26.6.2. These historical observations used Qwen3.5 4B, a 4096-token context, MLX Whisper base.en, and Kokoro ONNX. Current MyAvatar defaults to Low mode (Qwen3.5 0.8B, 2048 context); Medium mode uses the 4B configuration. Treat the figures below as development reference points, not current guarantees.
+Machine: Apple M1 Pro, 16 GB unified memory, macOS 26.6.2. These historical observations used Qwen3.5 4B, a 4096-token context, MLX Whisper base.en, and Kokoro ONNX. Current MyAvatar defaults to Low mode (Qwen3.5 0.8B, 2048 context); Medium mode uses the 4B configuration; High mode uses Qwen3.5 9B with a 6144-token context. Treat the figures below as development reference points, not current guarantees.
 
 These are individual development observations, not percentile benchmarks. Generated speech was used as a controlled STT fixture. Actual room noise, microphone, answer length, model loading, competing apps, and thermals will change latency.
 
