@@ -16,7 +16,7 @@ export function reducePanelState(state, action) {
       return {...state, open: true, expanded};
     }
     case 'open-wide':
-      return ['changes', 'diff'].includes(action.id)
+      return ['changes', 'diff', 'calendar'].includes(action.id)
         ? {...state, open: true, wide: action.id} : state;
     case 'close-wide': return {...state, wide: null};
     default: return state;

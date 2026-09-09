@@ -70,6 +70,9 @@ body.widget #widget-brief-status[data-tone=warning] { color: #edd4a1; }
 body.widget #widget-calendar-toggle { font-size:15px; line-height:1; }
 body.widget #widget-mini-calendar { position:absolute; z-index:8; top:8px; left:10px; right:10px; height:340px; display:flex; flex-direction:column; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:hidden; }
 body.widget #widget-mini-calendar[hidden] { display:none; }
+body.widget[data-attached-workspace=calendar] #widget-coding-panels { display:none!important; }
+body.widget[data-attached-workspace=calendar] #widget-code-wing { display:flex; }
+body.widget .calendar-wing { display:grid; gap:8px; }
 body.widget .mini-calendar-heading { display:flex; align-items:flex-start; justify-content:space-between; }
 body.widget .mini-calendar-heading h2 { margin:2px 0 0; font-size:16px; }
 body.widget .mini-calendar-heading button { width:28px; height:28px; padding:0; border:0; font-size:18px; }

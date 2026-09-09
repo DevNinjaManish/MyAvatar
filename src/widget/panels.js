@@ -176,15 +176,19 @@ export function mountWidgetPanels(doc, desktop) {
     });
 
     const fileView = state.wide === 'changes';
-    $('widget-wing-title').textContent = fileView ? 'Files / Changes' : 'Git / Diff';
+    const calendarView = state.wide === 'calendar';
+    document.body.dataset.attachedWorkspace = state.wide || '';
+    $('widget-wing-title').textContent = calendarView ? 'Nova · Calendar' : (fileView ? 'Files / Changes' : 'Git / Diff');
     const empty = doc.querySelector('.widget-wing-empty');
     const title = doc.createElement('strong');
-    title.textContent = fileView ? 'No files loaded yet' : 'No diff to review yet';
-    const detail = fileView
+    title.textContent = calendarView ? 'Upcoming events' : (fileView ? 'No files loaded yet' : 'No diff to review yet');
+    const detail = calendarView
+      ? 'Your Mac Calendar events appear here without moving the agent.'
+      : fileView
       ? 'Folder changes are summarized in the terminal panel and copied from approved local actions.'
       : 'Git inspection is connected to the local repository from this app path.';
     empty.replaceChildren(title, doc.createTextNode(detail));
-    $('widget-wing-close').setAttribute('aria-label', fileView ? 'Collapse expanded file view' : 'Collapse expanded diff view');
+    $('widget-wing-close').setAttribute('aria-label', calendarView ? 'Close calendar' : (fileView ? 'Collapse expanded file view' : 'Collapse expanded diff view'));
     $('widget-wing-close').title = $('widget-wing-close').getAttribute('aria-label');
 
     try {
@@ -633,5 +637,7 @@ export function mountWidgetPanels(doc, desktop) {
   updateWingFooter('Ready');
   render();
   void syncProjectState();
+  win.openAttachedWorkspace = id => dispatch({type: 'open-wide', id});
+  win.closeAttachedWorkspace = () => dispatch({type: 'close-wide'});
   return {dispose() { abort.abort(); observer.disconnect(); unsubscribe?.(); }};
 }
