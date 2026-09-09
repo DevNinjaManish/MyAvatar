@@ -2,5 +2,6 @@
 import './main.js';
 import './widget-cockpit.css';
 import './widget-panels.css';
+import './widget-polish.css';
 import {mountWidgetPanels} from './widget/panels.js';
 mountWidgetPanels(document, window.desktop);
