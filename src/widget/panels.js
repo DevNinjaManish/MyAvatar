@@ -475,6 +475,25 @@ export function mountWidgetPanels(doc, desktop) {
     updateWingFooter(`Last action: test ${output?.ok ? 'passed' : 'failed'}`);
   });
 
+  on($('widget-list-files'), 'click', async () => {
+    const button = $('widget-list-files');
+    button.disabled = true;
+    report('Reading tracked project files…', 'info');
+    const result = await runAgentQuery({kind: 'gitFiles'});
+    const output = $('widget-files-output');
+    if (result?.ok) {
+      output.hidden = false;
+      output.textContent = result.stdout || '(No tracked files found.)';
+      $('widget-files-empty').textContent = 'Tracked files only. File contents and untracked paths stay protected.';
+      doc.querySelector('[data-widget-panel="changes"] .panel-state').textContent = 'Ready';
+      report('Project file list loaded.', 'info');
+      updateWingFooter('Tracked files loaded');
+    } else {
+      report(`Could not list project files: ${result?.error || 'Unknown error'}`, 'error');
+    }
+    button.disabled = false;
+  });
+
   on($('widget-refresh-git'), 'click', async () => {
     await refreshGitSummary();
     doc.querySelector('[data-widget-panel="diff"] .panel-state').textContent = 'Updated';

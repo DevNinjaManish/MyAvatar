@@ -17,6 +17,7 @@ const ALLOWED_AGENT_COMMANDS={
   testPy:{label:'npm run test:py',command:'.venv/bin/python',args:['-m','unittest','discover','-s','tests/py','-p','test_*.py'],shell:false},
   gitStatus:{label:'git status --short',command:'git',args:['status','--short'],shell:false},
   gitDiff:{label:'git diff --stat',command:'git',args:['diff','--stat'],shell:false},
+  gitFiles:{label:'git ls-files',command:'git',args:['ls-files'],shell:false},
   gitLog:{label:'git log --oneline -7',command:'git',args:['log','--oneline','-7'],shell:false},
   gitBranch:{label:'git branch --show-current',command:'git',args:['branch','--show-current'],shell:false},
   gitCommit:{label:'git commit -am',command:'git',args:['commit','-am',''],shell:false}
