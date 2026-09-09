@@ -31,6 +31,22 @@ const KNOWN_QUERIES = {
   gitDiff: {kind: 'gitDiff', panel: 'diff', fallback: 'No diff output available.'},
   gitBranch: {kind: 'gitBranch', panel: 'diff', fallback: 'Branch unknown.'},
 };
+const planFromBrief = brief => {
+  const text=(typeof brief==='string'?brief:'').toLowerCase();
+  if(!text) return [];
+  const include=(token=>text.includes(token));
+  const steps=[];
+  if (include('build')) steps.push({kind:'build',label:'Build',resultKey:'build'});
+  if (include('test') || include('tests')) {
+    if (include('python') || include('pytest')) steps.push({kind:'testPy',label:'Python tests',resultKey:'testPy'});
+    else steps.push({kind:'test',label:'JavaScript tests',resultKey:'test'});
+  }
+  if (include('check status') || include('status') || include('git status')) steps.push({kind:'gitStatus',label:'Git status',resultKey:'gitStatus'});
+  if (include('diff') || include('review') || include('changes')) steps.push({kind:'gitDiff',label:'Git diff',resultKey:'gitDiff'});
+  if (steps.length===0) steps.push({kind:'test',label:'JavaScript tests',resultKey:'test'});
+  const shouldCommit = include('commit') || include('checkpoint');
+  return shouldCommit ? [...steps,{kind:'gitCommit',label:'Commit',resultKey:'gitCommit',autoMessage:brief}] : steps;
+};
 const toCommandLine = id => {
   const request = KNOWN_COMMANDS[id];
   return request ? request.kind : null;
@@ -56,6 +72,7 @@ export function mountWidgetPanels(doc, desktop) {
   let trustedMode = false;
   let pendingAction = null;
   let activeProject = $('widget-project-name')?.textContent?.trim() || 'Local workspace';
+  let agentRunning = false;
 
   const abort = new AbortController(), signal = abort.signal;
   const on = (element, event, callback, options = {}) => element.addEventListener(event, callback, {...options, signal});
@@ -231,6 +248,64 @@ export function mountWidgetPanels(doc, desktop) {
     await runCommandNow(pendingAction);
     pendingAction = null;
   };
+  const runAgentPlan = async () => {
+    const brief = $('widget-brief').value.trim();
+    if (!brief) return;
+    if (!trustedMode) {
+      report('Enable trusted mode before running the local agent sequence.', 'warning');
+      return;
+    }
+    if (agentRunning) return;
+    agentRunning = true;
+    const plan = planFromBrief(brief).map(step => ({
+      kind: step.kind,
+      commitMessage: step.kind === 'gitCommit'
+        ? `coding agent: ${step.autoMessage.slice(0, 96).trim() || 'local update'}`
+        : undefined
+    }));
+    if (!plan.length) {
+      agentRunning = false;
+      report('No local action plan could be built from this brief.', 'warning');
+      return;
+    }
+    report(`Running local agent plan (${plan.length} step${plan.length>1?'s':''}).`, 'info');
+    for (const step of plan) {
+      if (!agentRunning) break;
+      const requestLabel = step.kind === 'gitStatus' || step.kind === 'gitDiff'
+        ? KNOWN_QUERIES[step.kind]?.kind || step.kind
+        : step.kind;
+      if (step.kind === 'gitDiff') {
+        const result = await runAgentQuery(step);
+        if (!result?.ok) {
+          report(`Local agent step failed: ${result?.error || 'unknown'}`, 'error');
+          break;
+        }
+        const wing = $('widget-code-wing').querySelector('.widget-wing-content');
+        if (wing) { const pre=doc.createElement('pre');pre.textContent = result.stdout || '(No diff output.)';wing.innerHTML='';wing.append(pre); }
+        updateWingFooter(`Local agent step: ${requestLabel} loaded`);
+        doc.querySelector('[data-widget-panel="diff"] .panel-state').textContent = result?.ok ? 'Pass' : 'Fail';
+        continue;
+      }
+      const output = step.kind === 'gitStatus'
+        ? await runAgentQuery(step)
+        : await runCommandNow(step);
+      if (output && (output.ok === false)) {
+        report(`Local agent step failed: ${step.kind}`, 'error');
+        if (step.kind === 'test' || step.kind === 'testPy' || step.kind === 'build') break;
+      } else {
+        updateWingFooter(`Local agent step: ${requestLabel} complete`);
+      }
+      if (step.kind === 'test' || step.kind === 'testJs' || step.kind === 'testPy') {
+        doc.querySelector('[data-widget-panel="tests"] .panel-state').textContent = output?.ok ? 'Pass' : 'Fail';
+      }
+      if (step.kind === 'gitCommit' && output?.ok) {
+        $('widget-brief-status').textContent = 'Task completed (local agent)';
+        await refreshGitSummary();
+      }
+    }
+    agentRunning = false;
+    report('Local agent plan finished.', 'info');
+  };
 
   // Core panel controls.
   on($('widget-coding-tools'), 'click', () => {
@@ -292,6 +367,7 @@ export function mountWidgetPanels(doc, desktop) {
     doc.querySelector('[data-widget-panel="task"] .panel-state').textContent = 'Queued';
     report('Task queued. Start by executing a terminal action to materialize work.', 'info');
   });
+  on($('widget-agent-run'), 'click', runAgentPlan);
 
   on($('widget-trusted-mode'), 'click', () => {
     trustedMode = !trustedMode;
@@ -313,6 +389,7 @@ export function mountWidgetPanels(doc, desktop) {
     $('widget-brief-status').dataset.tone = 'info';
     doc.querySelector('[data-widget-panel="task"] .panel-state').textContent = length ? 'Draft' : 'Not started';
     $('widget-task-run').disabled = !length;
+    $('widget-agent-run').disabled = !length;
   });
 
   on($('widget-brief-to-chat'), 'click', () => {

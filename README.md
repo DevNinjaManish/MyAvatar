@@ -19,6 +19,7 @@ The maintainer authorised integration of PR #1 into `main` while native Mac test
 - Attached expandable/collapsible Task, Files/Changes, Terminal, Tests and Git/Diff panels, with a wider file/diff view and keyboard navigation.
 - Chat and Tools can stay open together. The optional expanded conversation uses the same renderer/audio session.
 - Task drafting with unsent-chat protection; a project-aware native folder picker that switches the local project context used by the allowed commands; clear unavailable/empty states rather than fabricated coding results.
+- Task panel includes a local agent mode that runs a deterministic command plan derived from your brief (build/test/status/diff/optional commit) with local approval rules.
 - Local microphone conversation with automatic turn detection and a manual fallback.
 - Speaker-grille equalisation driven by output audio, camera shutters, breathing, listening/thinking motion and per-bot expressions.
 - Existing short greetings after launch/bot/performance changes. A quieter, cancellable greeting policy is planned.
