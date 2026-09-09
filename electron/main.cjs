@@ -9,7 +9,7 @@ const PROJECT_ROOT=((() => {
 let activeProjectRoot=PROJECT_ROOT;
 let activeProjectSource='app folder';
 const activeAgentProcesses=new Map();
-const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_HEIGHT}=require('./widget-layout.cjs');
+const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_HEIGHT,UTILITY_HEIGHT}=require('./widget-layout.cjs');
 
 const ALLOWED_AGENT_COMMANDS={
   build:{label:'npm run build',command:'npm',args:['run','build'],shell:false},
@@ -112,7 +112,8 @@ else app.whenReady().then(async()=>{
   session.defaultSession.setPermissionRequestHandler((wc,permission,callback)=>callback(local(wc.getURL())&&permission==='media'));
   if(process.platform==='darwin')await systemPreferences.askForMediaAccess('microphone');
   const area=screen.getPrimaryDisplay().workArea;
-  const win=new BrowserWindow({width:WIDTH,height:COMPACT_HEIGHT,x:area.x+area.width-270,y:area.y+80,minWidth:WIDTH,minHeight:COMPACT_HEIGHT,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  const initialY=area.y+area.height-Math.min(UTILITY_HEIGHT,area.height);
+  const win=new BrowserWindow({width:WIDTH,height:COMPACT_HEIGHT,x:area.x+area.width-270,y:initialY,minWidth:WIDTH,minHeight:COMPACT_HEIGHT,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   mainWindow=win;
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
@@ -126,6 +127,7 @@ else app.whenReady().then(async()=>{
     if(win.isDestroyed()||mode!=='widget')return null;
     const display=screen.getDisplayNearestPoint({x:Math.round(anchor.x+WIDTH/2),y:Math.round(anchor.y+COMPACT_HEIGHT/2)});
     layout=widgetLayout(anchor,view,display.workArea);
+    anchor.y=layout.bounds.y;
     win.setMinimumSize(Math.min(WIDTH,display.workArea.width),Math.min(COMPACT_HEIGHT,display.workArea.height));
     win.setBounds(layout.bounds);
     win.webContents.send('widget-layout-changed',layout);

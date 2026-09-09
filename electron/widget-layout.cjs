@@ -18,7 +18,11 @@ function widgetLayout(anchor, view, area) {
     : extras ? COMPACT_HEIGHT + extras : COMPACT_HEIGHT;
   const height = Math.min(wantedHeight, area.height);
   let x = clamp(anchor.x, area.x, area.x + area.width - width);
-  const y = clamp(anchor.y, area.y, area.y + area.height - height);
+  // Reserve the full utility height even while compact. That keeps the
+  // platform's screen coordinate stable when a utility panel opens; only the
+  // content below it grows.
+  const reservedHeight = Math.min(UTILITY_HEIGHT, area.height);
+  const y = clamp(anchor.y, area.y, area.y + area.height - reservedHeight);
   let side = 'none', offset = 0, wingWidth = 0, totalWidth = width;
   if (view.tools && view.wide) {
     // Very narrow work areas get an in-column expanded view instead.

@@ -46,7 +46,7 @@ test('only disclosure preferences are persisted, never task or project content',
   let saved;savePanelPreferences({setItem:(_key,value)=>saved=JSON.parse(value)},{...initialPanelState(),brief:'secret',project:'/private'});
   assert.deepEqual(saved,{expanded:['task']});
 });
-test('compact dimensions are unchanged',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1170,y:100,width:260,height:370}));
+test('compact dimensions are unchanged',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1170,y:64,width:260,height:370}));
 test('chat uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,UTILITY_HEIGHT));
 test('coding uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,UTILITY_HEIGHT));
 test('calendar leaves room for month controls and event entries',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,CALENDAR_HEIGHT));
@@ -64,7 +64,7 @@ test('left edge opens the wide panel on the right',()=>{
   assert.equal(result.side,'right');assert.equal(result.bounds.x,12);assert.equal(result.offset,0);
 });
 test('closing a large stack restores the original anchor',()=>{
-  const anchor={x:1170,y:400};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
+  const anchor={x:1170,y:64};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
   assert.deepEqual(widgetLayout(anchor,{},area).bounds,{...anchor,width:260,height:370});
 });
 test('negative display coordinates are supported',()=>{
