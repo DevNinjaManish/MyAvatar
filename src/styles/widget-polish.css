@@ -69,10 +69,10 @@ body.widget #widget-panel-notice[data-tone=error] {
 body.widget #widget-brief-status[data-tone=warning] { color: #edd4a1; }
 body.widget #widget-calendar-toggle { font-size:15px; line-height:1; }
 /* Calendar is a compact utility popover; only coding/diff use the large wing. */
-body.widget #widget-mini-calendar { position:absolute; z-index:8; top:8px; left:10px; right:10px; height:330px; display:flex; flex-direction:column; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:hidden; }
+body.widget #widget-mini-calendar { position:absolute; z-index:8; top:8px; left:10px; right:10px; height:430px; display:flex; flex-direction:column; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:hidden; }
 body.widget #widget-mini-calendar[hidden] { display:none; }
 body.widget.widget-calendar-open { overflow:hidden; }
-body.widget.widget-calendar-open #widget-mini-calendar { position:static; order:2; width:238px; height:330px; margin:8px auto 0; }
+body.widget.widget-calendar-open #widget-mini-calendar { position:static; order:2; width:238px; height:430px; margin:8px auto 0; }
 body.widget[data-attached-workspace=calendar] #widget-coding-panels { display:none!important; }
 body.widget[data-attached-workspace=calendar] #widget-code-wing { display:flex; }
 body.widget .calendar-wing { display:grid; gap:8px; }
@@ -187,6 +187,8 @@ body.widget.widget-calendar-open main {
 body.widget .mini-calendar-month { display:grid; grid-template-columns:30px 1fr 30px; align-items:center; gap:6px; margin:7px 0 8px; }
 body.widget .mini-calendar-month strong { text-align:center; font-size:12px; }
 body.widget .mini-calendar-month button { min-height:28px; padding:0; font-size:18px; }
+body.widget .mini-calendar-actions { display:flex; gap:6px; margin:0 0 7px; }
+body.widget .mini-calendar-actions button { flex:1; min-height:28px; padding:4px 7px; font-size:10px; }
 body.widget .mini-calendar-weekdays,
 body.widget .mini-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px; text-align:center; }
 body.widget .mini-calendar-weekdays { margin-bottom:3px; color:var(--widget-text-soft); font-size:8px; }

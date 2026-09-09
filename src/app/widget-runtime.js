@@ -225,6 +225,7 @@ $('widget-mini-calendar-close').onclick=()=>{$('widget-mini-calendar').hidden=tr
 $('widget-mini-calendar-refresh').onclick=()=>void loadMiniCalendar();
 $('widget-calendar-prev').onclick=()=>{miniCalendarMonth.setMonth(miniCalendarMonth.getMonth()-1);renderMiniCalendar();};
 $('widget-calendar-next').onclick=()=>{miniCalendarMonth.setMonth(miniCalendarMonth.getMonth()+1);renderMiniCalendar();};
+$('widget-calendar-today').onclick=()=>{miniCalendarMonth=new Date();renderMiniCalendar();};
 $('widget-creative-toggle').onclick=()=>{setWorkspaceMode('creative');window.desktop?.mode('full');};
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
