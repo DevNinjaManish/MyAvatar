@@ -92,12 +92,12 @@ test('accept only the small boolean panel IPC contract',()=>{
   assert.equal(validPanelsRequest({open:true,wide:true}),true);
   assert.equal(validPanelsRequest({open:false,wide:false}),true);
 });
-test('markup has unique IDs, four persistent controls and separate Stop',()=>{
+test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
   assert.equal(new Set(ids).size,ids.length);
   const toolbar=html.match(/<div class="widget-toolbar">([\s\S]*?)<\/div>/)[1];
-  assert.deepEqual([...toolbar.matchAll(/<button id="([^"]+)"/g)].map(match=>match[1]),['widget-mic','widget-chat-toggle','widget-coding-tools','widget-more']);
+  assert.deepEqual([...toolbar.matchAll(/<button id="([^"]+)"/g)].map(match=>match[1]),['widget-mic','widget-chat-toggle','widget-coding-tools','widget-calendar-toggle','widget-more']);
   assert.ok(!toolbar.includes('widget-stop'));assert.ok(ids.includes('widget-stop'));
   assert.equal((html.match(/id="stage"/g)||[]).length,1);
 });

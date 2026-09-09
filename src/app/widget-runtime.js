@@ -197,6 +197,7 @@ $('widget-copy-last').onclick=async()=>{
 $('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidden;};
 const workspaceModes={calendar:'Plan time, review events, and prepare meeting notes.',coding:'Inspect the project, plan changes, review diffs, and run checks.',creative:'Create images, refine ideas, and review visual drafts.',inbox:'Review messages and prepare replies for your approval.',system:'See local CPU, memory, disk, model, and task health.'};
 const recommendedWorkspace={nova:'calendar',robot:'coding',butler:'calendar',pixel:'creative',luma:'creative'};
+async function loadMiniCalendar(){const status=$('widget-mini-calendar-status'),list=$('widget-mini-calendar-events');status.textContent='Reading your Mac Calendar…';list.innerHTML='<p>Loading events…</p>';const result=await window.desktop?.getCalendarEvents?.();if(!result?.ok){status.textContent='Calendar access needs permission';list.innerHTML='<p class="mini-calendar-error">Allow MyAvatar to access Calendar in System Settings, then refresh.</p>';return;}const events=result.events||[];status.textContent=events.length?`${events.length} upcoming event${events.length===1?'':'s'}`:'No events in the next 14 days';list.innerHTML='';for(const event of events.slice(0,5)){const card=document.createElement('article');card.className='mini-calendar-event';const title=document.createElement('strong');title.textContent=event.title;const meta=document.createElement('span');meta.textContent=`${event.start} · ${event.calendar}`;card.append(title,meta);list.append(card);}if(!events.length)list.innerHTML='<p>Your calendar is clear.</p>';}
  async function loadCalendarWorkspace(){
   const status=$('calendar-status'),list=$('calendar-events');
   if(!window.desktop?.getCalendarEvents){status.textContent='Calendar integration is unavailable in this build.';return;}
@@ -216,6 +217,9 @@ const recommendedWorkspace={nova:'calendar',robot:'coding',butler:'calendar',pix
 document.querySelectorAll('[data-workspace-mode]').forEach(button=>button.onclick=()=>setWorkspaceMode(button.dataset.workspaceMode));
  $('calendar-refresh').onclick=()=>void loadCalendarWorkspace();
 setWorkspaceMode('coding',false);
+$('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar');panel.hidden=!panel.hidden;document.body.classList.toggle('widget-calendar-open',!panel.hidden);if(!panel.hidden)void loadMiniCalendar();};
+$('widget-mini-calendar-close').onclick=()=>{$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');};
+$('widget-mini-calendar-refresh').onclick=()=>void loadMiniCalendar();
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value,memoryEnabled:$('memory-enabled').checked});$('settings').close();window.desktop?.mode('widget');};
@@ -369,6 +373,7 @@ function interactWithAvatar(){
 function syncBotUI(){
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
  setWorkspaceMode(recommendedWorkspace[id]||'coding',false);
+ $('widget-calendar-toggle').hidden=id!=='nova';if(id!=='nova'){$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');}
  $('widget-name').textContent=name;const profile=config.performanceProfile||'medium';$('widget-quality').textContent='Performance · '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended');$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended')+' · click to change';$('widget-quality-slider').value=String({low:0,medium:1}[profile]??1);$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
  $('stage').setAttribute('aria-label',name+' avatar');
  $('widget-drag').setAttribute('aria-label','Drag to move '+name);

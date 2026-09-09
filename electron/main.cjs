@@ -67,24 +67,27 @@ const runCommand=(command,args,shell=false,cwd=PROJECT_ROOT,taskId='command')=>n
   activeAgentProcesses.set(taskId,child);
 });
 const readMacCalendar=()=>new Promise(resolve=>{
-  const script=`tell application "Calendar"
+  const namesScript='tell application "Calendar" to get name of calendars';
+  execFile('/usr/bin/osascript',['-e',namesScript],{timeout:4000,maxBuffer:100_000},(nameError,namesOut,nameErr)=>{
+    if(nameError)return resolve({ok:false,error:nameErr?.trim()||nameError.message,code:nameError.code||1});
+    const names=(namesOut||'').trim().split(/,\s*/).filter(Boolean);
+    const eventScript=`on run argv
+set calName to item 1 of argv
+tell application "Calendar"
 set nowDate to current date
 set endDate to nowDate + (14 * days)
 set rows to ""
-repeat with cal in calendars
-  repeat with itemRef in (every event of cal whose start date is greater than or equal to nowDate and start date is less than endDate)
-    set rows to rows & (summary of itemRef) & tab & (start date of itemRef as string) & tab & (end date of itemRef as string) & tab & (name of cal) & linefeed
-  end repeat
+set cal to calendar calName
+repeat with itemRef in (every event of cal whose start date is greater than or equal to nowDate and start date is less than endDate)
+set rows to rows & (summary of itemRef) & tab & (start date of itemRef as string) & tab & (end date of itemRef as string) & tab & calName & linefeed
 end repeat
 return rows
-end tell`;
-  execFile('/usr/bin/osascript',['-e',script],{timeout:15000,maxBuffer:1_000_000},(error,stdout,stderr)=>{
-    if(error)return resolve({ok:false,error:stderr?.trim()||error.message,code:error.code||1});
-    const events=(stdout||'').trim().split('\n').filter(Boolean).map((line,index)=>{
-      const [title,start,end,calendar]=line.split('\t');
-      return {id:`calendar-${index}`,title:title||'Untitled event',start:start||'',end:end||'',calendar:calendar||'Calendar'};
+end tell
+end run`;
+    Promise.all(names.map(name=>new Promise(done=>execFile('/usr/bin/osascript',['-e',eventScript,name],{timeout:2500,maxBuffer:200_000},(error,stdout)=>done(error?'':(stdout||'')))))).then(outputs=>{
+      const events=outputs.join('').trim().split('\n').filter(Boolean).map((line,index)=>{const [title,start,end,calendar]=line.split('\t');return {id:`calendar-${index}`,title:title||'Untitled event',start:start||'',end:end||'',calendar:calendar||'Calendar'};});
+      resolve({ok:true,events});
     });
-    resolve({ok:true,events});
   });
 });
 
