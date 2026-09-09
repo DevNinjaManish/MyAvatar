@@ -39,6 +39,7 @@ const planFromBrief = brief => {
   if (include('build')) steps.push({kind:'build',label:'Build',resultKey:'build'});
   if (include('test') || include('tests')) {
     if (include('python') || include('pytest')) steps.push({kind:'testPy',label:'Python tests',resultKey:'testPy'});
+    else if (include('javascript') || include('js')) steps.push({kind:'testJs',label:'JavaScript tests',resultKey:'testJs'});
     else steps.push({kind:'test',label:'JavaScript tests',resultKey:'test'});
   }
   if (include('check status') || include('status') || include('git status')) steps.push({kind:'gitStatus',label:'Git status',resultKey:'gitStatus'});
@@ -306,7 +307,7 @@ export function mountWidgetPanels(doc, desktop) {
         const result = await runAgentQuery({...step, taskId: activeTaskId});
         if (!result?.ok) {
           taskFailed = true;
-          report(`Local agent step failed: ${result?.error || 'unknown'}`, 'error');
+          report(`Step ${step.kind} failed: ${result?.error || 'unknown'}`, 'error');
           break;
         }
         const wing = $('widget-code-wing').querySelector('.widget-wing-content');
@@ -320,7 +321,7 @@ export function mountWidgetPanels(doc, desktop) {
         : await runCommandNow({...step, taskId: activeTaskId});
       if (output && (output.ok === false)) {
         taskFailed = true;
-        report(`Local agent step failed: ${step.kind}`, 'error');
+        report(`Step ${step.kind} failed: ${output.error || output.stderr || 'unknown error'}`, 'error');
         if (step.kind === 'test' || step.kind === 'testPy' || step.kind === 'build') break;
       } else {
         updateWingFooter(`Local agent step: ${requestLabel} complete`);
@@ -435,7 +436,7 @@ export function mountWidgetPanels(doc, desktop) {
   });
 
   const quickTasks = {
-    check: 'Check project status and run tests',
+    check: 'Check project status and run JavaScript tests',
     test: 'Run tests',
     build: 'Build app',
     review: 'Review changes and show the diff'
