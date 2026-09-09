@@ -22,6 +22,10 @@ body.widget[data-state=speaking] #widget-stop:not([hidden]){display:grid}
 body.widget.widget-chat-open main{--widget-avatar-size:152px;width:152px;height:158px}
 body.widget.widget-chat-open #widget-tools{width:238px;margin-top:-13px;padding-top:13px}
 body.widget.widget-chat-open #widget-chat{width:238px;margin:7px auto 0;padding:11px;border-radius:16px;border-color:#ffffff1b;background:#121a1ef4;box-shadow:0 12px 26px #0005,inset 0 1px #ffffff08}
+#widget-menu .menu-control-row{display:flex;align-items:center;justify-content:space-between;min-height:39px;padding:5px 10px;border-radius:8px;color:var(--ink);font-size:12px}
+#widget-menu .menu-control-row:hover{background:#ffffff08}
+#widget-menu .menu-control-row #widget-awareness{width:30px;height:30px;padding:6px;border:0;border-radius:9px;background:#ffffff08;color:#b8c4c7}
+#widget-menu .menu-control-row #widget-awareness[aria-pressed=true]{background:#3b3948;color:#ddd0ff;box-shadow:0 0 10px #c7afff35}
 body.widget[data-bot=robot]{--accent:#79d8ef}
 body.widget[data-bot=nova]{--accent:#f0a8d0}
 body.widget[data-bot=butler]{--accent:#d1b26f}
