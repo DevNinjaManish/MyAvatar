@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('desktop',{
   runAgentQuery: request=>ipcRenderer.invoke('agent-run-query',request),
   getAgentProject:()=>ipcRenderer.invoke('agent-project-state'),
   cancelAgentTask:taskId=>ipcRenderer.invoke('agent-cancel-task',taskId),
+  getCalendarEvents:()=>ipcRenderer.invoke('calendar-events'),
   chooseProject:()=>ipcRenderer.invoke('widget-choose-project'),
   onWidgetLayout:callback=>{
     const listener=(_event,layout)=>callback(layout);

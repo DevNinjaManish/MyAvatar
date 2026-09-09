@@ -197,12 +197,24 @@ $('widget-copy-last').onclick=async()=>{
 $('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidden;};
 const workspaceModes={calendar:'Plan time, review events, and prepare meeting notes.',coding:'Inspect the project, plan changes, review diffs, and run checks.',creative:'Create images, refine ideas, and review visual drafts.',inbox:'Review messages and prepare replies for your approval.',system:'See local CPU, memory, disk, model, and task health.'};
 const recommendedWorkspace={nova:'calendar',robot:'coding',butler:'calendar',pixel:'creative',luma:'creative'};
-function setWorkspaceMode(mode,announce=true){
+ async function loadCalendarWorkspace(){
+  const status=$('calendar-status'),list=$('calendar-events');
+  if(!window.desktop?.getCalendarEvents){status.textContent='Calendar integration is unavailable in this build.';return;}
+  status.textContent='Reading your Mac Calendar…';list.innerHTML='<p class="workspace-empty">Loading events…</p>';
+  const result=await window.desktop.getCalendarEvents();
+  if(!result?.ok){status.textContent='Calendar permission is needed or Calendar could not be read.';list.innerHTML='<div class="workspace-error"><strong>Can’t read Calendar yet.</strong><span>Allow MyAvatar to access Calendar in System Settings, then refresh.</span></div>';return;}
+  const events=result.events||[];status.textContent=events.length?`${events.length} upcoming event${events.length===1?'':'s'} · next 14 days`:'No events in the next 14 days';
+  list.innerHTML='';
+  if(!events.length){list.innerHTML='<div class="workspace-empty"><strong>Your calendar is clear.</strong><span>Nova will show upcoming events here.</span></div>';return;}
+  for(const event of events){const card=document.createElement('article');card.className='calendar-event';const title=document.createElement('strong');title.textContent=event.title;const meta=document.createElement('span');meta.textContent=`${event.start} · ${event.calendar}`;card.append(title,meta);list.append(card);}
+ }
+ function setWorkspaceMode(mode,announce=true){
  const selected=workspaceModes[mode]?mode:'coding';document.body.dataset.workspace=selected;
  document.querySelectorAll('[data-workspace-mode]').forEach(button=>{const active=button.dataset.workspaceMode===selected;button.classList.toggle('active',active);button.setAttribute('aria-current',active?'page':'false');});
- $('detail').textContent=workspaceModes[selected];if(announce)$('status').setAttribute('aria-label',`${selected} workspace`);
-}
+  $('detail').textContent=workspaceModes[selected];$('calendar-workspace').hidden=selected!=='calendar'||document.body.classList.contains('widget');$('stage').hidden=selected==='calendar'&&!document.body.classList.contains('widget');if(selected==='calendar'&&!document.body.classList.contains('widget'))void loadCalendarWorkspace();if(announce)$('status').setAttribute('aria-label',`${selected} workspace`);
+ }
 document.querySelectorAll('[data-workspace-mode]').forEach(button=>button.onclick=()=>setWorkspaceMode(button.dataset.workspaceMode));
+ $('calendar-refresh').onclick=()=>void loadCalendarWorkspace();
 setWorkspaceMode('coding',false);
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
@@ -231,6 +243,7 @@ setInterval(()=>{$('fps').textContent=`${avatar.fps} FPS · ${(config?.bots?.[co
 
 function windowMode(mode){
  document.body.classList.toggle('widget',mode==='widget');$('bot-library').hidden=true;
+ setWorkspaceMode(document.body.dataset.workspace||recommendedWorkspace[config?.conversation?.persona]||'coding',false);
  if(mode!=='widget')setWidgetChat(false,false);
  closeWidgetMenu(false);
  $('stage').setAttribute('role','img');

@@ -66,6 +66,27 @@ const runCommand=(command,args,shell=false,cwd=PROJECT_ROOT,taskId='command')=>n
   });
   activeAgentProcesses.set(taskId,child);
 });
+const readMacCalendar=()=>new Promise(resolve=>{
+  const script=`tell application "Calendar"
+set nowDate to current date
+set endDate to nowDate + (14 * days)
+set rows to ""
+repeat with cal in calendars
+  repeat with itemRef in (every event of cal whose start date is greater than or equal to nowDate and start date is less than endDate)
+    set rows to rows & (summary of itemRef) & tab & (start date of itemRef as string) & tab & (end date of itemRef as string) & tab & (name of cal) & linefeed
+  end repeat
+end repeat
+return rows
+end tell`;
+  execFile('/usr/bin/osascript',['-e',script],{timeout:15000,maxBuffer:1_000_000},(error,stdout,stderr)=>{
+    if(error)return resolve({ok:false,error:stderr?.trim()||error.message,code:error.code||1});
+    const events=(stdout||'').trim().split('\n').filter(Boolean).map((line,index)=>{
+      const [title,start,end,calendar]=line.split('\t');
+      return {id:`calendar-${index}`,title:title||'Untitled event',start:start||'',end:end||'',calendar:calendar||'Calendar'};
+    });
+    resolve({ok:true,events});
+  });
+});
 
 const executeAgentCommand=async request=>{
   const parsed=parseAgentRequest(request);
@@ -162,6 +183,10 @@ else app.whenReady().then(async()=>{
     if(!child||child.killed)return {ok:false,error:'No running task found.'};
     child.kill('SIGTERM');
     return {ok:true};
+  });
+  ipcMain.handle('calendar-events',async event=>{
+    if(!trusted(event))return {ok:false,error:'Calendar access is unavailable.'};
+    return readMacCalendar();
   });
   ipcMain.handle('widget-chat',async(event,expanded)=>{
     if(!trusted(event)||mode!=='widget'||typeof expanded!=='boolean')return false;
