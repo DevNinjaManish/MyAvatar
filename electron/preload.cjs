@@ -3,6 +3,8 @@ contextBridge.exposeInMainWorld('desktop',{
   mode: mode=>ipcRenderer.invoke('window-mode',mode),
   widgetChat: expanded=>ipcRenderer.invoke('widget-chat',Boolean(expanded)),
   widgetPanels: view=>ipcRenderer.invoke('widget-panels',view),
+  runAgentCommand: request=>ipcRenderer.invoke('agent-run-command',request),
+  runAgentQuery: request=>ipcRenderer.invoke('agent-run-query',request),
   chooseProject:()=>ipcRenderer.invoke('widget-choose-project'),
   onWidgetLayout:callback=>{
     const listener=(_event,layout)=>callback(layout);

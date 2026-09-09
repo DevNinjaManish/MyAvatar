@@ -1,6 +1,59 @@
 const {app,BrowserWindow,session,systemPreferences,ipcMain,screen,desktopCapturer,dialog}=require('electron');
+const {execFile}=require('node:child_process');
 const path=require('node:path');
+const PROJECT_ROOT=((() => {
+  if (typeof process === 'object' && typeof process.cwd === 'function') return process.cwd();
+  return path.resolve(__dirname, '..');
+})());
 const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_HEIGHT}=require('./widget-layout.cjs');
+
+const ALLOWED_AGENT_COMMANDS={
+  build:{label:'npm run build',command:'npm',args:['run','build'],shell:false},
+  test:{label:'npm run test',command:'npm',args:['run','test'],shell:false},
+  testJs:{label:'npm run test:js',command:'npm',args:['run','test:js'],shell:false},
+  testPy:{label:'npm run test:py',command:'.venv/bin/python',args:['-m','unittest','discover','-s','tests/py','-p','test_*.py'],shell:false},
+  gitStatus:{label:'git status --short',command:'git',args:['status','--short'],shell:false},
+  gitDiff:{label:'git diff --stat',command:'git',args:['diff','--stat'],shell:false},
+  gitLog:{label:'git log --oneline -7',command:'git',args:['log','--oneline','-7'],shell:false},
+  gitBranch:{label:'git branch --show-current',command:'git',args:['branch','--show-current'],shell:false},
+  gitCommit:{label:'git commit -am',command:'git',args:['commit','-am',''],shell:false}
+};
+
+const commandError=(message)=>({ok:false,error:message||'Command rejected.'});
+const parseAgentRequest=request=>{
+  if(!request||typeof request!=='object')return null;
+  const {kind}=request;
+  if(kind==='custom'){
+    if(request.id!=='custom')return null;
+    if(typeof request.command!=='string'||typeof request.args==='undefined')return null;
+    const command=request.command.trim();
+    const args=Array.isArray(request.args)?request.args:[];
+    if(!command||!Array.isArray(args)||args.some(item=>typeof item!=='string'))return null;
+    return {command,args,shell:false,label:`${command} ${args.join(' ')}`.trim()};
+  }
+  if(kind==='gitCommit'){
+    const commitMessage=(request.commitMessage||'').toString().trim();
+    if(!commitMessage) return null;
+    return {command:'git',args:['commit','-am',commitMessage],shell:false,label:`git commit -am "${commitMessage}"`};
+  }
+  const preset=ALLOWED_AGENT_COMMANDS[kind];
+  if(!preset)return null;
+  return {...preset,id:kind};
+};
+
+const runCommand=(command,args,shell=false)=>new Promise(resolve=>{
+  execFile(command,args,{cwd:PROJECT_ROOT,timeout:120000,maxBuffer:2_000_000,shell},(error,stdout,stderr)=>{
+    if(error)return resolve({ok:false,error:error.message,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:error.code||1});
+    resolve({ok:true,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:0});
+  });
+});
+
+const executeAgentCommand=async request=>{
+  const parsed=parseAgentRequest(request);
+  if(!parsed)return commandError('This command type is not allowed.');
+  if(parsed.command!=='git'&&parsed.command!=='npm'&&parsed.command!=='.venv/bin/python') return commandError('Command is blocked by the current policy.');
+  return runCommand(parsed.command,parsed.args,parsed.shell);
+};
 let mainWindow=null;
 
 if(!app.requestSingleInstanceLock())app.quit();
@@ -62,6 +115,16 @@ else app.whenReady().then(async()=>{
       else restoreWidget();
     }
     return mode;
+  });
+  ipcMain.handle('agent-run-command',async(event,request)=>{
+    if(!trusted(event))return commandError('Command request is unavailable.');
+    return executeAgentCommand(request);
+  });
+  ipcMain.handle('agent-run-query',async(event,request)=>{
+    if(!trusted(event))return {ok:false,error:'Query request is unavailable.'};
+    const parsed=parseAgentRequest(request);
+    if(!parsed||!parsed.id||parsed.command!=='git')return commandError('This query is not allowed.');
+    return runCommand(parsed.command,parsed.args,parsed.shell);
   });
   ipcMain.handle('widget-chat',async(event,expanded)=>{
     if(!trusted(event)||mode!=='widget'||typeof expanded!=='boolean')return false;

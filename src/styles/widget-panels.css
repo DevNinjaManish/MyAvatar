@@ -29,7 +29,9 @@ body.widget.widget-panels-open.widget-chat-open #widget-chat{flex:0 1 170px;min-
 .widget-panel-body{padding:0 9px 10px;font-size:11px;line-height:1.5}
 .widget-panel-body p{margin:4px 0 8px;color:var(--muted);overflow-wrap:anywhere}
 .widget-panel-body label{font-size:10px;margin:3px 0 6px;gap:5px}
-#widget-brief{width:100%;min-height:74px;max-height:120px;resize:vertical;padding:8px;font-size:11px;border-radius:8px}
+#widget-brief,#widget-terminal-command{width:100%;min-height:60px;max-height:120px;resize:vertical;padding:8px;font-size:11px;border-radius:8px}
+#widget-terminal-command{min-height:32px;max-height:32px;resize:none}
+#widget-terminal-output{max-height:120px;overflow:auto}
 .widget-panel-body button{font-size:10px;padding:6px 8px;border-radius:8px}
 .widget-panel-body .panel-actions{display:flex;flex-wrap:wrap;gap:6px}
 .widget-panel-body pre{white-space:pre-wrap;overflow-wrap:anywhere;font:10px/1.6 ui-monospace,monospace;background:#0b1216;border:1px solid #ffffff10;border-radius:7px;padding:9px;color:var(--muted)}
