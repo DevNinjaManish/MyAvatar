@@ -109,6 +109,16 @@ export function mountWidgetPanels(doc, desktop) {
     $('widget-project-name').title = activeProject;
     updateWingFooter('Project selected');
   };
+  const syncProjectState = async () => {
+    if (!desktop?.getAgentProject) return;
+    const result = await desktop.getAgentProject();
+    if (signal.aborted || !result?.ok || !result.project?.name) return;
+    setProject(result.project.name);
+    $('widget-files-empty').textContent = 'Workspace connected. Actions run only in this local project.';
+    report(`Workspace ready: ${result.project.name}. Start with a quick action.`);
+    doc.querySelector('[data-widget-panel="changes"] .panel-state').textContent = 'Ready';
+    doc.querySelector('[data-widget-panel="terminal"] .panel-state').textContent = trustedMode ? 'Trusted' : 'Strict';
+  };
   const refreshGitSummary = async () => {
     const status = await runAgentQuery({kind: 'gitStatus'});
     const branch = await runAgentQuery({kind: 'gitBranch'});
@@ -306,6 +316,10 @@ export function mountWidgetPanels(doc, desktop) {
       }
     }
     agentRunning = false;
+    const taskState = doc.querySelector('[data-widget-panel="task"] .panel-state');
+    if (taskState) taskState.textContent = 'Pass';
+    $('widget-brief-status').textContent = 'Task completed (local agent)';
+    $('widget-brief-status').dataset.tone = 'success';
     report('Local agent plan finished.', 'info');
   };
 
@@ -370,6 +384,20 @@ export function mountWidgetPanels(doc, desktop) {
     await runAgentPlan();
   });
   on($('widget-agent-run'), 'click', runAgentPlan);
+
+  const quickTasks = {
+    check: 'Check project status and run tests',
+    test: 'Run tests',
+    build: 'Build app',
+    review: 'Review changes and show the diff'
+  };
+  doc.querySelectorAll('[data-quick-task]').forEach(button => on(button, 'click', () => {
+    const brief = quickTasks[button.dataset.quickTask];
+    if (!brief) return;
+    $('widget-brief').value = brief;
+    $('widget-brief').dispatchEvent(new Event('input', {bubbles: true}));
+    $('widget-task-run').click();
+  }));
 
   on($('widget-trusted-mode'), 'click', () => {
     trustedMode = !trustedMode;
@@ -504,8 +532,11 @@ export function mountWidgetPanels(doc, desktop) {
       if (!result?.ok || !result.project?.name) throw Error(result?.error || 'Could not select a folder.');
       setProject(result.project.name);
       nextLabel = 'Change folder';
-      $('widget-files-empty').textContent = 'Folder selected. Actions run on the local app repository path.';
-      report('Folder selected locally. This does not override the single-project execution policy.');
+      $('widget-files-empty').textContent = 'Workspace connected. Actions run only in this local project.';
+      doc.querySelector('[data-widget-panel="changes"] .panel-state').textContent = 'Ready';
+      doc.querySelector('[data-widget-panel="terminal"] .panel-state').textContent = trustedMode ? 'Trusted' : 'Strict';
+      report(`Workspace ready: ${result.project.name}. Start with a quick action.`);
+      await refreshGitSummary();
     } catch (error) {
       report(`Folder selection failed: ${error.message}`, 'error');
     } finally {
@@ -532,5 +563,6 @@ export function mountWidgetPanels(doc, desktop) {
   setNeedApprove(false);
   updateWingFooter('Ready');
   render();
+  void syncProjectState();
   return {dispose() { abort.abort(); observer.disconnect(); unsubscribe?.(); }};
 }

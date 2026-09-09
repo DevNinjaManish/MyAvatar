@@ -39,6 +39,8 @@ body.widget #widget-messages .hint { font-size: 11px; line-height: 1.55; }
 body.widget #widget-text { font-size: 12px; min-height: 34px; }
 body.widget #widget-text-form button { font-size: 11px; min-height: 34px; }
 body.widget .widget-panels-heading { padding: 9px 10px 8px; }
+/* Keep the first-run coding actions above the fold in the compact widget. */
+body.widget.widget-panels-open main { --widget-avatar-size: 128px; height: 134px; }
 body.widget .widget-panels-heading button { min-width: 28px; height: 28px; }
 body.widget .widget-panels-heading button[data-small-label] { font-size: 10px; padding: 4px 5px; }
 body.widget .widget-panels-scroll { padding: 0 9px 10px; scrollbar-color: #526166 transparent; }

@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('desktop',{
   widgetPanels: view=>ipcRenderer.invoke('widget-panels',view),
   runAgentCommand: request=>ipcRenderer.invoke('agent-run-command',request),
   runAgentQuery: request=>ipcRenderer.invoke('agent-run-query',request),
+  getAgentProject:()=>ipcRenderer.invoke('agent-project-state'),
   chooseProject:()=>ipcRenderer.invoke('widget-choose-project'),
   onWidgetLayout:callback=>{
     const listener=(_event,layout)=>callback(layout);

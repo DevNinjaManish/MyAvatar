@@ -32,6 +32,9 @@ body.widget.widget-panels-open.widget-chat-open #widget-chat{flex:0 1 170px;min-
 #widget-brief,#widget-terminal-command{width:100%;min-height:60px;max-height:120px;resize:vertical;padding:8px;font-size:11px;border-radius:8px}
 #widget-terminal-command{min-height:32px;max-height:32px;resize:none}
 #widget-terminal-output{max-height:120px;overflow:auto}
+.quick-actions{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:7px 0 9px}
+.quick-actions-label{width:100%;font-size:10px;color:var(--muted)}
+.quick-actions button{font-size:10px!important;min-height:28px!important;padding:5px 7px!important}
 .widget-panel-body button{font-size:10px;padding:6px 8px;border-radius:8px}
 .widget-panel-body .panel-actions{display:flex;flex-wrap:wrap;gap:6px}
 .widget-panel-body pre{white-space:pre-wrap;overflow-wrap:anywhere;font:10px/1.6 ui-monospace,monospace;background:#0b1216;border:1px solid #ffffff10;border-radius:7px;padding:9px;color:var(--muted)}

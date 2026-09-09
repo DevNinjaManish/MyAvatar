@@ -1,12 +1,13 @@
 const {app,BrowserWindow,session,systemPreferences,ipcMain,screen,desktopCapturer,dialog}=require('electron');
 const {execFile}=require('node:child_process');
 const path=require('node:path');
-const {accessSync,constants}=require('node:fs');
+const {accessSync,constants,readFileSync,writeFileSync,mkdirSync}=require('node:fs');
 const PROJECT_ROOT=((() => {
   if (typeof process === 'object' && typeof process.cwd === 'function') return process.cwd();
   return path.resolve(__dirname, '..');
 })());
 let activeProjectRoot=PROJECT_ROOT;
+let activeProjectSource='app folder';
 const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_HEIGHT}=require('./widget-layout.cjs');
 
 const ALLOWED_AGENT_COMMANDS={
@@ -72,6 +73,13 @@ let mainWindow=null;
 
 if(!app.requestSingleInstanceLock())app.quit();
 else app.whenReady().then(async()=>{
+  const projectStateDir=typeof app.getPath==='function' ? app.getPath('userData') : path.join(PROJECT_ROOT,'.local-state');
+  const projectStateFile=path.join(projectStateDir,'coding-project.json');
+  try{
+    const saved=JSON.parse(readFileSync(projectStateFile,'utf8'));
+    const candidate=sanitizeProjectRoot(saved?.path);
+    if(candidate!==PROJECT_ROOT||saved?.path===PROJECT_ROOT){activeProjectRoot=candidate;activeProjectSource='saved workspace';}
+  }catch{}
   const local=url=>{try{return new URL(url).origin==='http://127.0.0.1:5173';}catch{return false;}};
   session.defaultSession.setPermissionRequestHandler((wc,permission,callback)=>callback(local(wc.getURL())&&permission==='media'));
   if(process.platform==='darwin')await systemPreferences.askForMediaAccess('microphone');
@@ -140,6 +148,10 @@ else app.whenReady().then(async()=>{
     if(!parsed||!parsed.id||parsed.command!=='git')return commandError('This query is not allowed.');
     return runCommand(parsed.command,parsed.args,parsed.shell,activeProjectRoot);
   });
+  ipcMain.handle('agent-project-state',async event=>{
+    if(!trusted(event))return {ok:false,error:'Project state is unavailable.'};
+    return {ok:true,project:{name:path.basename(activeProjectRoot)||activeProjectRoot,source:activeProjectSource}};
+  });
   ipcMain.handle('widget-chat',async(event,expanded)=>{
     if(!trusted(event)||mode!=='widget'||typeof expanded!=='boolean')return false;
     stopDrag();view.chat=expanded;reflow();return expanded;
@@ -161,6 +173,11 @@ else app.whenReady().then(async()=>{
       if(result.canceled||!result.filePaths.length)return {ok:true,canceled:true};
       const selected=path.resolve(result.filePaths[0] || '');
       activeProjectRoot=sanitizeProjectRoot(selected);
+      activeProjectSource='selected workspace';
+      try{
+        mkdirSync(path.dirname(projectStateFile),{recursive:true});
+        writeFileSync(projectStateFile,JSON.stringify({path:activeProjectRoot},{space:2}),'utf8');
+      }catch{}
       return {ok:true,project:{name:path.basename(selected)||selected}};
     }catch{return {ok:false,error:'The folder picker could not be opened.'};}
     finally{selectingProject=false;}
