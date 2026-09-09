@@ -5,6 +5,7 @@ await import('./main.js');
 import './widget-cockpit.css';
 import './widget-panels.css';
 import './widget-polish.css';
+import './conversation/chat-actions.css';
 import {mountWidgetPanels} from './widget/panels.js';
 import {mountReadinessUI} from './conversation/readiness-ui.js';
 import {installCaptureLifecycleGuards} from './audio/lifecycle.js';

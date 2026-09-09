@@ -23,6 +23,11 @@ export class ChatStore extends EventTarget{
   }
   addStructured({id,type,text='',status='complete',turn=null,meta={}}){return this._upsert({id,role:'system',type,text,status,turn,meta});}
   _find(turn,role='assistant'){return this._messages().find(item=>item.turn===turn&&item.role===role);}
+  _findApproval(requestId){return this._messages().find(item=>item.type==='approval'&&item.meta?.requestId===requestId);}
+  userTextForTurn(turn){return this._find(turn,'user')?.text||'';}
+  canRetry(item){return Boolean(item&&item.role==='assistant'&&['failed','interrupted'].includes(item.status)&&Number.isInteger(item.turn)&&!item.meta?.sideEffect);}
+  _markSideEffect(turn){const item=this._find(turn,'assistant');if(item){item.meta.sideEffect=true;this._emit('messages');}}
+  cancelPendingApprovals(turn=null){let changed=false;for(const item of this._messages()){if(item.type==='approval'&&item.meta?.approvalState==='pending'&&(turn===null||item.turn===turn)){item.meta.approvalState='cancelled';changed=true;}}if(changed)this._emit('messages');return changed;}
   _upsert({id,role,type='message',text='',status='streaming',turn=null,meta={}}){
     if(!VALID_STATUSES.has(status))throw Error(`Invalid message status: ${status}`);
     const list=this._messages();let item=list.find(entry=>entry.id===id);
@@ -56,12 +61,24 @@ export class ChatStore extends EventTarget{
     if(event.type==='error'&&turn!==null){const item=this._find(turn,'assistant');if(item&&!FINAL_STATUSES.has(item.status)){item.status='failed';item.meta.error=String(event.message||'Response failed.');this._emit('messages');}return;}
     if(event.type==='greeting'){
       const id=`greeting-${event.operationId||event.sequence||Date.now()}`;
-      this._upsert({id,role:'assistant',text:String(event.text||''),status:'complete',meta:{emotion:'happy'}});
+      this._upsert({id,role:'assistant',text:String(event.text||''),status:'complete',meta:{emotion:'happy'}});return;
     }
-    // Existing action_request cards remain owned by main.js until Batch 08 can
-    // move approvals and tool events together without removing their buttons.
+    if(event.type==='action_request'){
+      if(turn!==null)this._markSideEffect(turn);
+      const action=event.action||{};
+      const target=action.kind==='set_volume'?`${action.value}%`:String(action.value||'');
+      const label=action.kind==='set_volume'?`Change system volume to ${target}`:`${String(action.kind||'action').replaceAll('_',' ')} ${target}`.trim();
+      this._upsert({id:`approval-${event.requestId||event.sequence}`,role:'system',type:'approval',text:label,status:'complete',turn,meta:{requestId:event.requestId,action,approvalState:'pending',sideEffect:true}});return;
+    }
+    if(event.type==='action_result'){
+      if(turn!==null)this._markSideEffect(turn);
+      const approval=this._findApproval(event.requestId);
+      const approvalState=event.denied?'denied':event.ok?'approved':'failed';
+      if(approval){approval.meta.approvalState=approvalState;approval.meta.resultOk=Boolean(event.ok);this._emit('messages');}
+      else this.addStructured({id:`action-result-${event.requestId||event.sequence}`,type:'tool-result',text:event.ok?'Action completed.':event.denied?'Action denied.':'Action failed.',turn,meta:{requestId:event.requestId,ok:Boolean(event.ok),denied:Boolean(event.denied),sideEffect:true}});
+    }
   }
-  interrupt(turn){const item=this._find(turn,'assistant');if(item&&!FINAL_STATUSES.has(item.status)){item.status='interrupted';this._emit('messages');}}
-  interruptLatest(){const list=this._messages();for(let i=list.length-1;i>=0;i--){const item=list[i];if(item.role==='assistant'&&!FINAL_STATUSES.has(item.status)){item.status='interrupted';this._emit('messages');return item;}}return null;}
+  interrupt(turn){const item=this._find(turn,'assistant');if(item&&!FINAL_STATUSES.has(item.status)){item.status='interrupted';this.cancelPendingApprovals(turn);this._emit('messages');}}
+  interruptLatest(){const list=this._messages();for(let i=list.length-1;i>=0;i--){const item=list[i];if(item.role==='assistant'&&!FINAL_STATUSES.has(item.status)){item.status='interrupted';this.cancelPendingApprovals(item.turn);this._emit('messages');return item;}}this.cancelPendingApprovals();return null;}
   _emit(kind){this.dispatchEvent(new CustomEvent('change',{detail:{kind,botId:this.botId}}));}
 }

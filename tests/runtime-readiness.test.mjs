@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {RuntimeEventGate} from '../src/conversation/runtime-events.js';
+import {RuntimeEventGate,validApprovalDecision} from '../src/conversation/runtime-events.js';
 
 const event=(type,sequence,{sessionId='s1',botId='robot',...rest}={})=>({
   type,runtimeVersion:1,sessionId,sequence,botId,turn:null,...rest
@@ -45,4 +45,13 @@ test('invalid typed envelopes are rejected',()=>{
   assert.equal(gate.accept({...event('config',1),runtimeVersion:2}),false);
   assert.equal(gate.accept({...event('config',1),sequence:0}),false);
   assert.equal(gate.accept({...event('config',1),botId:''}),false);
+});
+
+test('approval decisions accept only the narrow allow-once or deny contract',()=>{
+  assert.equal(validApprovalDecision({requestId:'abc',decision:'allow_once'}),true);
+  assert.equal(validApprovalDecision({requestId:'abc',decision:'deny'}),true);
+  assert.equal(validApprovalDecision({requestId:'',decision:'deny'}),false);
+  assert.equal(validApprovalDecision({requestId:'abc',decision:'always_allow'}),false);
+  assert.equal(validApprovalDecision({requestId:'x'.repeat(129),decision:'allow_once'}),false);
+  assert.equal(validApprovalDecision({requestId:'abc',decision:'allow_once',command:'rm -rf /'}),true);
 });
