@@ -1,31 +1,39 @@
-# UI polish handoff
+# UI polish and next-phase handoff
 
-Continue on `ui/widget-cockpit-v1`, Draft PR #1. Read `UI_COCKPIT_PLAN.md` for the panel architecture. Do not merge yet.
+Updated 2026-09-09. The maintainer explicitly requested that the accumulated work from PR #1 (`ui/widget-cockpit-v1`) and the engine roadmap be committed and merged into `main`. This supersedes the former 'do not merge yet' instruction. Check current repository state, then branch from the integrated `main` for follow-up changes; do not recreate or lose the existing UI work.
 
-## Current scope
+## Current direction
 
-The user has deferred work that needs their Mac and asked to continue UI and UI polish. Native macOS validation is a later pre-merge checkpoint, not a blocker for isolated UI iterations. Do not ask the user to run the app after every visual pass. Pause coding-executor integration, model changes, OS permissions work and native window changes for now.
+Read [ENGINE_IMPROVEMENT_PLAN.md](ENGINE_IMPROVEMENT_PLAN.md) first for the approved next milestone and [ROADMAP.md](ROADMAP.md) for its checklist. Read [UI_COCKPIT_PLAN.md](UI_COCKPIT_PLAN.md) for the attached-panel implementation.
 
-Keep the floating bust above its minimal cockpit, four controls (Mic, Chat, Tools, More), one large bot, and attached expandable/collapsible panels. Keep the existing assets and mouth-speaker equaliser untouched. Rivet is the weathered teal/orange coding robot; Luma is the white/cyan designer; Nova is rose; Sterling is navy/gold; Pixel is pink/lime. No renamed bots, full bodies, pinning or replacement artwork.
+The scope has expanded from presentation-only polishing to planning a dependable runtime: startup, greetings, listening, speech, chat, safe agent foundations and animation lifecycle. These engines are not implemented by this documentation update. Begin future implementation with runtime/configuration regression coverage, then startup and greetings. Keep changes in small focused PRs rather than rewriting every engine at once.
 
-## This polish pass
+Work that needs the maintainer's Mac is still deferred. Do not require a live Mac check after every pure-logic/UI iteration. Engine simulations, recorded fixtures, state tests and isolated UI work can proceed. Native permission changes, real microphone/speaker tuning, final voice selection, Mac actions and hardware measurements need explicit later validation. Integration into main does not certify a release.
 
-- Added widget-scoped typography, spacing, legible disabled controls, restrained active states and keyboard focus rings. No new animations, dependencies or renderer instances.
-- Kept the native compact column dimensions and all four main controls; microphone remains visible alongside contextual speech Stop.
-- Added Up/Down/Home/End navigation on panel headers without hijacking editing keys.
-- Collapse all now disables when appropriate and leaves focus on a usable header. Closing a wide view restores focus even if its originating panel has collapsed.
-- Discuss in chat preserves an existing unsent draft and explains the conflict instead of overwriting it. Copying never submits a message or starts a task. Overlong text is rejected rather than silently truncated.
-- Folder selection now has a pending label and busy state, readable errors, cancellation recovery and disposal guards. This remains the same display-name-only picker; it grants no file or command access.
-- Files and Diff have distinct, honest empty states. Task labels distinguish an empty form from an actual draft.
+## Locked visual and interaction constraints
 
-## Validation
+Keep the existing floating bust, restrained cockpit, four controls (Mic, Chat, Tools, More), one large bot and attached expandable/collapsible panels. Preserve original assets and the real mouth-speaker equaliser. Rivet is weathered teal/orange; Luma white/cyan; Nova rose; Sterling navy/gold; Pixel pink/lime. No renamed bots, full bodies, pinning, replacement artwork or decorative waveform replacing speech hardware.
 
-`node --test tests/widget-polish.test.mjs`: 14 passing targeted tests. `node --check src/widget/panels.js` passed.
+The UI must stay truthful while engines are developed. Display actual readiness, queued tasks, approvals and results only when connected. Never fabricate test passes, progress percentages, inspected Git state or specialist activity.
 
-An offline isolated Chromium fixture passed 37 UI checks, including narrow-column containment, the five bot names, control visibility, disclosure keyboard navigation, draft preservation, text-only project names, folder cancellation/error states, focus restoration and reduced motion. It used the real panel controller and widget styles, reduced source-derived base CSS, inlined local module bodies, static uploaded Rivet artwork and mocked desktop/voice handlers. It was not Electron, the full application, live voice or mouth-animation validation.
+## Implemented polish at bc40c4f
 
-The earlier panel/native-mock results are documented in `UI_COCKPIT_PLAN.md`. They were not rerun in this polish pass. The complete dependency-installed build and test suite, native macOS appearance/dragging, monitor transitions, microphone and TTS still require validation before merging.
+- Widget-scoped typography, spacing, readable disabled controls, restrained active states and focus rings; no new animations/dependencies/renderers.
+- Existing native compact-column dimensions and all four controls; mic remains available alongside contextual Stop.
+- Up/Down/Home/End panel-header navigation without hijacking editing keys.
+- Collapse all disables appropriately; closing a wide view restores usable focus even after the source panel collapsed.
+- Discuss in chat protects an existing unsent draft, explains conflicts and rejects overlong text; it never submits or starts a job.
+- Folder selection has pending/busy, cancellation/error and disposal handling. Its display-name-only contract is unchanged and grants no file/command authority.
+- Files and Diff have distinct honest empty states; task labels follow actual draft content.
 
-## Suggested next UI-only pass
+## Validation record and remaining work
 
-Refine companion-picker and More-menu density, keyboard help, and narrow file/diff empty-state layout. Keep unavailable execution, telemetry and delegation clearly unavailable; do not invent running tasks, progress percentages or successful tests.
+The polish pass reported 14 targeted tests and `node --check src/widget/panels.js` passing, plus 37 isolated Chromium checks. That fixture used the real controller/widget styles, reduced source-derived base CSS, inlined local modules, static uploaded Rivet art and mocked desktop/voice handlers. It was not the full application, live Electron, voice or mouth-animation validation.
+
+The prior panel pass reported 40 panel/native-mock tests and 25 shell checks; these are documented separately in the cockpit plan. GitHub Actions subsequently verified JavaScript tests, Python tests and production build on `bc40c4f` ([run](https://github.com/DevNinjaManish/MyAvatar/actions/runs/34356589056)). Historical fixture counts are not new measurements of the engine roadmap.
+
+Native appearance/dragging/focus, monitor transitions, all five live bots, mouth equalisation, permissions, microphone/TTS, echo and hardware performance are still unverified in these handoff runs. Finish the deferred checklist in the engine plan before release qualification; do not claim the merge itself completed it.
+
+## Optional parallel UI-only work
+
+Refine companion-picker/More-menu density, keyboard help, recovery/empty-state layouts and narrow file/diff readability without changing native window contracts. Align new readiness/chat/approval views with real engine events as those implementations land. Do not add working execution, telemetry or delegation controls before their backends exist.
