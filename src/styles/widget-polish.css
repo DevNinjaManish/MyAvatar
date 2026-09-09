@@ -84,6 +84,13 @@ body.widget.widget-chat-open #widget-chat {
   min-height:420px;
   max-height:420px;
 }
+/* Chat is an attached panel, not a new avatar mode. Keep the platform's
+ * portrait and toolbar footprint identical in compact and chat states. */
+body.widget.widget-chat-open main {
+  --widget-avatar-size:224px;
+  width:224px;
+  height:236px;
+}
 body.widget .widget-caption { height:25px; padding:3px 4px; }
 body.widget .widget-toolbar,
 body.widget.widget-chat-open .widget-toolbar {
@@ -106,13 +113,19 @@ body.widget .widget-toolbar #widget-chat-toggle { position:absolute !important; 
 body.widget .widget-toolbar #widget-specialist-toggle { position:absolute !important; top:5px !important; left:107px; }
 body.widget .widget-toolbar #widget-more { position:absolute !important; top:5px !important; right:auto !important; bottom:auto !important; left:157px; }
 /* Opening a utility never restyles or resizes the platform controls. The
- * panel below is the only open-state indicator; Mic colors stay reserved for
- * actual audio state. */
+ * active utility gets a clear selected state without changing its slot. */
 body.widget .widget-toolbar button[aria-expanded=true] {
-  color:#b9c5c8;
-  border-color:transparent;
-  background:transparent;
-  box-shadow:none;
+  color:var(--accent);
+  border-color:color-mix(in srgb,var(--accent) 70%,transparent);
+  background:color-mix(in srgb,var(--accent) 14%,#10181c);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);
+}
+body.widget.widget-calendar-open #widget-specialist-toggle,
+body.widget.widget-panels-open #widget-specialist-toggle {
+  color:var(--accent);
+  border-color:color-mix(in srgb,var(--accent) 70%,transparent);
+  background:color-mix(in srgb,var(--accent) 14%,#10181c);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);
 }
 body.widget #widget-stop-slot { flex:none; display:grid; place-items:center; width:28px; height:28px; }
 body.widget #widget-stop { margin:0; }
@@ -247,3 +260,5 @@ body.widget .mini-calendar-grid span { position:relative; display:grid; place-it
 body.widget .mini-calendar-grid span.empty { visibility:hidden; }
 body.widget .mini-calendar-grid span.today { background:var(--accent); color:#163329; font-weight:750; }
 body.widget .mini-calendar-grid span.has-event::after { content:''; position:absolute; bottom:2px; width:3px; height:3px; border-radius:50%; background:#f09ab9; }
+/* Keep More below the portrait/platform so it never obscures the companion. */
+body.widget #widget-menu { top:250px; left:10px; right:auto; width:238px; max-height:430px; overflow:auto; box-sizing:border-box; }
