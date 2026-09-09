@@ -46,17 +46,17 @@ test('only disclosure preferences are persisted, never task or project content',
   let saved;savePanelPreferences({setItem:(_key,value)=>saved=JSON.parse(value)},{...initialPanelState(),brief:'secret',project:'/private'});
   assert.deepEqual(saved,{expanded:['task']});
 });
-test('compact dimensions use the balanced widget footprint',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1130,y:24,width:310,height:430}));
+test('compact dimensions are unchanged',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1170,y:64,width:260,height:370}));
 test('chat uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,UTILITY_HEIGHT));
 test('coding uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,UTILITY_HEIGHT));
 test('calendar leaves room for month controls and event entries',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,CALENDAR_HEIGHT));
 test('chat+tools size is clamped to the work area',()=>{
   const result=widgetLayout({x:1170,y:100},{chat:true,tools:true},area);
-  assert.equal(result.bounds.height,UTILITY_HEIGHT);assert.equal(result.bounds.y,24);
+  assert.equal(result.bounds.height,UTILITY_HEIGHT);assert.equal(result.bounds.y,64);
 });
 test('right edge opens the wide panel on the left without moving the compact column',()=>{
   const result=widgetLayout({x:1170,y:100},{tools:true,wide:true},area);
-  assert.equal(result.side,'left');assert.equal(result.bounds.x+result.offset,1130);
+  assert.equal(result.side,'left');assert.equal(result.bounds.x+result.offset,1170);
   assert.equal(result.wingWidth,440);
 });
 test('left edge opens the wide panel on the right',()=>{
@@ -64,8 +64,8 @@ test('left edge opens the wide panel on the right',()=>{
   assert.equal(result.side,'right');assert.equal(result.bounds.x,12);assert.equal(result.offset,0);
 });
 test('closing a large stack restores the original anchor',()=>{
-  const anchor={x:1130,y:24};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
-  assert.deepEqual(widgetLayout(anchor,{},area).bounds,{...anchor,width:310,height:430});
+  const anchor={x:1170,y:64};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
+  assert.deepEqual(widgetLayout(anchor,{},area).bounds,{...anchor,width:260,height:370});
 });
 test('negative display coordinates are supported',()=>{
   const monitor={x:-1920,y:-100,width:1920,height:1080};
@@ -75,7 +75,7 @@ test('negative display coordinates are supported',()=>{
 });
 test('narrow monitors use an inline wide view instead of offscreen windows',()=>{
   const result=widgetLayout({x:20,y:20},{tools:true,wide:true},{x:0,y:0,width:500,height:600});
-  assert.equal(result.side,'inline');assert.equal(result.bounds.width,310);
+  assert.equal(result.side,'inline');assert.equal(result.bounds.width,260);
 });
 test('all tested layouts stay within work area bounds',()=>{
   for(const width of [260,400,600,800,1440])for(const height of [370,480,600,900]){

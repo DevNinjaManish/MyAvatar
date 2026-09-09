@@ -72,7 +72,7 @@ body.widget #widget-calendar-toggle { font-size:15px; line-height:1; }
  * reserved slots so badges and Stop never push the caption or toolbar. */
 body.widget #widget-tools,
 body.widget.widget-chat-open #widget-tools {
-  width:288px;
+  width:238px;
   margin:-19px auto 0;
   padding:15px 14px 12px;
   gap:8px;
@@ -80,24 +80,24 @@ body.widget.widget-chat-open #widget-tools {
 }
 body.widget.widget-chat-open #widget-chat {
   flex:none;
-  height:460px;
-  min-height:460px;
-  max-height:460px;
+  height:420px;
+  min-height:420px;
+  max-height:420px;
   /* Chat is attached below the platform, never another flex item beside it. */
   position:absolute;
   /* 338px is the platform's fixed bottom edge inside the 780px widget
    * frame; the panel's own 8px visual gap matches Calendar. */
-  top:380px;
+  top:338px;
   left:11px;
-  width:288px;
+  width:238px;
   margin:0;
 }
 /* Chat is an attached panel, not a new avatar mode. Keep the platform's
  * portrait and toolbar footprint identical in compact and chat states. */
 body.widget.widget-chat-open main {
-  --widget-avatar-size:264px;
-  width:264px;
-  height:278px;
+  --widget-avatar-size:224px;
+  width:224px;
+  height:236px;
 }
 body.widget .widget-caption { height:25px; padding:3px 4px; }
 body.widget .widget-toolbar,
@@ -143,7 +143,7 @@ body.widget #widget-chat-toggle[data-unread]::after { right:2px; top:1px; box-sh
 body.widget #widget-mini-calendar { position:absolute; z-index:8; top:8px; left:10px; right:10px; height:430px; display:flex; flex-direction:column; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:hidden; }
 body.widget #widget-mini-calendar[hidden] { display:none; }
 body.widget.widget-calendar-open { overflow:hidden; }
-body.widget.widget-calendar-open #widget-mini-calendar { position:static; order:2; width:288px; height:460px; margin:8px auto 0; }
+body.widget.widget-calendar-open #widget-mini-calendar { position:static; order:2; width:238px; height:430px; margin:8px auto 0; }
 body.widget[data-attached-workspace=calendar] #widget-coding-panels { display:none!important; }
 body.widget[data-attached-workspace=calendar] #widget-code-wing { display:flex; }
 body.widget .calendar-wing { display:grid; gap:8px; }
@@ -250,9 +250,9 @@ body.widget .widget-wing-footer { font-size: 11px; color: var(--widget-text-soft
 body.widget.widget-chat-open main,
 body.widget.widget-panels-open main,
 body.widget.widget-calendar-open main {
-  --widget-avatar-size: 264px;
-  width: 264px !important;
-  height: 278px !important;
+  --widget-avatar-size: 224px;
+  width: 224px !important;
+  height: 236px !important;
 }
 /* Real month grid: seven stable columns, readable dates, and event dots. */
 body.widget .mini-calendar-month { display:grid; grid-template-columns:30px 1fr 30px; align-items:center; gap:6px; margin:7px 0 8px; }
@@ -269,17 +269,17 @@ body.widget .mini-calendar-grid span.empty { visibility:hidden; }
 body.widget .mini-calendar-grid span.today { background:var(--accent); color:#163329; font-weight:750; }
 body.widget .mini-calendar-grid span.has-event::after { content:''; position:absolute; bottom:2px; width:3px; height:3px; border-radius:50%; background:#f09ab9; }
 /* Keep More below the portrait/platform so it never obscures the companion. */
-body.widget #widget-menu { top:320px; left:10px; right:auto; width:288px; max-height:460px; overflow:auto; box-sizing:border-box; }
+body.widget #widget-menu { top:250px; left:10px; right:auto; width:238px; max-height:430px; overflow:auto; box-sizing:border-box; }
 /* Final geometry contract: the platform never participates in document flow. */
 body.widget main {
   position:absolute;
   top:10px;
-  left:23px;
+  left:18px;
   margin:0 !important;
 }
 body.widget #widget-tools {
   position:absolute;
-  top:268px;
+  top:226px;
   left:11px;
   margin:0 !important;
 }
