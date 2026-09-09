@@ -2,6 +2,7 @@ import {turnPlayback} from '../audio/turn-playback.js';
 
 export const RUNTIME_EVENT_VERSION=1;
 const BOT_TRANSITION_TYPES=new Set(['config']);
+const APPROVAL_DECISIONS=new Set(['allow_once','deny']);
 
 export class RuntimeEventGate{
   constructor(){this.sessionId=null;this.sequence=0;this.botId=null;this.typed=false;}
@@ -33,6 +34,10 @@ function noteClientMessage(data,win){
   }catch{}
 }
 
+export function validApprovalDecision(detail){
+  return Boolean(detail&&typeof detail.requestId==='string'&&detail.requestId.length>0&&detail.requestId.length<=128&&APPROVAL_DECISIONS.has(detail.decision));
+}
+
 /** Install before main.js creates the socket. It filters obsolete runtime events
  * and coordinates turn/audio freshness without deriving authority from prose.
  */
@@ -47,6 +52,11 @@ export function installRuntimeEventGuard(win=window){
       const gate=new RuntimeEventGate();
       const nativeSend=socket.send.bind(socket);
       socket.send=data=>{noteClientMessage(data,win);return nativeSend(data);};
+      const decide=event=>{
+        if(socket.readyState!==NativeWebSocket.OPEN||!validApprovalDecision(event.detail))return;
+        socket.send(JSON.stringify({type:'action_decision',requestId:event.detail.requestId,decision:event.detail.decision}));
+      };
+      win.addEventListener('myavatar:approval-decision',decide);
       socket.addEventListener('message',event=>{
         let payload;
         try{payload=JSON.parse(event.data);}catch{return;}
@@ -56,8 +66,10 @@ export function installRuntimeEventGuard(win=window){
         if(payload.readiness&&typeof payload.readiness==='object'){
           win.dispatchEvent(new CustomEvent('myavatar:readiness',{detail:payload.readiness}));
         }
+        if(payload.type==='action_request')event.stopImmediatePropagation();
       },{capture:true});
       socket.addEventListener('close',()=>{
+        win.removeEventListener('myavatar:approval-decision',decide);
         turnPlayback.cancelTurn();
         win.dispatchEvent(new CustomEvent('myavatar:socket-close'));
       },{once:true});

@@ -46,7 +46,33 @@ test('scroll follow policy follows only near the bottom',()=>{
   assert.equal(shouldFollowScroll({scrollTop:100,clientHeight:500,scrollHeight:1200}),false);
 });
 
-test('future tool and approval records have typed structured state',()=>{
-  const store=new ChatStore();store.addStructured({id:'approval-abc',type:'approval',text:'Approval required',meta:{requestId:'abc',action:{kind:'open_app',value:'Xcode'}}});
-  const item=store.snapshot()[0];assert.equal(item.type,'approval');assert.equal(item.role,'system');assert.equal(item.meta.requestId,'abc');
+test('approval request and result update the same canonical message',()=>{
+  const store=new ChatStore();
+  store.applyRuntimeEvent({type:'transcript',turn:8,text:'Open Xcode'});
+  store.applyRuntimeEvent({type:'token',turn:8,text:'I can do that.'});
+  store.applyRuntimeEvent({type:'action_request',turn:8,requestId:'abc',action:{kind:'open_app',value:'Xcode'}});
+  let items=store.snapshot();const approval=items.find(item=>item.type==='approval');
+  assert.equal(approval.id,'approval-abc');assert.equal(approval.meta.approvalState,'pending');
+  assert.equal(items.find(item=>item.role==='assistant').meta.sideEffect,true);
+  store.applyRuntimeEvent({type:'action_result',turn:8,requestId:'abc',ok:true});
+  items=store.snapshot();assert.equal(items.find(item=>item.id==='approval-abc').meta.approvalState,'approved');
+});
+
+test('denied approval is recorded without creating retryable side effects',()=>{
+  const store=new ChatStore();store.applyRuntimeEvent({type:'transcript',turn:9,text:'Close Xcode'});store.applyRuntimeEvent({type:'token',turn:9,text:'Okay.'});
+  store.applyRuntimeEvent({type:'action_request',turn:9,requestId:'deny-me',action:{kind:'close_app',value:'Xcode'}});
+  store.applyRuntimeEvent({type:'action_result',turn:9,requestId:'deny-me',ok:false,denied:true});
+  const approval=store.snapshot().find(item=>item.type==='approval');assert.equal(approval.meta.approvalState,'denied');
+});
+
+test('retry is allowed only for failed or interrupted non-side-effecting responses',()=>{
+  const safe=new ChatStore();safe.applyRuntimeEvent({type:'transcript',turn:3,text:'Explain this'});safe.applyRuntimeEvent({type:'token',turn:3,text:'Partial'});safe.applyRuntimeEvent({type:'error',turn:3,message:'model failed'});
+  assert.equal(safe.canRetry(safe.snapshot().find(item=>item.role==='assistant')),true);assert.equal(safe.userTextForTurn(3),'Explain this');
+  const unsafe=new ChatStore();unsafe.applyRuntimeEvent({type:'transcript',turn:4,text:'Open Xcode'});unsafe.applyRuntimeEvent({type:'token',turn:4,text:'Working'});unsafe.applyRuntimeEvent({type:'action_request',turn:4,requestId:'x',action:{kind:'open_app',value:'Xcode'}});unsafe.applyRuntimeEvent({type:'error',turn:4,message:'later failure'});
+  assert.equal(unsafe.canRetry(unsafe.snapshot().find(item=>item.role==='assistant')),false);
+});
+
+test('standalone action result becomes typed tool result when approval record is absent',()=>{
+  const store=new ChatStore();store.applyRuntimeEvent({type:'action_result',turn:5,requestId:'missing',ok:false});
+  const item=store.snapshot()[0];assert.equal(item.type,'tool-result');assert.equal(item.meta.sideEffect,true);assert.equal(item.text,'Action failed.');
 });
