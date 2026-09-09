@@ -83,6 +83,12 @@ body.widget.widget-chat-open #widget-chat {
   height:420px;
   min-height:420px;
   max-height:420px;
+  /* Chat is attached below the platform, never another flex item beside it. */
+  position:absolute;
+  top:370px;
+  left:11px;
+  width:238px;
+  margin:0;
 }
 /* Chat is an attached panel, not a new avatar mode. Keep the platform's
  * portrait and toolbar footprint identical in compact and chat states. */
