@@ -80,14 +80,14 @@ body.widget.widget-chat-open #widget-tools {
 }
 body.widget.widget-chat-open #widget-chat {
   flex:none;
-  height:420px;
-  min-height:420px;
-  max-height:420px;
+  height:400px;
+  min-height:400px;
+  max-height:400px;
   /* Chat is attached below the platform, never another flex item beside it. */
   position:absolute;
   /* 338px is the platform's fixed bottom edge inside the 780px widget
    * frame; the panel's own 8px visual gap matches Calendar. */
-  top:348px;
+  top:368px;
   left:11px;
   width:238px;
   margin:0;
@@ -146,12 +146,12 @@ body.widget.widget-calendar-open { overflow:hidden; }
 body.widget.widget-calendar-open #widget-mini-calendar {
   position:absolute;
   z-index:8;
-  top:348px;
+  top:368px;
   left:11px;
   right:auto;
   order:initial;
   width:238px;
-  height:420px;
+  height:400px;
   margin:0;
 }
 body.widget[data-attached-workspace=calendar] #widget-coding-panels { display:none!important; }
@@ -283,13 +283,13 @@ body.widget #widget-menu { top:250px; left:10px; right:auto; width:238px; max-he
 /* Final geometry contract: the platform never participates in document flow. */
 body.widget main {
   position:absolute;
-  top:20px;
+  top:40px;
   left:18px;
   margin:0 !important;
 }
 body.widget #widget-tools {
   position:absolute;
-  top:236px;
+  top:256px;
   left:11px;
   margin:0 !important;
 }
