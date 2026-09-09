@@ -364,6 +364,8 @@ export function mountWidgetPanels(doc, desktop) {
   // Core panel controls.
   on($('widget-coding-tools'), 'click', () => {
     closeMenus();
+    if (doc.body.classList.contains('widget-chat-open')) $('widget-chat-toggle').click();
+    if (doc.body.classList.contains('widget-calendar-open')) $('widget-calendar-toggle').click();
     dispatch({type: 'toggle-tools'});
     if (state.open) $('widget-panels-title').focus({preventScroll: true});
   });

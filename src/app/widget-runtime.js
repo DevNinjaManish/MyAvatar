@@ -220,7 +220,7 @@ async function loadMiniCalendar(){const status=$('widget-mini-calendar-status'),
 document.querySelectorAll('[data-workspace-mode]').forEach(button=>button.onclick=()=>setWorkspaceMode(button.dataset.workspaceMode));
  $('calendar-refresh').onclick=()=>void loadCalendarWorkspace();
 setWorkspaceMode('coding',false);
-$('widget-calendar-toggle').onclick=()=>{window.closeAttachedWorkspace?.();document.body.dataset.attachedWorkspace='';const panel=$('widget-mini-calendar');panel.hidden=!panel.hidden;document.body.classList.toggle('widget-calendar-open',!panel.hidden);if(!panel.hidden){window.desktop?.widgetCalendar?.({open:true});renderMiniCalendar();void loadMiniCalendar();}else window.desktop?.widgetCalendar?.({open:false});};
+$('widget-calendar-toggle').onclick=()=>{window.closeAttachedWorkspace?.();if(!document.body.classList.contains('widget-calendar-open')){setWidgetChat(false,false);if(document.body.classList.contains('widget-panels-open'))$('widget-coding-tools').click();}document.body.dataset.attachedWorkspace='';const panel=$('widget-mini-calendar');panel.hidden=!panel.hidden;document.body.classList.toggle('widget-calendar-open',!panel.hidden);if(!panel.hidden){window.desktop?.widgetCalendar?.({open:true});renderMiniCalendar();void loadMiniCalendar();}else window.desktop?.widgetCalendar?.({open:false});};
 $('widget-mini-calendar-close').onclick=()=>{$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');window.desktop?.widgetCalendar?.({open:false});};
 $('widget-mini-calendar-refresh').onclick=()=>void loadMiniCalendar();
 $('widget-calendar-prev').onclick=()=>{miniCalendarMonth.setMonth(miniCalendarMonth.getMonth()-1);renderMiniCalendar();};
@@ -440,6 +440,10 @@ for(const [id,paths] of Object.entries(widgetIcons).filter(([id])=>['widget-mic'
 
 function setWidgetChat(open,focus=true){
  const shouldOpen=Boolean(open)&&document.body.classList.contains('widget');
+ if(shouldOpen){
+  if(document.body.classList.contains('widget-calendar-open')){$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');window.desktop?.widgetCalendar?.({open:false});}
+  if(document.body.classList.contains('widget-panels-open'))$('widget-coding-tools').click();
+ }
  document.body.classList.toggle('widget-chat-open',shouldOpen);
  $('widget-chat-toggle').setAttribute('aria-expanded',String(shouldOpen));
  $('widget-chat-toggle').setAttribute('aria-label',shouldOpen?'Close chat':'Open chat');

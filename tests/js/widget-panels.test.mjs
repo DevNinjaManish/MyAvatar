@@ -47,7 +47,7 @@ test('only disclosure preferences are persisted, never task or project content',
   assert.deepEqual(saved,{expanded:['task']});
 });
 test('compact dimensions are unchanged',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1170,y:100,width:260,height:370}));
-test('chat keeps its existing height',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,570));
+test('chat has a fixed work height',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,720));
 test('calendar leaves room for month controls and event entries',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,CALENDAR_HEIGHT));
 test('chat+tools size is clamped to the work area',()=>{
   const result=widgetLayout({x:1170,y:100},{chat:true,tools:true},area);
