@@ -46,10 +46,12 @@ test('text-editing and activation keys are not hijacked', () => {
 test('invalid disclosure positions are ignored', () => {
   for(const [index,count] of [[0,0],[-1,5],[5,5],[1.5,5],[0,1.5]]) assert.equal(disclosureFocusIndex('End',index,count),null);
 });
-test('polish imports after existing panel styles',()=>{
+test('polish imports after existing panel styles and main loads once',()=>{
   const code=readFileSync(new URL('../src/widget-entry.js',import.meta.url),'utf8');
   assert.ok(code.indexOf("'./widget-polish.css'")>code.indexOf("'./widget-panels.css'"));
-  assert.equal((code.match(/import '\.\/main.js'/g)||[]).length,1);
+  const staticLoads=(code.match(/import '\.\/main.js'/g)||[]).length;
+  const dynamicLoads=(code.match(/import\('\.\/main.js'\)/g)||[]).length;
+  assert.equal(staticLoads+dynamicLoads,1);
 });
 test('polish CSS is widget-scoped and does not add an audio animation',()=>{
   const css=readFileSync(new URL('../src/widget-polish.css',import.meta.url),'utf8');

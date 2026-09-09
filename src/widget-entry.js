@@ -1,7 +1,11 @@
-// Preserve one existing avatar/audio session. Load overrides after the base UI.
-import './main.js';
+// Install runtime event validation before main.js creates the WebSocket.
+import {installRuntimeEventGuard} from './conversation/runtime-events.js';
+installRuntimeEventGuard(window);
+await import('./main.js');
 import './widget-cockpit.css';
 import './widget-panels.css';
 import './widget-polish.css';
 import {mountWidgetPanels} from './widget/panels.js';
+import {mountReadinessUI} from './conversation/readiness-ui.js';
 mountWidgetPanels(document, window.desktop);
+mountReadinessUI(window,document);

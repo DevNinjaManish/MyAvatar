@@ -1,0 +1,48 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {RuntimeEventGate} from '../src/conversation/runtime-events.js';
+
+const event=(type,sequence,{sessionId='s1',botId='robot',...rest}={})=>({
+  type,runtimeVersion:1,sessionId,sequence,botId,turn:null,...rest
+});
+
+test('typed runtime starts only from config',()=>{
+  const gate=new RuntimeEventGate();
+  assert.equal(gate.accept(event('ready',1)),false);
+  assert.equal(gate.accept(event('config',1)),true);
+});
+
+test('rejects duplicate and out-of-order sequence numbers',()=>{
+  const gate=new RuntimeEventGate();
+  assert.equal(gate.accept(event('config',1)),true);
+  assert.equal(gate.accept(event('ready',2)),true);
+  assert.equal(gate.accept(event('token',2)),false);
+  assert.equal(gate.accept(event('token',1)),false);
+  assert.equal(gate.accept(event('token',3)),true);
+});
+
+test('rejects a different session after the socket session is established',()=>{
+  const gate=new RuntimeEventGate();gate.accept(event('config',1));
+  assert.equal(gate.accept(event('config',1,{sessionId:'old'})),false);
+});
+
+test('config is the only bot transition and old bot output is rejected',()=>{
+  const gate=new RuntimeEventGate();gate.accept(event('config',1));
+  assert.equal(gate.accept(event('config',2,{botId:'luma'})),true);
+  assert.equal(gate.accept(event('greeting',3,{botId:'robot'})),false);
+  assert.equal(gate.accept(event('bot_history',4,{botId:'luma'})),true);
+});
+
+test('legacy events are accepted only before typed runtime identity appears',()=>{
+  const gate=new RuntimeEventGate();
+  assert.equal(gate.accept({type:'legacy'}),true);
+  assert.equal(gate.accept(event('config',1)),true);
+  assert.equal(gate.accept({type:'legacy'}),false);
+});
+
+test('invalid typed envelopes are rejected',()=>{
+  const gate=new RuntimeEventGate();
+  assert.equal(gate.accept({...event('config',1),runtimeVersion:2}),false);
+  assert.equal(gate.accept({...event('config',1),sequence:0}),false);
+  assert.equal(gate.accept({...event('config',1),botId:''}),false);
+});

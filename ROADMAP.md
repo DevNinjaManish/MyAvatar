@@ -20,13 +20,13 @@ The coding panels are a UI shell, not an executor. Existing narrow Mac action ta
 
 ## P0 — Shared runtime and trustworthy startup
 
-- [~] Add typed runtime/engine events with session, bot, operation, turn and task identities. Batch 02 adds versioned session/bot/sequence envelopes and greeting operation IDs; task and detailed engine identities remain.
-- [ ] Separate readiness, microphone, playback and task state; reject stale events. Backend event identity now exists, but central readiness and browser-side stale-event rejection remain.
-- [~] Validate defaults/preferences: Batch 01 resolves selected profiles, validates saved choices and recovers malformed settings with atomic writes. Full provider/numeric validation and in-widget recovery messages remain.
+- [~] Add typed runtime/engine events with session, bot, operation, turn and task identities. Batch 02 adds versioned session/bot/sequence envelopes and greeting operation IDs; Batch 03 adds client-side session/bot/sequence enforcement and engine-readiness payloads. Task identities and a fuller cross-engine event model remain.
+- [~] Separate readiness, microphone, playback and task state; reject stale events. Batch 03 adds independent LLM/STT/TTS readiness plus browser rejection of stale session/bot/sequence events. Microphone, playback and task state are still separate future work.
+- [~] Validate defaults/preferences: Batch 01 resolves selected profiles, validates saved choices and recovers malformed settings with atomic writes. Full provider/numeric validation and richer in-widget recovery remain.
 - [ ] Migrate legacy High preferences to the agreed Fast/Balanced-only interface.
 - [x] Fix approval-ID generation (`random.token_hex` -> `secrets.token_hex`) with regression coverage; revoke pending approvals on timeout/cancellation and reject invalid, duplicate and stale decisions.
-- [ ] Add bounded startup/recovery, component readiness and text-only degradation where possible.
-- [~] Make greetings cancellable, once-per-event, identity-safe and truthful; silence settings/reconnect greeting spam. Batch 02 implements cancellable authored greetings, settings silence, onboarding ordering and quick-reconnect cooldown; full reconnect/client stale-event work remains.
+- [~] Add bounded startup/recovery, component readiness and text-only degradation where possible. Batch 03 adds truthful per-engine readiness and degraded text/chat behavior; reconnect/backoff and explicit retry policy remain.
+- [~] Make greetings cancellable, once-per-event, identity-safe and truthful; silence settings/reconnect greeting spam. Batch 02 implements cancellable authored greetings, settings silence, onboarding ordering and quick-reconnect cooldown; full reconnect policy remains.
 - [ ] Preserve explicit microphone and quiet-mode preferences through all transitions.
 
 ## P1 — Listening and speech

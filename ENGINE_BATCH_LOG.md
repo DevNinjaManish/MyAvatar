@@ -58,15 +58,13 @@ execution remain planned. No live microphone, speaker or Mac action was tested.
 
 Base: Batch 01 commit `8a270cf24f63e3e25800846a4af044bc7f2ecd9d`.
 Branch: `engine/batch-02-runtime-greetings`.
-Status: implementation in review; stacked on Batch 01 so it can remain a small,
-independent change while Batch 01 is still open.
+Status: implemented and exact-head CI passed; stacked on Batch 01.
 
 ### Implemented
 
 - `backend/runtime.py` adds a versioned server-event envelope. Every integrated
   WebSocket event carries one session ID, monotonic sequence, current bot ID and
-  optional turn/operation identity. This is the first runtime contract; engine,
-  microphone, playback and task readiness state are not yet centralised.
+  optional turn/operation identity.
 - `backend/greetings.py` moves authored greeting selection and TTS scheduling out
   of the WebSocket handler. Greetings are low-priority tasks with an operation ID.
   Cancellation invalidates late synthesis results even when the native TTS worker
@@ -80,44 +78,82 @@ independent change while Batch 01 is still open.
   the selected bot's first greeting after config/history update. Normal launch
   greeting is requested only after that bot has previously delivered a greeting.
 - A process-local startup cooldown suppresses quick reconnect/reopen greeting
-  repeats. This is not a complete reconnect manager; socket reconnection itself
-  remains a later runtime batch.
+  repeats. This is not a complete reconnect manager.
 - Greeting templates were rewritten to avoid unsupported claims such as a
-  prepared schedule, agenda, diagnostics or completed work. Personality remains
-  distinct without asserting access the app does not have.
+  prepared schedule, agenda, diagnostics or completed work.
 - Greeting failures are nonfatal and do not block the WebSocket receive loop.
   Rotation indices advance only after the greeting event is actually sent.
-- Existing conversation TTS, microphone capture, mouth equaliser, bot artwork,
-  UI panels and native-window code are unchanged by this batch.
 
 ### Validation scope
 
-- Pure runtime tests verify stable session identity, bot switching and monotonic
-  event sequencing.
-- Greeting tests cover deterministic rotation, truthful templates, startup
-  cooldown, cancellation, latest-bot-wins, settings silence and synthesis failure.
-- WebSocket integration tests cover event envelopes, onboarding greeting identity
-  and rapid bot switching with mocked TTS. These tests do not open a microphone,
-  play sound or run a real model.
-- Exact-head CI is the authority for the complete JavaScript/Python/build suite
-  after the batch PR is created. Live Mac validation remains deferred.
+Pure runtime, greeting and WebSocket integration tests cover event sequencing,
+identity, cancellation, truthful templates and rapid bot switching with mocked
+TTS. Exact-head CI passed JavaScript tests, Python tests and production build for
+commit `5d3f51ad2dac0e787e968222e2ac97a23a30cbd9`.
 
 ### Not implemented or certified by this batch
 
-- No reconnect/backoff manager, central engine-readiness model, text-only degraded
-  mode, microphone ownership change, speaker-safe barge-in or device recovery.
-- The browser does not yet independently reject every stale session event; the
-  backend now emits identity/sequence metadata so that client-side guard can be
-  added without inventing IDs later.
-- If a greeting has already been delivered to the renderer before a bot switch,
-  the existing local `interrupt()` path remains responsible for stopping its
-  playback. This batch primarily prevents obsolete pending synthesis from being
-  delivered after cancellation.
+No reconnect/backoff manager, central engine readiness, microphone ownership,
+speaker-safe barge-in, device recovery, voice replacement, animation change or
+coding execution. Live Mac validation remains deferred.
+
+## Batch 03 - Engine readiness and stale-event protection
+
+Base: Batch 02 commit `5d3f51ad2dac0e787e968222e2ac97a23a30cbd9`.
+Branch: `engine/batch-03-readiness-stale-events`.
+Status: implemented with automated regression coverage; stacked on Batch 02.
+
+### Implemented
+
+- `backend/readiness.py` tracks LLM, STT and TTS independently as pending,
+  preparing, ready, unavailable or deferred. Derived capabilities are chat,
+  listen, speak and full voice; overall state is ready, degraded, preparing or
+  unavailable.
+- Startup warm-up treats engines independently. A TTS failure can leave text chat
+  available; an STT failure can leave typed chat and speech output available; an
+  LLM failure reports chat unavailable instead of pretending the whole runtime is
+  healthy.
+- Text turns continue without audio when TTS is unavailable. PCM turns fail early
+  with a typed fallback when STT is unavailable. LLM-unavailable turns surface the
+  transcript then a truthful local-chat error without calling the model.
+- Readiness is embedded in existing `preparing` and `ready` events so the protocol
+  preserves established event ordering. Fatal warm-up failures still preserve the
+  existing preparing-then-setup-error sequence and detail.
+- `src/conversation/runtime-events.js` installs before `main.js` creates the
+  WebSocket and rejects mismatched sessions, duplicate/out-of-order sequence
+  numbers, and obsolete old-bot output after a config transition.
+- `src/conversation/readiness-ui.js` renders truthful compact states such as
+  `Chat ready · voice unavailable`. It blocks voice controls when STT is
+  unavailable while preserving typed chat when the LLM remains usable.
+- Existing widget layout, bot artwork, equaliser, microphone/VAD implementation,
+  voices, native window and coding panels are unchanged.
+
+### Validation scope
+
+- JavaScript regression tests cover runtime event ordering, mismatched sessions,
+  stale bot events, legacy transition behavior and readiness UI gating.
+- Python regression tests cover readiness derivation and degraded TTS/STT/LLM
+  server paths while mocking model/speech work as appropriate.
+- Existing protocol-order tests were kept intact; readiness was integrated without
+  inserting surprise events between established `config`, `preparing`, `ready`
+  and `bot_history` sequences.
+- Exact-head GitHub Actions passed JavaScript tests, Python tests and production
+  build for the validated pre-squash tree at commit
+  `443189bc7df711e422d70fd191e3dc56f93aa0f9`. Final squashed exact-head CI is
+  required before this batch is considered complete.
+
+### Not implemented or certified by this batch
+
+Reconnect/backoff and engine retry policy remain incomplete. Microphone ownership,
+VAD tuning, real barge-in, audio-device recovery, final voice selection, canonical
+chat storage, agent/coding execution and animation lifecycle work remain later
+batches. No live microphone, speaker, permissions or hardware-performance claim is
+made from these tests.
 
 ## Next bounded batch
 
-Central readiness/recovery state and client-side stale-event filtering. Expose
-truthful component availability without changing microphone/VAD behaviour yet;
-then make the browser reject obsolete session/bot/operation events. Keep startup,
-chat and widget usable when one engine is unavailable where practical. Continue
-to defer live audio tuning until the maintainer is ready for Mac validation.
+Microphone ownership and listening lifecycle, without yet tuning VAD quality.
+Centralise MediaStream/worklet cleanup and make Stop speaking, mute and End
+conversation state transitions explicit. Add race tests for pending permission,
+end-session, disconnect and stale capture callbacks before attempting natural
+barge-in or real-device echo tuning.
