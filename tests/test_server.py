@@ -33,17 +33,21 @@ class Pipeline(unittest.TestCase):
                 self.assertEqual(''.join(e['text'] for e in events if e['type']=='token'),'Hello. How are you?')
                 self.assertEqual(kinds[-1],'done')
 
-    def test_tts_failure_surfaces_without_deadlock(self):
+    def test_tts_failure_degrades_to_text_without_deadlock(self):
         async def fake_stream(messages,config):
-            for _ in range(20):yield 'Sentence. '
+            for _ in range(5):yield 'Sentence. '
         with patch('backend.app.stream',fake_stream),patch('backend.app.speech.generate',side_effect=ValueError('bad voice')):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
                 ws.receive_json();ws.receive_json();ws.send_json({'type':'turn','turn':2,'text':'Hi'})
+                events=[]
                 for _ in range(50):
-                    e=ws.receive_json()
-                    if e['type']=='error':
-                        self.assertIn('bad voice',e['message']);break
-                else:self.fail('No error received')
+                    e=ws.receive_json();events.append(e)
+                    if e['type'] in ('done','error'):break
+                kinds=[e['type'] for e in events]
+                self.assertNotIn('error',kinds)
+                self.assertIn('speech_unavailable',kinds)
+                self.assertEqual(''.join(e['text'] for e in events if e['type']=='token'),'Sentence. '*5)
+                self.assertEqual(kinds[-1],'done')
 
     def test_symbol_only_speech_fragment_is_skipped(self):
         async def fake_stream(messages,config):
@@ -125,7 +129,6 @@ class Cancellation(unittest.TestCase):
                 else:self.fail('New turn did not complete')
                 self.assertEqual([m['content'] for m in seen[-1] if m['role']=='user'],['new'])
 
-
 class BotSwitching(unittest.TestCase):
     def test_switch_updates_identity_voice_and_restores_separate_history(self):
         async def fake_stream(messages,config):yield 'Hello there.'
@@ -158,7 +161,6 @@ class BotSwitching(unittest.TestCase):
                 self.assertEqual(config['performanceProfile'],'high')
                 self.assertEqual(config['audio']['mode'],'manual')
                 self.assertEqual(ws.receive_json()['type'],'bot_history')
-
 
 class Recovery(unittest.TestCase):
     def test_empty_model_reply_surfaces_error(self):

@@ -1,19 +1,27 @@
 import re
 
+_ABBREVIATIONS=r'\b(?:Mr|Mrs|Ms|Dr|Prof|St|vs|etc|e\.g|i\.e)\.$'
+
 
 def split_ready(text, *, first=False, first_chars=56, chunk_chars=140):
-    # Don't break decimals or common titles into separate spoken fragments.
-    for match in re.finditer(r'[.!?](?:\s|$)', text):
+    """Return one speech-ready chunk while preserving natural boundaries."""
+    # Prefer complete sentences, while avoiding decimals and common abbreviations.
+    for match in re.finditer(r'[.!?](?:["\')\]]?)(?:\s|$)', text):
         end=match.end()
-        if text[match.start()]=='.' and re.search(r'\b(?:Mr|Mrs|Ms|Dr|Prof|St|vs|etc)\.$',text[:match.start()+1],re.I):
-            continue
+        if text[match.start()]=='.':
+            prefix=text[:match.start()+1]
+            if re.search(_ABBREVIATIONS,prefix,re.I):continue
+            if match.start()>0 and match.start()+1<len(text) and text[match.start()-1].isdigit() and text[match.start()+1].isdigit():continue
         return text[:end].strip(),text[end:]
-    if first:
-        clause=re.search(r'[,;:—](?:\s|$)',text)
-        if clause and clause.start()>=24:
-            return text[:clause.end()].strip(),text[clause.end():]
+    # Then prefer a clause boundary once there is enough material to sound natural.
+    clause_floor=24 if first else max(32,min(72,chunk_chars//2))
+    for match in re.finditer(r'[,;:—–](?:\s|$)',text):
+        if match.start()>=clause_floor:
+            return text[:match.end()].strip(),text[match.end():]
     limit=first_chars if first else chunk_chars
-    if len(text)>limit and ' ' in text[:limit]:
-        end=text.rfind(' ',0,limit)
-        return text[:end],text[end:]
+    if len(text)>limit:
+        # Prefer a nearby whitespace boundary, but don't emit tiny fragments.
+        end=text.rfind(' ',max(0,limit-32),min(len(text),limit+1))
+        if end<max(24,limit//2):end=text.find(' ',limit)
+        if end>0:return text[:end].strip(),text[end:]
     return None,text

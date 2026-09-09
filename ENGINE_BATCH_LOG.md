@@ -187,8 +187,7 @@ work. Disconnect still requires the current application restart policy.
 
 Base: Batch 04 commit `300ba2d492ed7c7ecdc9caae27a777315204eb35`.
 Branch: `engine/batch-05-turn-playback`.
-Status: implemented with deterministic interruption-order coverage; final squashed
-exact-head CI is required before integration.
+Status: implemented and exact-head CI passed; stacked on Batch 04.
 
 ### Implemented
 
@@ -198,31 +197,26 @@ exact-head CI is required before integration.
 - The WebSocket boundary records actual outgoing `turn` and `stop` messages and
   feeds only accepted, identity-checked server audio/done/error events into that
   coordinator. Old turns cannot regain authority after a new turn begins.
-- `AudioEngine.setListening(true)` now refuses to reopen the live VAD gate while
-  the active turn, expected audio, decode, queued audio or playback is unfinished.
-  The legacy 800 ms callback in `main.js` is therefore no longer authoritative and
-  cannot reopen listening during a reply; its later source cleanup remains safe to
-  do separately from this bounded coordination change.
-- Audio decode and playback are represented by generation-scoped tokens. Stop or a
-  newer turn invalidates old decode results and prevents stale queued/playing audio
-  from affecting the current turn.
-- Stop speaking keeps the live microphone capture allocated, cancels the current
-  turn, stops playback, and then explicitly resumes listening only for an active
-  unmuted live conversation. Mute and End conversation retain their distinct Batch
-  04 meanings.
+- `AudioEngine.setListening(true)` refuses to reopen the live VAD gate while the
+  active turn, expected audio, decode, queued audio or playback is unfinished.
+  The legacy 800 ms callback in `main.js` is therefore no longer authoritative.
+- Audio decode and playback use generation-scoped tokens. Stop or a newer turn
+  invalidates old decode results and prevents stale queued/playing audio from
+  affecting the current turn.
+- Stop speaking keeps live microphone capture allocated, cancels the current turn,
+  stops playback, and resumes listening only for an active unmuted live session.
 - Existing VAD thresholds, STT/TTS providers, mouth equaliser, bot artwork, widget
   layout and coding panels remain unchanged.
 
 ### Validation scope
 
-- New deterministic tests cover server-done-before-decode ordering, multiple audio
-  chunks, stale old-turn tokens/events, replacement by a newer turn and immediate
-  error cancellation.
+- Deterministic tests cover server-done-before-decode ordering, multiple chunks,
+  stale old-turn tokens/events, replacement by a newer turn and error cancellation.
 - Lifecycle tests cover Stop-speaking resume only for active, unmuted live capture.
-- Existing JavaScript and Python regression suites and production build passed on
-  the pre-squash Batch 05 head; final squashed exact-head CI remains the authority.
+- Exact-head GitHub Actions passed JavaScript tests, Python tests and production
+  build for final squashed commit `e0dc0f969c44799738dad557f31728554177ab21`.
 - Live speaker echo, headset/device changes, real microphone behavior and natural
-  barge-in are still not certified by these automated tests.
+  barge-in remain uncertified.
 
 ### Not implemented or certified by this batch
 
@@ -230,10 +224,49 @@ Natural speaker-safe barge-in, VAD quality tuning, Silero evaluation, audio-devi
 recovery, final speech providers/voices, canonical chat storage, animation lifecycle
 and coding execution remain later work.
 
+## Batch 06 - Speech output and TTS reliability
+
+Base: Batch 05 commit `e0dc0f969c44799738dad557f31728554177ab21`.
+Branch: `engine/batch-06-tts-reliability`.
+Status: implemented with automated regression coverage; live voice review deferred.
+
+### Implemented
+
+- `backend/conversation/speech.py` creates TTS-only text from the displayed answer.
+  Chat/history preserve original model output while speech removes markdown noise,
+  avoids reading code blocks/URLs/long paths verbatim, bounds spoken length, and
+  applies a small technical-pronunciation map.
+- Speech chunking prefers complete sentences, then useful clause boundaries, before
+  falling back to length-based splitting. Decimal points and common abbreviations
+  are protected from accidental sentence breaks.
+- Per-turn synthesis buffering is bounded to four chunks. The turn task remains the
+  authority for cancellation, so obsolete native synthesis may finish in its worker
+  but cannot re-enter an interrupted response path.
+- Runtime TTS failure marks TTS unavailable, emits a `speech_unavailable` status,
+  stops further synthesis for the turn, and continues the model answer through
+  normal token/history/metrics/`done` handling instead of failing the answer.
+- Emotion speed multipliers are narrowed to keep delivery more restrained pending
+  actual listening tests.
+
+### Validation scope
+
+- Regression tests cover markdown/code/URL/path speech normalisation, bounded spoken
+  text, technical pronunciation substitutions, sentence/clause chunk boundaries,
+  decimal handling and text-only completion after synthesis failure.
+- JavaScript tests, Python tests and production build passed on the implementation
+  head before final squash. Exact-head CI is rerun after the final single-commit
+  packaging and remains the authority for this batch.
+- No live voice quality, pronunciation, macOS speaker behavior or hardware latency
+  is certified by these tests.
+
+### Not implemented or certified by this batch
+
+Final per-bot voice selection, multilingual voice validation, provider replacement,
+natural speaker-safe barge-in, VAD tuning, device recovery, canonical chat storage,
+animation lifecycle and coding execution remain future work.
+
 ## Next bounded batch
 
-Speech output delivery and TTS queue reliability. Separate display text from spoken
-text, bound synthesis/playback queues, make TTS failure degrade to text without
-invalidating the answer, and add deterministic chunk/cancellation tests. Keep final
-voice selection and real-device listening tests deferred until the maintainer is
-ready for the Mac checkpoint.
+Canonical chat/message state. Introduce stable message IDs/status, one shared store
+for compact and expanded views, preserve drafts/scroll position, and make interrupted
+or failed replies explicit without changing agent/coding execution in the same batch.

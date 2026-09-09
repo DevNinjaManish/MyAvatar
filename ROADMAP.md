@@ -20,26 +20,26 @@ The coding panels are a UI shell, not an executor. Existing narrow Mac action ta
 
 ## P0 — Shared runtime and trustworthy startup
 
-- [~] Add typed runtime/engine events with session, bot, operation, turn and task identities. Batch 02 adds versioned session/bot/sequence envelopes and greeting operation IDs; Batch 03 adds client-side session/bot/sequence enforcement and engine-readiness payloads. Batch 05 adds explicit local turn/playback coordination; task identities and a fuller cross-engine event model remain.
-- [~] Separate readiness, microphone, playback and task state; reject stale events. Batch 03 adds independent LLM/STT/TTS readiness and stale-event rejection; Batch 04 adds explicit microphone capture ownership/generation; Batch 05 adds active-turn, decode, queue and playback freshness. Task state remains future work.
+- [~] Add typed runtime/engine events with session, bot, operation, turn and task identities. Batch 02 adds versioned session/bot/sequence envelopes and greeting operation IDs; Batch 03 adds client-side session/bot/sequence enforcement and engine-readiness payloads. Task identities and a fuller cross-engine event model remain.
+- [~] Separate readiness, microphone, playback and task state; reject stale events. Batch 03 adds independent LLM/STT/TTS readiness and stale-event rejection; Batch 04 adds microphone capture ownership/generation; Batch 05 adds explicit turn/playback coordination. Task state remains future work.
 - [~] Validate defaults/preferences: Batch 01 resolves selected profiles, validates saved choices and recovers malformed settings with atomic writes. Full provider/numeric validation and richer in-widget recovery remain.
 - [ ] Migrate legacy High preferences to the agreed Fast/Balanced-only interface.
 - [x] Fix approval-ID generation (`random.token_hex` -> `secrets.token_hex`) with regression coverage; revoke pending approvals on timeout/cancellation and reject invalid, duplicate and stale decisions.
-- [~] Add bounded startup/recovery, component readiness and text-only degradation where possible. Batch 03 adds truthful per-engine readiness and degraded text/chat behavior; reconnect/backoff and explicit retry policy remain.
+- [~] Add bounded startup/recovery, component readiness and text-only degradation where possible. Batch 03 adds truthful per-engine readiness and degraded text/chat behavior; Batch 06 makes runtime TTS failure degrade to a completed text answer. Reconnect/backoff and explicit retry policy remain.
 - [~] Make greetings cancellable, once-per-event, identity-safe and truthful; silence settings/reconnect greeting spam. Batch 02 implements cancellable authored greetings, settings silence, onboarding ordering and quick-reconnect cooldown; full reconnect policy remains.
 - [~] Preserve explicit microphone and quiet-mode preferences through all transitions. Batch 04 keeps mute as a listening gate that does not end the live capture; broader reconnect/device preference handling remains.
 
 ## P1 — Listening and speech
 
 - [~] Centralise MediaStream/worklet ownership and cleanup for end-session, failure, disconnect and device changes. Batch 04 adds single capture ownership, generation-based stale callback rejection, idempotent cleanup, pending-permission cancellation, disconnect and unload cleanup. Device-change recovery remains.
-- [~] Replace timer-only listening reopen behaviour with explicit turn/playback coordination. Batch 05 makes active turn, expected audio, decode, queue and playback state authoritative; the legacy 800 ms callback can no longer reopen listening during an active reply, though its source cleanup remains.
-- [~] Separate Stop speaking, mute, End conversation, Cancel task and Undo. Batch 04 separates Stop speaking, Mute and End conversation at the microphone lifecycle layer; Batch 05 makes Stop speaking cancel current playback/turn and explicitly resume only an unmuted live conversation. Cancel task and Undo remain future agent work.
+- [~] Replace timer-only listening reopen behaviour with explicit turn/playback coordination. Batch 05 makes turn/playback state authoritative so the legacy timer cannot reopen listening during an active reply; source-level timer cleanup remains a small follow-up.
+- [~] Separate Stop speaking, mute, End conversation, Cancel task and Undo. Batches 04–05 separate Stop speaking, Mute and End conversation and make Stop cancel current playback/turn without releasing live capture. Cancel task and Undo remain future agent work.
 - [ ] Build repeatable noise, pause, short-command, accent and technical-vocabulary fixtures.
 - [ ] Benchmark optional speech-aware VAD before changing the default detector.
 - [ ] Introduce recognition-provider contracts; evaluate Intel compatibility and multilingual support separately.
 - [ ] Add validated per-bot voice/language profiles; select final voices through listening tests.
-- [ ] Separate spoken summaries from detailed display content; normalise markup and technical pronunciation.
-- [~] Improve chunk continuity, bounded queues, stale-audio discard and recoverable TTS failure. Batch 05 rejects stale decode/queued/playback work after interruption; bounded synthesis queues and recoverable TTS failure remain.
+- [~] Separate spoken summaries from detailed display content; normalise markup and technical pronunciation. Batch 06 adds a TTS-only normaliser for markdown, code blocks, links, paths and an initial technical pronunciation map. Final voice/listening review remains.
+- [~] Improve chunk continuity, bounded queues, stale-audio discard and recoverable TTS failure. Batch 05 rejects stale playback; Batch 06 prefers sentence/clause chunks, bounds the synthesis queue, and degrades TTS runtime failure to text-only completion. Live quality tuning remains.
 
 ## P2 — Chat and controlled agent behaviour
 
