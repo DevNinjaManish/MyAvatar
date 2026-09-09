@@ -73,6 +73,8 @@ export function mountWidgetPanels(doc, desktop) {
   let pendingAction = null;
   let activeProject = $('widget-project-name')?.textContent?.trim() || 'Local workspace';
   let agentRunning = false;
+  let taskCancelled = false;
+  let activeTaskId = null;
 
   const abort = new AbortController(), signal = abort.signal;
   const on = (element, event, callback, options = {}) => element.addEventListener(event, callback, {...options, signal});
@@ -269,6 +271,11 @@ export function mountWidgetPanels(doc, desktop) {
     }
     if (agentRunning) return;
     agentRunning = true;
+    taskCancelled = false;
+    activeTaskId = globalThis.crypto?.randomUUID?.() || `task-${Date.now()}`;
+    $('widget-task-cancel').hidden = false;
+    $('widget-task-run').disabled = true;
+    $('widget-agent-run').disabled = true;
     const plan = planFromBrief(brief).map(step => ({
       kind: step.kind,
       commitMessage: step.kind === 'gitCommit'
@@ -282,12 +289,12 @@ export function mountWidgetPanels(doc, desktop) {
     }
     report(`Running local agent plan (${plan.length} step${plan.length>1?'s':''}).`, 'info');
     for (const step of plan) {
-      if (!agentRunning) break;
+      if (!agentRunning || taskCancelled) break;
       const requestLabel = step.kind === 'gitStatus' || step.kind === 'gitDiff'
         ? KNOWN_QUERIES[step.kind]?.kind || step.kind
         : step.kind;
       if (step.kind === 'gitDiff') {
-        const result = await runAgentQuery(step);
+        const result = await runAgentQuery({...step, taskId: activeTaskId});
         if (!result?.ok) {
           report(`Local agent step failed: ${result?.error || 'unknown'}`, 'error');
           break;
@@ -299,8 +306,8 @@ export function mountWidgetPanels(doc, desktop) {
         continue;
       }
       const output = step.kind === 'gitStatus'
-        ? await runAgentQuery(step)
-        : await runCommandNow(step);
+        ? await runAgentQuery({...step, taskId: activeTaskId})
+        : await runCommandNow({...step, taskId: activeTaskId});
       if (output && (output.ok === false)) {
         report(`Local agent step failed: ${step.kind}`, 'error');
         if (step.kind === 'test' || step.kind === 'testPy' || step.kind === 'build') break;
@@ -316,11 +323,21 @@ export function mountWidgetPanels(doc, desktop) {
       }
     }
     agentRunning = false;
+    $('widget-task-cancel').hidden = true;
+    $('widget-task-run').disabled = !$('widget-brief').value.trim();
+    $('widget-agent-run').disabled = !$('widget-brief').value.trim();
     const taskState = doc.querySelector('[data-widget-panel="task"] .panel-state');
-    if (taskState) taskState.textContent = 'Pass';
-    $('widget-brief-status').textContent = 'Task completed (local agent)';
-    $('widget-brief-status').dataset.tone = 'success';
-    report('Local agent plan finished.', 'info');
+    if (taskCancelled) {
+      if (taskState) taskState.textContent = 'Cancelled';
+      $('widget-brief-status').textContent = 'Task cancelled';
+      report('Task cancelled safely.', 'warning');
+    } else {
+      if (taskState) taskState.textContent = 'Pass';
+      $('widget-brief-status').textContent = 'Task completed (local agent)';
+      $('widget-brief-status').dataset.tone = 'success';
+      report('Task completed.', 'info');
+    }
+    activeTaskId = null;
   };
 
   // Core panel controls.
@@ -384,6 +401,16 @@ export function mountWidgetPanels(doc, desktop) {
     await runAgentPlan();
   });
   on($('widget-agent-run'), 'click', runAgentPlan);
+  on($('widget-task-cancel'), 'click', async () => {
+    if (!agentRunning || !activeTaskId) return;
+    taskCancelled = true;
+    agentRunning = false;
+    $('widget-task-cancel').disabled = true;
+    $('widget-brief-status').textContent = 'Cancelling task…';
+    report('Stopping the current task…', 'warning');
+    await desktop?.cancelAgentTask?.(activeTaskId);
+    $('widget-task-cancel').disabled = false;
+  });
 
   const quickTasks = {
     check: 'Check project status and run tests',

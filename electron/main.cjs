@@ -8,6 +8,7 @@ const PROJECT_ROOT=((() => {
 })());
 let activeProjectRoot=PROJECT_ROOT;
 let activeProjectSource='app folder';
+const activeAgentProcesses=new Map();
 const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_HEIGHT}=require('./widget-layout.cjs');
 
 const ALLOWED_AGENT_COMMANDS={
@@ -57,18 +58,20 @@ const sanitizeProjectRoot=(candidate)=> {
   return root;
 };
 
-const runCommand=(command,args,shell=false,cwd=PROJECT_ROOT)=>new Promise(resolve=>{
-  execFile(command,args,{cwd,timeout:120000,maxBuffer:2_000_000,shell},(error,stdout,stderr)=>{
+const runCommand=(command,args,shell=false,cwd=PROJECT_ROOT,taskId='command')=>new Promise(resolve=>{
+  const child=execFile(command,args,{cwd,timeout:120000,maxBuffer:2_000_000,shell},(error,stdout,stderr)=>{
+    activeAgentProcesses.delete(taskId);
     if(error)return resolve({ok:false,error:error.message,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:error.code||1});
     resolve({ok:true,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:0});
   });
+  activeAgentProcesses.set(taskId,child);
 });
 
 const executeAgentCommand=async request=>{
   const parsed=parseAgentRequest(request);
   if(!parsed)return commandError('This command type is not allowed.');
   if(parsed.command!=='git'&&parsed.command!=='npm'&&parsed.command!=='.venv/bin/python') return commandError('Command is blocked by the current policy.');
-  return runCommand(parsed.command,parsed.args,parsed.shell,activeProjectRoot);
+  return runCommand(parsed.command,parsed.args,parsed.shell,activeProjectRoot,request.taskId||'command');
 };
 let mainWindow=null;
 
@@ -152,6 +155,13 @@ else app.whenReady().then(async()=>{
   ipcMain.handle('agent-project-state',async event=>{
     if(!trusted(event))return {ok:false,error:'Project state is unavailable.'};
     return {ok:true,project:{name:path.basename(activeProjectRoot)||activeProjectRoot,source:activeProjectSource}};
+  });
+  ipcMain.handle('agent-cancel-task',async(event,taskId)=>{
+    if(!trusted(event)||typeof taskId!=='string')return {ok:false,error:'Task cancellation is unavailable.'};
+    const child=activeAgentProcesses.get(taskId);
+    if(!child||child.killed)return {ok:false,error:'No running task found.'};
+    child.kill('SIGTERM');
+    return {ok:true};
   });
   ipcMain.handle('widget-chat',async(event,expanded)=>{
     if(!trusted(event)||mode!=='widget'||typeof expanded!=='boolean')return false;
