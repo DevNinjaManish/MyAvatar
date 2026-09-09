@@ -6,7 +6,7 @@ No paid runtime API is required. The app's local services bind to `127.0.0.1`; m
 
 ## Development status
 
-This is a source-run development build, not a signed or release-qualified application. The cockpit, attached coding panels and UI polish are the current UI foundation. The coding panels are a functional **UI shell**, not an implemented coding executor: they do not yet read/edit project files, run commands/tests, inspect Git or delegate jobs. Choosing a folder currently returns its display name only and grants no project authority.
+This is a source-run development build, not a signed or release-qualified application. The cockpit, attached coding panels and UI polish are the current UI foundation. The local coding helper now runs a limited allowlisted command set for project-level actions (build/test/git inspection/commit) from the selected project folder, with strict approval controls. It does not yet read/write files directly or perform general-purpose code editing.
 
 The next approved milestone is engine and behaviour reliability: startup, greetings, listening, speech, chat, safe agent foundations and animation lifecycle. Read [ENGINE_IMPROVEMENT_PLAN](docs/ENGINE_IMPROVEMENT_PLAN.md) for the full plan and [ROADMAP](docs/ROADMAP.md) for the checklist. Planned capabilities are not enabled by adding these docs.
 
@@ -18,7 +18,7 @@ The maintainer authorised integration of PR #1 into `main` while native Mac test
 - Four persistent controls: Mic, Chat, Tools and More. Speech Stop is contextual beside status; microphone/mute stays available during speech.
 - Attached expandable/collapsible Task, Files/Changes, Terminal, Tests and Git/Diff panels, with a wider file/diff view and keyboard navigation.
 - Chat and Tools can stay open together. The optional expanded conversation uses the same renderer/audio session.
-- Task drafting with unsent-chat protection; a display-name-only native folder picker; clear unavailable/empty states rather than fabricated coding results.
+- Task drafting with unsent-chat protection; a project-aware native folder picker that switches the local project context used by the allowed commands; clear unavailable/empty states rather than fabricated coding results.
 - Local microphone conversation with automatic turn detection and a manual fallback.
 - Speaker-grille equalisation driven by output audio, camera shutters, breathing, listening/thinking motion and per-bot expressions.
 - Existing short greetings after launch/bot/performance changes. A quieter, cancellable greeting policy is planned.
@@ -89,7 +89,7 @@ MyAvatar supports **Fast and Balanced only**. Existing saved `High` preferences 
 
 ## Use and privacy
 
-Onboarding explains the local-only design and lets you choose a companion and performance mode. Microphone capture requires macOS permission; the exact first-use and resume lifecycle is part of the outstanding native validation and reliability work. Speak, then pause briefly to submit a turn. In the widget, the microphone button starts listening and becomes the mute/unmute toggle; End voice conversation remains in More. Stop interrupts the current speech response. No coding-task execution is connected yet.
+Onboarding explains the local-only design and lets you choose a companion and performance mode. Microphone capture requires macOS permission; the exact first-use and resume lifecycle is part of the outstanding native validation and reliability work. Speak, then pause briefly to submit a turn. In the widget, the microphone button starts listening and becomes the mute/unmute toggle; End voice conversation remains in More. Stop interrupts the current speech response.
 
 The display shows Listening, Thinking and Speaking. Setup, microphone, connection and runtime errors also appear in widget chat with an unread badge. A shared readiness/recovery model and widget-visible agent approvals are planned; do not infer engine health solely from appearance.
 
@@ -115,7 +115,7 @@ Native Mac checks remain deferred: transparency/dragging, both monitor edges, mu
 
 The speech path is English-first. Reliable speaker-safe full-duplex interruption, per-engine readiness/recovery, greeting deduplication, a shared chat store and structured agent tools are planned. Existing timer-based listening behaviour and narrow action tags should not be presented as a validated general agent system.
 
-The next implementation package is runtime/configuration regression coverage, followed by startup and greeting reliability. Coding file/command execution is a separate later milestone. Native testing is deferred, not silently waived for release.
+The next implementation package is runtime/configuration regression coverage, followed by startup and greeting reliability. Coding execution is now partially integrated (allowlisted command runner) and still limited by fixed commands and local scope. Native testing remains deferred, not silently waived for release.
 
 ## Documentation
 

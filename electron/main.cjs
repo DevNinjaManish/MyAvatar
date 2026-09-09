@@ -1,10 +1,12 @@
 const {app,BrowserWindow,session,systemPreferences,ipcMain,screen,desktopCapturer,dialog}=require('electron');
 const {execFile}=require('node:child_process');
 const path=require('node:path');
+const {accessSync,constants}=require('node:fs');
 const PROJECT_ROOT=((() => {
   if (typeof process === 'object' && typeof process.cwd === 'function') return process.cwd();
   return path.resolve(__dirname, '..');
 })());
+let activeProjectRoot=PROJECT_ROOT;
 const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_HEIGHT}=require('./widget-layout.cjs');
 
 const ALLOWED_AGENT_COMMANDS={
@@ -41,8 +43,20 @@ const parseAgentRequest=request=>{
   return {...preset,id:kind};
 };
 
-const runCommand=(command,args,shell=false)=>new Promise(resolve=>{
-  execFile(command,args,{cwd:PROJECT_ROOT,timeout:120000,maxBuffer:2_000_000,shell},(error,stdout,stderr)=>{
+const sanitizeProjectRoot=(candidate)=> {
+  if (typeof candidate !== 'string' || !candidate.trim()) return PROJECT_ROOT;
+  const root=candidate.trim();
+  if (!path.isAbsolute(root)) return PROJECT_ROOT;
+  try{
+    accessSync(root, constants.F_OK | constants.R_OK);
+  } catch {
+    return PROJECT_ROOT;
+  }
+  return root;
+};
+
+const runCommand=(command,args,shell=false,cwd=PROJECT_ROOT)=>new Promise(resolve=>{
+  execFile(command,args,{cwd,timeout:120000,maxBuffer:2_000_000,shell},(error,stdout,stderr)=>{
     if(error)return resolve({ok:false,error:error.message,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:error.code||1});
     resolve({ok:true,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:0});
   });
@@ -52,7 +66,7 @@ const executeAgentCommand=async request=>{
   const parsed=parseAgentRequest(request);
   if(!parsed)return commandError('This command type is not allowed.');
   if(parsed.command!=='git'&&parsed.command!=='npm'&&parsed.command!=='.venv/bin/python') return commandError('Command is blocked by the current policy.');
-  return runCommand(parsed.command,parsed.args,parsed.shell);
+  return runCommand(parsed.command,parsed.args,parsed.shell,activeProjectRoot);
 };
 let mainWindow=null;
 
@@ -124,7 +138,7 @@ else app.whenReady().then(async()=>{
     if(!trusted(event))return {ok:false,error:'Query request is unavailable.'};
     const parsed=parseAgentRequest(request);
     if(!parsed||!parsed.id||parsed.command!=='git')return commandError('This query is not allowed.');
-    return runCommand(parsed.command,parsed.args,parsed.shell);
+    return runCommand(parsed.command,parsed.args,parsed.shell,activeProjectRoot);
   });
   ipcMain.handle('widget-chat',async(event,expanded)=>{
     if(!trusted(event)||mode!=='widget'||typeof expanded!=='boolean')return false;
@@ -142,11 +156,12 @@ else app.whenReady().then(async()=>{
     if(selectingProject)return {ok:false,error:'A folder picker is already open.'};
     selectingProject=true;stopDrag();
     try{
-      const result=await dialog.showOpenDialog(win,{title:'Choose a coding project',buttonLabel:'Select folder',properties:['openDirectory'],message:'Select a workspace label. File access and coding execution are not connected yet.'});
+      const result=await dialog.showOpenDialog(win,{title:'Choose a coding project',buttonLabel:'Select folder',properties:['openDirectory','createDirectory'],message:'Select a workspace to run allowed local commands.'});
       if(win.isDestroyed())return {ok:false,error:'The widget was closed.'};
       if(result.canceled||!result.filePaths.length)return {ok:true,canceled:true};
-      // A display name only: this UI phase deliberately creates no access grant.
-      return {ok:true,project:{name:path.basename(result.filePaths[0])||result.filePaths[0]}};
+      const selected=path.resolve(result.filePaths[0] || '');
+      activeProjectRoot=sanitizeProjectRoot(selected);
+      return {ok:true,project:{name:path.basename(selected)||selected}};
     }catch{return {ok:false,error:'The folder picker could not be opened.'};}
     finally{selectingProject=false;}
   });
