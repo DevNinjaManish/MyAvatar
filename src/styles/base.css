@@ -317,16 +317,6 @@ body.widget #widget-tools {
   gap:8px}
 body.widget #widget-chat {
   display:none}
-body.widget.widget-chat-open main {
-  --widget-avatar-size:160px;
-  width:160px;
-  height:168px}
-body.widget.widget-chat-open #widget-tools {
-  margin-top:7px;
-  gap:5px}
-body.widget.widget-chat-open .widget-caption {height:21px;padding:3px 9px}
-body.widget.widget-chat-open .widget-toolbar {padding:3px}
-body.widget.widget-chat-open .widget-toolbar button {width:27px;height:31px;padding:5px}
 body.widget.widget-chat-open #widget-chat {
   display:flex;
   order:2;
