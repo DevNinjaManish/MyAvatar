@@ -55,6 +55,7 @@ export function mountWidgetPanels(doc, desktop) {
   let state = readPanelPreferences(storage), request = 0, selecting = false;
   let trustedMode = false;
   let pendingAction = null;
+  let activeProject = $('widget-project-name')?.textContent?.trim() || 'Local workspace';
 
   const abort = new AbortController(), signal = abort.signal;
   const on = (element, event, callback, options = {}) => element.addEventListener(event, callback, {...options, signal});
@@ -70,11 +71,26 @@ export function mountWidgetPanels(doc, desktop) {
       $('widget-command-approve')?.setAttribute('hidden', '');
       $('widget-command-cancel')?.setAttribute('hidden', '');
       $('widget-run-command')?.removeAttribute('disabled');
+      updateWingFooter('Waiting');
       return;
     }
     $('widget-command-approve')?.removeAttribute('hidden');
     $('widget-command-cancel')?.removeAttribute('hidden');
     $('widget-run-command')?.setAttribute('disabled', 'true');
+    updateWingFooter('Approval required');
+  };
+  const updateWingFooter = status => {
+    const footer = $('widget-wing-footer');
+    if (!footer) return;
+    const pending = pendingAction ? 'pending approval' : 'no pending approval';
+    const tail = status ? ` · ${status}` : '';
+    footer.textContent = `Project: ${activeProject} · ${pending}${tail}`;
+  };
+  const setProject = name => {
+    activeProject = (typeof name === 'string' && name.trim()) ? name.trim() : 'Local workspace';
+    $('widget-project-name').textContent = activeProject;
+    $('widget-project-name').title = activeProject;
+    updateWingFooter('Project selected');
   };
   const refreshGitSummary = async () => {
     const status = await runAgentQuery({kind: 'gitStatus'});
@@ -191,6 +207,8 @@ export function mountWidgetPanels(doc, desktop) {
       report(`Command failed: ${output?.error || 'Unknown error'}`,'error');
       $('widget-terminal-output').textContent = output?.stderr || output?.error || 'Command failed.';
     }
+    const actionLabel = request.kind || request.id || 'command';
+    updateWingFooter(`Last action: ${actionLabel} ${output?.ok ? 'succeeded' : 'failed'}`);
     maybeEnableCommand();
     setNeedApprove(false);
     void refreshGitSummary();
@@ -209,6 +227,7 @@ export function mountWidgetPanels(doc, desktop) {
   const executeApproved = async () => {
     if (!pendingAction) return;
     $('widget-run-command').setAttribute('disabled', 'true');
+    report('Running approved command…', 'info');
     await runCommandNow(pendingAction);
     pendingAction = null;
   };
@@ -346,11 +365,13 @@ export function mountWidgetPanels(doc, desktop) {
     const output = await runCommandNow({kind: 'test'});
     $('widget-tests-status').textContent = output?.ok ? 'Tests complete' : 'Tests failed';
     doc.querySelector('[data-widget-panel="tests"] .panel-state').textContent = output?.ok ? 'Pass' : 'Fail';
+    updateWingFooter(`Last action: test ${output?.ok ? 'passed' : 'failed'}`);
   });
 
   on($('widget-refresh-git'), 'click', async () => {
     await refreshGitSummary();
     doc.querySelector('[data-widget-panel="diff"] .panel-state').textContent = 'Updated';
+    updateWingFooter('Git status refreshed');
   });
 
   on($('widget-open-diff'), 'click', async () => {
@@ -363,6 +384,7 @@ export function mountWidgetPanels(doc, desktop) {
     pre.textContent = diffText;
     wing.append(pre);
     dispatch({type: 'open-wide', id: 'diff'});
+    updateWingFooter(`Last action: git diff ${result?.ok ? 'loaded' : 'failed'}`);
   });
 
   on($('widget-commit'), 'click', async () => {
@@ -379,9 +401,11 @@ export function mountWidgetPanels(doc, desktop) {
     const result = await runAgentAction({kind: 'gitCommit', commitMessage: messageText});
     if (result?.ok) {
       report(`Committed: ${messageText}`);
+      updateWingFooter('Committed changes to git');
       await refreshGitSummary();
     } else {
       report(`Commit failed: ${result?.error || 'Unknown error'}`, 'error');
+      updateWingFooter(`Commit failed: ${messageText}`);
     }
   });
 
@@ -399,8 +423,7 @@ export function mountWidgetPanels(doc, desktop) {
       const result = await desktop.chooseProject();
       if (signal.aborted || result?.canceled) return;
       if (!result?.ok || !result.project?.name) throw Error(result?.error || 'Could not select a folder.');
-      $('widget-project-name').textContent = result.project.name;
-      $('widget-project-name').title = result.project.name;
+      setProject(result.project.name);
       nextLabel = 'Change folder';
       $('widget-files-empty').textContent = 'Folder selected. Actions run on the local app repository path.';
       report('Folder selected locally. This does not override the single-project execution policy.');
@@ -428,6 +451,7 @@ export function mountWidgetPanels(doc, desktop) {
   doc.querySelector('[data-widget-panel="task"] .panel-state').textContent = $('widget-brief').value.trim() ? 'Draft' : 'Not started';
   setTrustLabel();
   setNeedApprove(false);
+  updateWingFooter('Ready');
   render();
   return {dispose() { abort.abort(); observer.disconnect(); unsubscribe?.(); }};
 }
