@@ -173,3 +173,13 @@ body.widget .widget-wing-footer { font-size: 11px; color: var(--widget-text-soft
   body.widget { --widget-hairline: #ffffff61; --widget-text-soft: #edf3f1; }
   body.widget .widget-panel-toggle .panel-state { color: var(--ink); }
 }
+
+/* The companion is the stable anchor. Utility panels expand around it and
+ * never shrink its portrait when Chat, Coding, or Calendar opens. */
+body.widget.widget-chat-open main,
+body.widget.widget-panels-open main,
+body.widget.widget-calendar-open main {
+  --widget-avatar-size: 224px;
+  width: 224px;
+  height: 236px;
+}
