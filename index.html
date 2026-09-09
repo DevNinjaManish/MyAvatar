@@ -1,13 +1,12 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' blob: ws://127.0.0.1:8765; img-src 'self' blob: data:; worker-src 'self' blob:;"><title>MyAvatar</title></head><body>
-<div id="widget-drag"  aria-label="Drag handle"><span></span></div>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' blob: ws://127.0.0.1:8765; img-src 'self' blob: data:; worker-src 'self' blob:;"><title>MyAvatar</title><link rel="stylesheet" href="/src/widget-cockpit.css"></head><body>
+<div id="widget-drag" aria-label="Drag handle"><span></span></div>
 <div id="widget-tools">
   <button id="widget-picker-toggle" class="widget-caption" aria-label="Choose companion" aria-expanded="false" aria-controls="bot-library" title="Choose companion"><img id="widget-bot-icon" alt=""><span id="widget-emoji" hidden></span><span id="widget-name">Companion</span><span id="widget-status" aria-live="polite">Connecting…</span><span class="picker-chevron" aria-hidden="true">⌄</span></button>
   <div class="widget-toolbar">
     <button id="widget-mic" aria-label="Start conversation" title="Start conversation" disabled></button>
     <button id="widget-stop" aria-label="Stop speaking" title="Stop speaking" hidden></button>
     <button id="widget-chat-toggle" aria-label="Open chat" title="Open chat" aria-expanded="false" aria-controls="widget-chat"></button>
-    <button id="widget-awareness" aria-label="Screen awareness off" title="Screen awareness off" aria-pressed="false"></button>
-    <button id="expand" aria-label="Open conversation" title="Open conversation"></button>
+    <button id="expand" aria-label="Open tools workspace" title="Open tools workspace"></button>
     <button id="widget-more" aria-label="More options" title="More options" aria-expanded="false" aria-controls="widget-menu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
   </div>
 </div>
@@ -18,6 +17,7 @@
 </section>
 <section id="widget-menu" aria-label="Companion options" hidden>
   <div class="menu-heading">COMPANION<button id="menu-close" aria-label="Close options">×</button></div>
+  <div class="menu-control-row"><span>Screen awareness</span><button id="widget-awareness" aria-label="Screen awareness off" title="Screen awareness off" aria-pressed="false"></button></div>
   <button id="widget-bot">Choose companion <span>↗</span></button>
   <button id="widget-settings">Settings <span>↗</span></button>
   <button id="widget-quality" aria-expanded="false" aria-controls="widget-quality-panel">Performance</button>
