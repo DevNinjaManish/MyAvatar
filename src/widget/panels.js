@@ -74,7 +74,9 @@ export function mountWidgetPanels(doc, desktop) {
   let activeProject = $('widget-project-name')?.textContent?.trim() || 'Local workspace';
   let agentRunning = false;
   let taskCancelled = false;
+  let taskFailed = false;
   let activeTaskId = null;
+  let lastTaskBrief = '';
 
   const abort = new AbortController(), signal = abort.signal;
   const on = (element, event, callback, options = {}) => element.addEventListener(event, callback, {...options, signal});
@@ -233,8 +235,12 @@ export function mountWidgetPanels(doc, desktop) {
       $('widget-terminal-output').textContent = output.stdout || '(Command completed with empty output.)';
       report(`Command ${request.kind || request.id || 'unknown'} completed.`);
     } else {
-      report(`Command failed: ${output?.error || 'Unknown error'}`,'error');
-      $('widget-terminal-output').textContent = output?.stderr || output?.error || 'Command failed.';
+      const timedOut = output?.code === 'ETIMEDOUT' || /timed out/i.test(output?.error || '');
+      const message = timedOut
+        ? 'This command took too long and was stopped. Try a smaller task.'
+        : (output?.error || 'Unknown error');
+      report(`Command failed: ${message}`,'error');
+      $('widget-terminal-output').textContent = output?.stderr || message;
     }
     const actionLabel = request.kind || request.id || 'command';
     updateWingFooter(`Last action: ${actionLabel} ${output?.ok ? 'succeeded' : 'failed'}`);
@@ -272,8 +278,11 @@ export function mountWidgetPanels(doc, desktop) {
     if (agentRunning) return;
     agentRunning = true;
     taskCancelled = false;
+    taskFailed = false;
+    lastTaskBrief = brief;
     activeTaskId = globalThis.crypto?.randomUUID?.() || `task-${Date.now()}`;
     $('widget-task-cancel').hidden = false;
+    $('widget-task-retry').hidden = true;
     $('widget-task-run').disabled = true;
     $('widget-agent-run').disabled = true;
     const plan = planFromBrief(brief).map(step => ({
@@ -296,6 +305,7 @@ export function mountWidgetPanels(doc, desktop) {
       if (step.kind === 'gitDiff') {
         const result = await runAgentQuery({...step, taskId: activeTaskId});
         if (!result?.ok) {
+          taskFailed = true;
           report(`Local agent step failed: ${result?.error || 'unknown'}`, 'error');
           break;
         }
@@ -309,6 +319,7 @@ export function mountWidgetPanels(doc, desktop) {
         ? await runAgentQuery({...step, taskId: activeTaskId})
         : await runCommandNow({...step, taskId: activeTaskId});
       if (output && (output.ok === false)) {
+        taskFailed = true;
         report(`Local agent step failed: ${step.kind}`, 'error');
         if (step.kind === 'test' || step.kind === 'testPy' || step.kind === 'build') break;
       } else {
@@ -324,6 +335,7 @@ export function mountWidgetPanels(doc, desktop) {
     }
     agentRunning = false;
     $('widget-task-cancel').hidden = true;
+    $('widget-task-retry').hidden = !taskFailed;
     $('widget-task-run').disabled = !$('widget-brief').value.trim();
     $('widget-agent-run').disabled = !$('widget-brief').value.trim();
     const taskState = doc.querySelector('[data-widget-panel="task"] .panel-state');
@@ -331,6 +343,10 @@ export function mountWidgetPanels(doc, desktop) {
       if (taskState) taskState.textContent = 'Cancelled';
       $('widget-brief-status').textContent = 'Task cancelled';
       report('Task cancelled safely.', 'warning');
+    } else if (taskFailed) {
+      if (taskState) taskState.textContent = 'Failed';
+      $('widget-brief-status').textContent = 'Task needs attention';
+      report('Task failed. Review the details, then try again.', 'error');
     } else {
       if (taskState) taskState.textContent = 'Pass';
       $('widget-brief-status').textContent = 'Task completed (local agent)';
@@ -410,6 +426,12 @@ export function mountWidgetPanels(doc, desktop) {
     report('Stopping the current task…', 'warning');
     await desktop?.cancelAgentTask?.(activeTaskId);
     $('widget-task-cancel').disabled = false;
+  });
+  on($('widget-task-retry'), 'click', () => {
+    if (!lastTaskBrief || agentRunning) return;
+    $('widget-brief').value = lastTaskBrief;
+    $('widget-brief').dispatchEvent(new Event('input', {bubbles: true}));
+    $('widget-task-run').click();
   });
 
   const quickTasks = {
