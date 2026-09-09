@@ -116,7 +116,7 @@ else app.whenReady().then(async()=>{
   // Keep one native rectangle for the entire widget lifetime. Utility panels
   // reveal content inside it; resizing the transparent window causes macOS to
   // re-clamp its top edge and produces the visible platform jump.
-  const win=new BrowserWindow({width:WIDTH,height:Math.min(UTILITY_HEIGHT,area.height),x:area.x+area.width-270,y:initialY,minWidth:WIDTH,minHeight:COMPACT_HEIGHT,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  const win=new BrowserWindow({width:WIDTH,height:Math.min(UTILITY_HEIGHT,area.height),x:area.x+area.width-WIDTH-10,y:initialY,minWidth:WIDTH,minHeight:COMPACT_HEIGHT,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   mainWindow=win;
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
