@@ -43,9 +43,9 @@ The coding panels are a UI shell, not an executor. Existing narrow Mac action ta
 
 ## P2 — Chat and controlled agent behaviour
 
-- [ ] One canonical conversation store for compact/expanded views with stable message status and IDs.
-- [ ] Preserve per-bot drafts and reader scroll position; add safe copy/retry/replay/transcript correction.
-- [ ] Show requests, approvals, tool results and failures inside the widget.
+- [~] One canonical conversation store for compact/expanded views with stable message status and IDs. Batch 07 adds the shared store, stable per-turn IDs, and explicit streaming/complete/interrupted/failed states; migration of interactive approvals/tool cards remains.
+- [~] Preserve per-bot drafts and reader scroll position; add safe copy/retry/replay/transcript correction. Batch 07 isolates drafts by companion and preserves reader position instead of forcing scroll-to-bottom. Retry/replay/transcript correction remain.
+- [~] Show requests, approvals, tool results and failures inside the widget. Batch 07 adds typed structured-message foundations and message failure/voice-warning state, while existing interactive approval cards intentionally remain on the current path until they can be migrated without losing controls.
 - [ ] Add safe code formatting and explicit, bounded local memory controls.
 - [ ] Add a structured capability registry and shared voice/click/keyboard command path.
 - [ ] Validate tools and permissions outside the model; no authority from rendered prose or screen/repository text.

@@ -23,12 +23,13 @@ export class RuntimeEventGate{
   }
 }
 
-function noteClientMessage(data){
+function noteClientMessage(data,win){
   if(typeof data!=='string')return;
   try{
     const message=JSON.parse(data);
     if(message?.type==='turn')turnPlayback.beginTurn(message.turn);
     else if(message?.type==='stop')turnPlayback.cancelTurn();
+    win.dispatchEvent(new CustomEvent('myavatar:client-message',{detail:message}));
   }catch{}
 }
 
@@ -45,12 +46,13 @@ export function installRuntimeEventGuard(win=window){
       const socket=Reflect.construct(Target,args,newTarget===win.WebSocket?Target:newTarget);
       const gate=new RuntimeEventGate();
       const nativeSend=socket.send.bind(socket);
-      socket.send=data=>{noteClientMessage(data);return nativeSend(data);};
+      socket.send=data=>{noteClientMessage(data,win);return nativeSend(data);};
       socket.addEventListener('message',event=>{
         let payload;
         try{payload=JSON.parse(event.data);}catch{return;}
         if(!gate.accept(payload)){event.stopImmediatePropagation();return;}
         turnPlayback.noteServerEvent(payload);
+        win.dispatchEvent(new CustomEvent('myavatar:runtime-event',{detail:payload}));
         if(payload.readiness&&typeof payload.readiness==='object'){
           win.dispatchEvent(new CustomEvent('myavatar:readiness',{detail:payload.readiness}));
         }
