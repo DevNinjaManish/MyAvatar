@@ -100,6 +100,15 @@ body.widget.widget-chat-open .widget-toolbar button {
   width:100%;
   min-width:0;
 }
+/* Opening a utility should not restyle or resize the platform controls. Keep
+ * the active state discoverable with a small underline instead of changing
+ * the icon surface or color. Mic state colors remain reserved for audio. */
+body.widget .widget-toolbar button[aria-expanded=true] {
+  color:#b9c5c8;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:inset 0 -2px var(--accent);
+}
 body.widget #widget-stop-slot { flex:none; display:grid; place-items:center; width:28px; height:28px; }
 body.widget #widget-stop { margin:0; }
 body.widget #widget-stop[hidden] { display:block; visibility:hidden; pointer-events:none; }
