@@ -1,6 +1,6 @@
 'use strict';
 const WIDTH = 260, COMPACT_HEIGHT = 370, CHAT_HEIGHT = 570;
-const TOOLS_HEIGHT = 720, COMBINED_HEIGHT = 850, WING_WIDTH = 440, GAP = 10;
+const TOOLS_HEIGHT = 720, COMBINED_HEIGHT = 850, CALENDAR_HEIGHT = 650, WING_WIDTH = 440, GAP = 10;
 const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, max)));
 
 /** A pure, testable layout function in Electron device-independent pixels.
@@ -9,7 +9,7 @@ const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, m
  */
 function widgetLayout(anchor, view, area) {
   const width = Math.min(WIDTH, area.width);
-  const wantedHeight = view.tools ? (view.chat ? COMBINED_HEIGHT : TOOLS_HEIGHT)
+  const wantedHeight = view.calendar ? CALENDAR_HEIGHT : view.tools ? (view.chat ? COMBINED_HEIGHT : TOOLS_HEIGHT)
     : view.chat ? CHAT_HEIGHT : COMPACT_HEIGHT;
   const height = Math.min(wantedHeight, area.height);
   let x = clamp(anchor.x, area.x, area.x + area.width - width);

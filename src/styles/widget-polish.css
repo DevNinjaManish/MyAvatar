@@ -71,6 +71,8 @@ body.widget #widget-calendar-toggle { font-size:15px; line-height:1; }
 /* Calendar is a compact utility popover; only coding/diff use the large wing. */
 body.widget #widget-mini-calendar { position:absolute; z-index:8; top:8px; left:10px; right:10px; height:330px; display:flex; flex-direction:column; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:hidden; }
 body.widget #widget-mini-calendar[hidden] { display:none; }
+body.widget.widget-calendar-open { overflow:hidden; }
+body.widget.widget-calendar-open #widget-mini-calendar { position:static; order:2; width:238px; height:330px; margin:8px auto 0; }
 body.widget[data-attached-workspace=calendar] #widget-coding-panels { display:none!important; }
 body.widget[data-attached-workspace=calendar] #widget-code-wing { display:flex; }
 body.widget .calendar-wing { display:grid; gap:8px; }

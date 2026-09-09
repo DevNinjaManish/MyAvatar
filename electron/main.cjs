@@ -117,7 +117,7 @@ else app.whenReady().then(async()=>{
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
   let anchor={x:win.getBounds().x,y:win.getBounds().y},mode='widget';
-  let view={chat:false,tools:false,wide:false},layout=widgetLayout(anchor,view,area);
+  let view={chat:false,tools:false,wide:false,calendar:false},layout=widgetLayout(anchor,view,area);
   let dragTimer=null,selectingProject=false;
   const trusted=event=>!win.isDestroyed()&&event.sender===win.webContents
     &&event.senderFrame===win.webContents.mainFrame&&local(win.webContents.getURL());
@@ -150,7 +150,7 @@ else app.whenReady().then(async()=>{
   });
   ipcMain.on('widget-drag-stop',event=>{if(trusted(event))stopDrag();});
   win.on('blur',stopDrag);win.on('closed',stopDrag);
-  win.webContents.on('did-start-loading',()=>{stopDrag();view={chat:false,tools:false,wide:false};reflow();});
+  win.webContents.on('did-start-loading',()=>{stopDrag();view={chat:false,tools:false,wide:false,calendar:false};reflow();});
   const restoreWidget=()=>{win.setResizable(false);reflow();notify();};
   ipcMain.handle('window-mode',async(event,next)=>{
     if(!trusted(event)||!['widget','full'].includes(next))return mode;
@@ -199,6 +199,10 @@ else app.whenReady().then(async()=>{
     if(!trusted(event)||mode!=='widget'||!validPanelsRequest(next))return {ok:false,error:'Invalid widget panel request.'};
     stopDrag();view.tools=next.open;view.wide=next.wide;
     return {ok:true,...reflow()};
+  });
+  ipcMain.handle('widget-calendar',async(event,next)=>{
+    if(!trusted(event)||!next||typeof next.open!=='boolean')return {ok:false,error:'Invalid calendar view request.'};
+    stopDrag();view.calendar=next.open;view.tools=false;view.wide=false;view.chat=false;return {ok:true,...reflow()};
   });
   // Explicit directory selection only. No arbitrary path arguments, file reads,
   // shell commands, writes, or backend permissions are exposed by this handler.
