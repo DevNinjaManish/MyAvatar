@@ -41,6 +41,9 @@ export function installRuntimeEventGuard(win=window){
           win.dispatchEvent(new CustomEvent('myavatar:readiness',{detail:payload.readiness}));
         }
       },{capture:true});
+      socket.addEventListener('close',()=>{
+        win.dispatchEvent(new CustomEvent('myavatar:socket-close'));
+      },{once:true});
       return socket;
     }
   });

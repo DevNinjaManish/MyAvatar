@@ -101,7 +101,7 @@ coding execution. Live Mac validation remains deferred.
 
 Base: Batch 02 commit `5d3f51ad2dac0e787e968222e2ac97a23a30cbd9`.
 Branch: `engine/batch-03-readiness-stale-events`.
-Status: implemented with automated regression coverage; stacked on Batch 02.
+Status: implemented and exact-head CI passed; stacked on Batch 02.
 
 ### Implemented
 
@@ -117,30 +117,18 @@ Status: implemented with automated regression coverage; stacked on Batch 02.
   with a typed fallback when STT is unavailable. LLM-unavailable turns surface the
   transcript then a truthful local-chat error without calling the model.
 - Readiness is embedded in existing `preparing` and `ready` events so the protocol
-  preserves established event ordering. Fatal warm-up failures still preserve the
-  existing preparing-then-setup-error sequence and detail.
+  preserves established event ordering.
 - `src/conversation/runtime-events.js` installs before `main.js` creates the
   WebSocket and rejects mismatched sessions, duplicate/out-of-order sequence
   numbers, and obsolete old-bot output after a config transition.
 - `src/conversation/readiness-ui.js` renders truthful compact states such as
-  `Chat ready · voice unavailable`. It blocks voice controls when STT is
-  unavailable while preserving typed chat when the LLM remains usable.
-- Existing widget layout, bot artwork, equaliser, microphone/VAD implementation,
-  voices, native window and coding panels are unchanged.
+  `Chat ready · voice unavailable` and gates voice input independently of text.
 
 ### Validation scope
 
-- JavaScript regression tests cover runtime event ordering, mismatched sessions,
-  stale bot events, legacy transition behavior and readiness UI gating.
-- Python regression tests cover readiness derivation and degraded TTS/STT/LLM
-  server paths while mocking model/speech work as appropriate.
-- Existing protocol-order tests were kept intact; readiness was integrated without
-  inserting surprise events between established `config`, `preparing`, `ready`
-  and `bot_history` sequences.
-- Exact-head GitHub Actions passed JavaScript tests, Python tests and production
-  build for the validated pre-squash tree at commit
-  `443189bc7df711e422d70fd191e3dc56f93aa0f9`. Final squashed exact-head CI is
-  required before this batch is considered complete.
+Exact-head GitHub Actions passed JavaScript tests, Python tests and production
+build for the final squashed Batch 03 commit
+`1e0678fcd999632e7aef230f2fc5980b1a251bf9`.
 
 ### Not implemented or certified by this batch
 
@@ -150,10 +138,55 @@ chat storage, agent/coding execution and animation lifecycle work remain later
 batches. No live microphone, speaker, permissions or hardware-performance claim is
 made from these tests.
 
+## Batch 04 - Microphone ownership and listening lifecycle
+
+Base: Batch 03 commit `1e0678fcd999632e7aef230f2fc5980b1a251bf9`.
+Branch: `engine/batch-04-mic-lifecycle`.
+Status: implemented with automated race coverage; live Mac validation deferred.
+
+### Implemented
+
+- `AudioEngine` now owns capture through one explicit process-local owner plus a
+  monotonically increasing capture generation. A second capture revokes the first
+  before it can remain active, preventing duplicate/orphan microphone sessions.
+- Capture mode is explicit (`live` or `manual`). Late permission results and stale
+  AudioWorklet frames are discarded when their generation is no longer current.
+- Cleanup is idempotent and releases recorder ports, graph nodes, timers and media
+  tracks without closing the shared AudioContext used by playback.
+- `setListening(false)` is a true mute/listening gate: it resets turn detection and
+  blocks utterance callbacks while deliberately keeping the live microphone stream
+  open. Unmute can resume the same live capture.
+- `src/audio/lifecycle.js` separates the three user-facing meanings: Stop speaking
+  leaves capture alone, Mute gates listening, and End conversation releases the
+  active capture. Full-mode live-mic End, widget End, disconnect and unload all
+  release capture.
+- Runtime WebSocket close emits a local lifecycle event so microphone resources are
+  released even though reconnect/backoff itself remains a later batch.
+- Existing VAD thresholds, Whisper/Kokoro providers, mouth equaliser, artwork,
+  widget layout and coding panels are unchanged.
+
+### Validation scope
+
+- JavaScript tests cover pending permission cancellation, single capture ownership,
+  mute-without-release, stale callback rejection, idempotent cleanup, Stop/Mute/End
+  semantic separation, disconnect and unload.
+- Existing VAD behavior tests remain in place; one compatibility regression found by
+  CI was fixed without changing detector thresholds.
+- Exact-head GitHub Actions passed JavaScript tests, Python tests and production
+  build for commit `821031be37e8cadeb2bf10f59960c1a9596aa2fe`.
+- No real microphone, headset change, echo path, speaker playback or macOS permission
+  flow has been certified by these automated checks.
+
+### Not implemented or certified by this batch
+
+Natural barge-in, speaker-safe interruption tuning, audio-device-change recovery,
+Silero evaluation, final recognition/voice selection and live latency remain future
+work. Disconnect still requires the current application restart policy.
+
 ## Next bounded batch
 
-Microphone ownership and listening lifecycle, without yet tuning VAD quality.
-Centralise MediaStream/worklet cleanup and make Stop speaking, mute and End
-conversation state transitions explicit. Add race tests for pending permission,
-end-session, disconnect and stale capture callbacks before attempting natural
-barge-in or real-device echo tuning.
+Turn/playback coordination and interruption semantics. Replace the remaining
+fixed-timer listening reopen path with explicit playback/turn state, keep Stop
+speaking distinct from Cancel task, and add deterministic tests for speech ending,
+late audio chunks, mute during reply, and interruption ordering. Do not tune VAD
+sensitivity or introduce a new speech model in the same batch.
