@@ -1,4 +1,4 @@
-import asyncio, base64, json, logging, os, time, copy, random, re, subprocess
+import asyncio, base64, json, logging, os, time, copy, re, subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -7,9 +7,12 @@ from backend.tts.provider import Speech
 from backend.llm.provider import stream
 from backend.conversation.chunks import split_ready
 from backend.memory import load_history, save_history, clear_history
+from backend import settings as runtime_settings
+from backend.approvals import request_approval, resolve_approval
 
 app=FastAPI()
 Path('logs').mkdir(exist_ok=True)
+CONFIG_PATH=Path('config.json')
 PREFERENCES_PATH=Path('data/settings.json')
 SCREEN_EVENTS_PATH=Path('data/screen-awareness/events.jsonl')
 logging.basicConfig(level=logging.INFO,handlers=[logging.StreamHandler()])
@@ -25,30 +28,13 @@ warm_task=None
 warm_stage='Preparing local speech models…'
 
 def apply_profile(config,name):
-    profile=config.get('performanceProfiles',{}).get(name)
-    if not profile:name='medium';profile=config['performanceProfiles'][name]
-    config['performanceProfile']=name
-    for section in ('llm','conversation','tts','avatar'):config[section].update(profile.get(section,{}))
+    runtime_settings.apply_profile(config,name,runtime_settings.read_defaults(CONFIG_PATH))
 
 def load_config():
-    config=json.loads(Path('config.json').read_text())
-    try:preferences=json.loads(PREFERENCES_PATH.read_text())
-    except FileNotFoundError:preferences={}
-    if 'language' in preferences:config['stt']['language']=preferences['language']
-    profile=preferences.get('performanceProfile')
-    if profile:apply_profile(config,profile)
-    bot=preferences.get('persona')
-    if bot in config.get('bots',{}):
-        config['conversation'].update(persona=bot,system=config['bots'][bot]['system'])
-        config['tts']['voice']=config['bots'][bot]['voice']
-    if preferences.get('interaction') in ('live','manual'):config['audio']['mode']=preferences['interaction']
-    if isinstance(preferences.get('memoryEnabled'),bool):config.setdefault('memory',{})['enabled']=preferences['memoryEnabled']
-    config['_greetingIndexes']=preferences.get('greetingIndexes',{})
-    return config
+    return runtime_settings.load_config(CONFIG_PATH,PREFERENCES_PATH)
 
 def save_preferences(config):
-    PREFERENCES_PATH.parent.mkdir(exist_ok=True)
-    PREFERENCES_PATH.write_text(json.dumps({'persona':config['conversation']['persona'],'performanceProfile':config.get('performanceProfile','low'),'interaction':config['audio']['mode'],'memoryEnabled':config.get('memory',{}).get('enabled',False),'greetingIndexes':config.get('_greetingIndexes',{})}))
+    return runtime_settings.save_preferences(config,PREFERENCES_PATH)
 
 def save_screen_event(bot_id,source,summary):
     """Keep an inspectable derived log without retaining raw screen images."""
@@ -259,11 +245,9 @@ async def ws(socket:WebSocket):
                             action=None if image else parse_action(action_match.group(1))
                             pending=pending[action_match.end():]
                             if action:
-                                request_id=random.token_hex(12);approval=loop.create_future();approvals[request_id]=(approval,action)
-                                await send('action_request',turn,requestId=request_id,action=action)
-                                try:allowed=await asyncio.wait_for(approval,45)
-                                except asyncio.TimeoutError:allowed=False
-                                approvals.pop(request_id,None)
+                                request_id,allowed=await request_approval(
+                                    approvals,action,
+                                    lambda request_id:send('action_request',turn,requestId=request_id,action=action))
                                 if allowed:
                                     ok=await loop.run_in_executor(None,run_action,action)
                                     await send('action_result',turn,requestId=request_id,ok=ok)
@@ -357,8 +341,7 @@ async def ws(socket:WebSocket):
                 await send('config',config=config)
                 await greet()
             elif msg['type']=='action_decision':
-                pending=approvals.get(msg.get('requestId'))
-                if pending and not pending[0].done():pending[0].set_result(msg.get('decision')=='allow_once')
+                resolve_approval(approvals,msg.get('requestId'),msg.get('decision'))
             elif msg['type']=='onboarding':
                 bot_id=msg.get('bot')
                 profile=config.get('bots',{}).get(bot_id)
