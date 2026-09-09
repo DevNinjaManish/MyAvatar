@@ -180,6 +180,18 @@ body.widget.widget-chat-open main,
 body.widget.widget-panels-open main,
 body.widget.widget-calendar-open main {
   --widget-avatar-size: 224px;
-  width: 224px;
-  height: 236px;
+  width: 224px !important;
+  height: 236px !important;
 }
+/* Real month grid: seven stable columns, readable dates, and event dots. */
+body.widget .mini-calendar-month { display:grid; grid-template-columns:30px 1fr 30px; align-items:center; gap:6px; margin:7px 0 8px; }
+body.widget .mini-calendar-month strong { text-align:center; font-size:12px; }
+body.widget .mini-calendar-month button { min-height:28px; padding:0; font-size:18px; }
+body.widget .mini-calendar-weekdays,
+body.widget .mini-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px; text-align:center; }
+body.widget .mini-calendar-weekdays { margin-bottom:3px; color:var(--widget-text-soft); font-size:8px; }
+body.widget .mini-calendar-grid { margin-bottom:7px; }
+body.widget .mini-calendar-grid span { position:relative; display:grid; place-items:center; min-height:23px; border-radius:6px; color:var(--widget-text-soft); font-size:10px; }
+body.widget .mini-calendar-grid span.empty { visibility:hidden; }
+body.widget .mini-calendar-grid span.today { background:var(--accent); color:#163329; font-weight:750; }
+body.widget .mini-calendar-grid span.has-event::after { content:''; position:absolute; bottom:2px; width:3px; height:3px; border-radius:50%; background:#f09ab9; }
