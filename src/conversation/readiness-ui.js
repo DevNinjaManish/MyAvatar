@@ -16,16 +16,18 @@ export function mountReadinessUI(win=window,doc=document){
     const caps=current.capabilities||{};
     doc.body.dataset.runtimeReadiness=current.overall||'unknown';
     const text=summary(current);
-    if($('status'))$('status').textContent=text;
-    if($('widget-status'))$('widget-status').textContent=text;
+    if($('status')&&$('status').textContent!==text)$('status').textContent=text;
+    if($('widget-status')&&$('widget-status').textContent!==text)$('widget-status').textContent=text;
     const chatReady=!!caps.chat,listenReady=!!caps.listen;
     // Keep the hidden/full mic enabled when chat is available because existing
     // text submission still uses it as the general readiness gate. Voice clicks
     // are blocked below when STT is unavailable.
-    if($('mic'))$('mic').disabled=!chatReady;
+    if($('mic')&&$('mic').disabled===chatReady)$('mic').disabled=!chatReady;
     if($('widget-mic')){
-      $('widget-mic').disabled=!chatReady||!listenReady;
-      $('widget-mic').setAttribute('aria-disabled',String(!listenReady));
+      const disabled=!chatReady||!listenReady;
+      if($('widget-mic').disabled!==disabled)$('widget-mic').disabled=disabled;
+      const ariaDisabled=String(!listenReady);
+      if($('widget-mic').getAttribute('aria-disabled')!==ariaDisabled)$('widget-mic').setAttribute('aria-disabled',ariaDisabled);
     }
   };
   const onReadiness=event=>{current=event.detail;apply();};
@@ -38,6 +40,6 @@ export function mountReadinessUI(win=window,doc=document){
   win.addEventListener('myavatar:readiness',onReadiness);
   doc.addEventListener('click',blockVoice,true);
   const observer=new MutationObserver(apply);
-  if($('status')?.parentElement)observer.observe($('status').parentElement,{subtree:true,childList:true,attributes:true});
+  if($('status')?.parentElement)observer.observe($('status').parentElement,{subtree:true,childList:true,characterData:true});
   return {dispose(){win.removeEventListener('myavatar:readiness',onReadiness);doc.removeEventListener('click',blockVoice,true);observer.disconnect();}};
 }

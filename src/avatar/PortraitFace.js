@@ -102,7 +102,7 @@ export class PortraitFace {
     // otherwise static 2.5D card into a full-resolution canvas animation.
     this.performance.effectFps=THREE.MathUtils.clamp(Number.isFinite(this.performance.effectFps)?this.performance.effectFps:24,1,60);
     this.bot=bot;this.scene=new THREE.Group();this.root=new THREE.Group();this.scene.add(this.root);this.root.position.y=1.30;
-    const portraits={robot:'rivet',nova:'nova',butler:'sterling',pixel:'pixel',luma:'luma'};
+    const portraits={robot:'rivet',nova:'nova',butler:'butler',pixel:'pixel',luma:'luma'};
     this.canvas=document.createElement('canvas');this.canvas.width=this.performance.portraitSize;this.canvas.height=this.performance.portraitSize;
     this.context=this.canvas.getContext('2d');
     const map=new THREE.CanvasTexture(this.canvas);map.colorSpace=THREE.SRGBColorSpace;map.generateMipmaps=false;map.minFilter=THREE.LinearFilter;map.magFilter=THREE.LinearFilter;map.anisotropy=1;
@@ -116,11 +116,11 @@ export class PortraitFace {
     // frame without obscuring animated eyes or speaker hardware.
     this.bust=null;this.bustShadow=null;
     const bustProfiles={
-      robot:{asset:'rivet-bust-v2.png',fade:[.44,.59],size:1.48,y:-.15},
-      nova:{asset:'nova-bust-v3.png',fade:[.47,.62],size:1.48,y:-.145},
-      butler:{asset:'sterling-bust-v2.png',fade:[.43,.58],size:1.46,y:-.15},
-      pixel:{asset:'pixel-bust-v3.png',fade:[.46,.61],size:1.49,y:-.15},
-      luma:{asset:'luma-bust-v2.png',fade:[.42,.57],size:1.48,y:-.15}
+      robot:{asset:'rivet/bust.png',fade:[.44,.59],size:1.48,y:-.15},
+      nova:{asset:'nova/bust.png',fade:[.47,.62],size:1.48,y:-.145},
+      butler:{asset:'butler/bust.png',fade:[.43,.58],size:1.46,y:-.15},
+      pixel:{asset:'pixel/bust.png',fade:[.46,.61],size:1.49,y:-.15},
+      luma:{asset:'luma/bust.png',fade:[.42,.57],size:1.48,y:-.15}
     };
     this.bustProfile=bustProfiles[bot]||null;
     if(this.bustProfile){
@@ -150,7 +150,7 @@ export class PortraitFace {
     this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.lastEmotion='relaxed';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.expressionKick=0;this.nextGaze=1.8;this.gaze=0;this.gazeTarget=0;this.transitionKick=0;this.dragKick=0;this.ambientKick=0;this.nextAmbient=2;this.ambientTarget={lift:0,roll:0};this.surpriseJump=0;this.nextMicroGesture=1.2;this.microGesture={lift:0,yaw:0,roll:0,scale:0};this.microTarget={...this.microGesture};this.nextIdleLightPaintAt=0;
     this.image=new Image();this.image.decoding='async';
     this.image.onload=()=>{this.imageReady=true;this.paintHardware(0,0);};
-    this.image.src=`/assets/bots/${portraits[bot]||'rivet'}-portrait.png`;
+    this.image.src=`/assets/bots/${portraits[bot]||'rivet'}/portrait.png`;
   }
   update(t,blink,mouth,state,previousState='IDLE',transition=1,emotion='relaxed',previousEmotion='relaxed',emotionTransition=1,motion=1,attention={x:0,y:0,dragging:false},dt=1/60){
     const gazeRange=state==='THINKING'?.4:state==='LISTENING'?.3:state==='CURIOUS'?.1:.9;

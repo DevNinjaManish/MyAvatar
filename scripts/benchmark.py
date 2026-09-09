@@ -4,9 +4,9 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import numpy as np
 import soundfile as sf
-from backend.tts.provider import Speech
-from backend.stt.provider import transcribe
-from backend.llm.provider import stream
+from backend.providers.tts import Speech
+from backend.providers.stt import transcribe
+from backend.providers.llm import stream
 from backend.conversation.chunks import split_ready
 config=json.loads(Path('config.json').read_text())
 async def main():

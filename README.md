@@ -8,7 +8,7 @@ No paid runtime API is required. The app's local services bind to `127.0.0.1`; m
 
 This is a source-run development build, not a signed or release-qualified application. The cockpit, attached coding panels and UI polish are the current UI foundation. The coding panels are a functional **UI shell**, not an implemented coding executor: they do not yet read/edit project files, run commands/tests, inspect Git or delegate jobs. Choosing a folder currently returns its display name only and grants no project authority.
 
-The next approved milestone is engine and behaviour reliability: startup, greetings, listening, speech, chat, safe agent foundations and animation lifecycle. Read [ENGINE_IMPROVEMENT_PLAN.md](ENGINE_IMPROVEMENT_PLAN.md) for the full plan and [ROADMAP.md](ROADMAP.md) for the checklist. Planned capabilities are not enabled by adding these docs.
+The next approved milestone is engine and behaviour reliability: startup, greetings, listening, speech, chat, safe agent foundations and animation lifecycle. Read [ENGINE_IMPROVEMENT_PLAN](docs/ENGINE_IMPROVEMENT_PLAN.md) for the full plan and [ROADMAP](docs/ROADMAP.md) for the checklist. Planned capabilities are not enabled by adding these docs.
 
 The maintainer authorised integration of PR #1 into `main` while native Mac testing remains deferred. Automated tests/build and native qualification are distinct: live audio, permissions, all five animated bots, monitor transitions and hardware performance still need the checks documented in the plan.
 
@@ -60,13 +60,11 @@ npm run setup
 
 Check that the Mac, local services, models and speech assets are ready with `npm run doctor`. The report stays on the Mac and identifies missing prerequisites.
 
-Download Fast and Balanced for the normal experience. The current implementation still contains an optional legacy High profile. Approximate model downloads are 1 GB for Fast, 3.3 GB for Balanced and 6.6 GB for High; speech assets add roughly 500 MB. Download size is not runtime memory use.
+Download Fast and Balanced for the normal experience. Approximate model downloads are 1 GB for Fast and 3.3 GB for Balanced; speech assets add roughly 500 MB. Download size is not runtime memory use.
 
 ```sh
 ollama pull huihui_ai/qwen3.5-abliterated:0.8b
 ollama pull huihui_ai/qwen3.5-abliterated:4b
-# Optional: only needed for the High profile still present in current code.
-ollama pull huihui_ai/qwen3.5-abliterated:9b
 .venv/bin/python scripts/download_models.py
 ```
 
@@ -86,9 +84,8 @@ Open Performance or Settings from More. These are the currently configured profi
 | --- | --- | --- |
 | Fast | `huihui_ai/qwen3.5-abliterated:0.8b`, 2K context, 45 FPS cap | Lighter everyday operation |
 | Balanced | `huihui_ai/qwen3.5-abliterated:4b`, 4K context, 60 FPS cap | Everyday voice conversation |
-| High, legacy | `huihui_ai/qwen3.5-abliterated:9b`, 6K context, 60 FPS cap | Optional heavier local generation |
 
-The approved target is **Fast and Balanced only**, including migration of saved High preferences. That code migration is not included in the documentation/integration change. Startup profile normalisation is also a tracked reliability item. Compact dimensions do not depend on the chosen profile. Current mode switching greets and resumes the existing hands-free flow; the plan replaces repeated introductions with quiet confirmation while preserving explicit mute/listening choices.
+MyAvatar supports **Fast and Balanced only**. Existing saved `High` preferences are migrated to Balanced atomically when loaded. Compact dimensions do not depend on the chosen profile. Current mode switching greets and resumes the existing hands-free flow; the plan replaces repeated introductions with quiet confirmation while preserving explicit mute/listening choices.
 
 ## Use and privacy
 
@@ -100,13 +97,13 @@ Companions can mark a reply as Happy, Sad, Relaxed, Surprised or Curious. MyAvat
 
 More -> Screen awareness enables observation. It takes an immediate snapshot and observes again after an idle interval while enabled. Images are passed to the configured local Ollama service, discarded after the turn and not added to conversation memory. Derived comments are stored in ignored `data/screen-awareness/events.jsonl`. Screen content must not authorise actions.
 
-[`config.json`](config.json) contains provider defaults, prompts, voices, profiles and VAD tuning. Voice activation adapts to steady ambient noise and rejects short transients; quiet microphones or loud rooms may need tuning of `audio.vad.threshold`, `noiseMultiplier` and `minSpeechMs`. Runtime choices save to ignored `data/settings.json`; no paid API key is required. Conversation memory is off by default and can be enabled in Settings; it stays in ignored local files. See [SECURITY.md](SECURITY.md).
+[`config.json`](config.json) contains provider defaults, prompts, voices, profiles and VAD tuning. Voice activation adapts to steady ambient noise and rejects short transients; quiet microphones or loud rooms may need tuning of `audio.vad.threshold`, `noiseMultiplier` and `minSpeechMs`. Runtime choices save to ignored `data/settings.json`; no paid API key is required. Conversation memory is off by default and can be enabled in Settings; it stays in ignored local files. See [SECURITY](docs/SECURITY.md).
 
 ## Validation
 
 ```sh
 npm test
-.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+.venv/bin/python -m unittest discover -s tests/py -p 'test_*.py'
 npm run build
 ```
 
@@ -122,10 +119,10 @@ The next implementation package is runtime/configuration regression coverage, fo
 
 ## Documentation
 
-- [Engine and behaviour plan](ENGINE_IMPROVEMENT_PLAN.md): priorities, dependencies, acceptance criteria and deferred checks.
-- [Roadmap](ROADMAP.md): implemented baseline and open work.
-- [Architecture](ARCHITECTURE.md): current modules and future boundaries.
-- [Widget cockpit](UI_COCKPIT_PLAN.md) and [UI polish handoff](UI_POLISH_HANDOFF.md): visual constraints and UI implementation history.
-- [Latency notes](LATENCY.md): historical development observations, not current guarantees.
+- [Engine and behaviour plan](docs/ENGINE_IMPROVEMENT_PLAN.md): priorities, dependencies, acceptance criteria and deferred checks.
+- [Roadmap](docs/ROADMAP.md): implemented baseline and open work.
+- [Architecture](docs/ARCHITECTURE.md): current modules and future boundaries.
+- [Widget cockpit](docs/UI_COCKPIT_PLAN.md) and [UI polish handoff](docs/UI_POLISH_HANDOFF.md): visual constraints and UI implementation history.
+- [Latency notes](docs/LATENCY.md): historical development observations, not current guarantees.
 
-MyAvatar is released under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance.
+MyAvatar is released under the [MIT License](LICENSE). See [CONTRIBUTING](docs/CONTRIBUTING.md) for contribution guidance.

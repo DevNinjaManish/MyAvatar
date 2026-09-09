@@ -9,8 +9,7 @@
   },
   "performanceProfiles": {
     "low": {"name":"Fast","llm":{"model":"huihui_ai/qwen3.5-abliterated:0.8b","context":2048,"maxTokens":80,"keepAlive":"20m"},"conversation":{"historyTurns":3,"firstChunkChars":48,"chunkChars":120},"avatar":{"maxFps":45,"pixelRatio":1.25,"portraitSize":512,"effectFps":24}},
-    "medium": {"name":"Balanced · Recommended","llm":{"model":"huihui_ai/qwen3.5-abliterated:4b","context":4096,"maxTokens":128,"keepAlive":"20m"},"conversation":{"historyTurns":5,"firstChunkChars":60,"chunkChars":150},"tts":{"speed":1.04},"avatar":{"maxFps":60,"pixelRatio":1.75,"portraitSize":627,"effectFps":40}},
-    "high": {"name":"High · Power","llm":{"model":"huihui_ai/qwen3.5-abliterated:9b","context":6144,"maxTokens":160,"keepAlive":"10m"},"conversation":{"historyTurns":6,"firstChunkChars":64,"chunkChars":160},"tts":{"speed":1.02},"avatar":{"maxFps":60,"pixelRatio":2,"portraitSize":627,"effectFps":40}}
+    "medium": {"name":"Balanced · Recommended","llm":{"model":"huihui_ai/qwen3.5-abliterated:4b","context":4096,"maxTokens":128,"keepAlive":"20m"},"conversation":{"historyTurns":5,"firstChunkChars":60,"chunkChars":150},"tts":{"speed":1.04},"avatar":{"maxFps":60,"pixelRatio":1.75,"portraitSize":627,"effectFps":40}}
   },
   "performanceProfile": "medium",
   "stt": {

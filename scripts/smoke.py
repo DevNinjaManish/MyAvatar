@@ -5,7 +5,7 @@ import httpx,numpy as np,soundfile as sf
 from websockets.asyncio.client import connect
 async def main():
     async with httpx.AsyncClient() as client:
-        source=(await client.get('http://127.0.0.1:5173/src/main.js')).text
+        source=(await client.get('http://127.0.0.1:5173/src/app/widget-runtime.js')).text
     token=re.search(r'"VITE_API_TOKEN":\s*"([a-f0-9]+)"',source)[1]
     audio,rate=sf.read('logs/voice-sample.wav',dtype='float32')
     pcm=np.interp(np.arange(int(len(audio)*16000/rate))*rate/16000,np.arange(len(audio)),audio).astype('<f4').tobytes()

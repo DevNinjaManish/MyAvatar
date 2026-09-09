@@ -1,12 +1,16 @@
 const {app,BrowserWindow,session,systemPreferences,ipcMain,screen,desktopCapturer,dialog}=require('electron');
 const path=require('node:path');
 const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_HEIGHT}=require('./widget-layout.cjs');
-app.whenReady().then(async()=>{
+let mainWindow=null;
+
+if(!app.requestSingleInstanceLock())app.quit();
+else app.whenReady().then(async()=>{
   const local=url=>{try{return new URL(url).origin==='http://127.0.0.1:5173';}catch{return false;}};
   session.defaultSession.setPermissionRequestHandler((wc,permission,callback)=>callback(local(wc.getURL())&&permission==='media'));
   if(process.platform==='darwin')await systemPreferences.askForMediaAccess('microphone');
   const area=screen.getPrimaryDisplay().workArea;
   const win=new BrowserWindow({width:WIDTH,height:COMPACT_HEIGHT,x:area.x+area.width-270,y:area.y+80,minWidth:WIDTH,minHeight:COMPACT_HEIGHT,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  mainWindow=win;
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
   let anchor={x:win.getBounds().x,y:win.getBounds().y},mode='widget';
@@ -99,8 +103,13 @@ app.whenReady().then(async()=>{
   win.on('leave-full-screen',()=>{if(mode==='full'){mode='widget';restoreWidget();}});
   const displayChanged=()=>{stopDrag();reflow();};
   screen.on('display-metrics-changed',displayChanged);screen.on('display-removed',displayChanged);
-  win.on('closed',()=>{screen.removeListener('display-metrics-changed',displayChanged);screen.removeListener('display-removed',displayChanged);});
+  win.on('closed',()=>{mainWindow=null;screen.removeListener('display-metrics-changed',displayChanged);screen.removeListener('display-removed',displayChanged);});
   win.webContents.on('did-finish-load',()=>{reflow();notify();});
   await win.loadURL('http://127.0.0.1:5173');
+});
+app.on('second-instance',()=>{
+  if(!mainWindow||mainWindow.isDestroyed())return;
+  if(mainWindow.isMinimized?.())mainWindow.restore?.();
+  mainWindow.show?.();mainWindow.focus?.();
 });
 app.on('window-all-closed',()=>app.quit());
