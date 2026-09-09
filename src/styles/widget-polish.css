@@ -68,6 +68,27 @@ body.widget #widget-panel-notice[data-tone=error] {
 }
 body.widget #widget-brief-status[data-tone=warning] { color: #edd4a1; }
 body.widget #widget-calendar-toggle { font-size:15px; line-height:1; }
+/* The companion platform has a fixed footprint. Contextual controls occupy
+ * reserved slots so badges and Stop never push the caption or toolbar. */
+body.widget #widget-tools,
+body.widget.widget-chat-open #widget-tools {
+  width:238px;
+  margin:-19px auto 0;
+  padding:15px 14px 12px;
+  gap:8px;
+  box-sizing:border-box;
+}
+body.widget .widget-caption { height:25px; padding:3px 4px; }
+body.widget .widget-toolbar,
+body.widget.widget-chat-open .widget-toolbar {
+  height:46px;
+  box-sizing:border-box;
+  padding:5px 8px;
+}
+body.widget #widget-stop-slot { flex:none; display:grid; place-items:center; width:28px; height:28px; }
+body.widget #widget-stop { margin:0; }
+body.widget #widget-stop[hidden] { display:block; visibility:hidden; pointer-events:none; }
+body.widget #widget-chat-toggle[data-unread]::after { right:2px; top:1px; box-shadow:0 0 0 1px #192124; pointer-events:none; }
 /* Calendar is a compact utility popover; only coding/diff use the large wing. */
 body.widget #widget-mini-calendar { position:absolute; z-index:8; top:8px; left:10px; right:10px; height:430px; display:flex; flex-direction:column; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:hidden; }
 body.widget #widget-mini-calendar[hidden] { display:none; }
