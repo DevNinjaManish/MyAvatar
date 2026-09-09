@@ -9,6 +9,8 @@ from backend.conversation.chunks import split_ready
 from backend.memory import load_history, save_history, clear_history
 from backend import settings as runtime_settings
 from backend.approvals import request_approval, resolve_approval
+from backend.runtime import RuntimeSession
+from backend.greetings import GreetingCoordinator
 
 app=FastAPI()
 Path('logs').mkdir(exist_ok=True)
@@ -102,7 +104,8 @@ def health(): return {'ok':True}
 
 @app.websocket('/ws')
 async def ws(socket:WebSocket):
-    if socket.query_params.get('token') != os.environ.get('MYAVATAR_TOKEN','development'):
+    client_token=socket.query_params.get('token')
+    if client_token != os.environ.get('MYAVATAR_TOKEN','development'):
         await socket.close(code=1008); return
     if socket.headers.get('origin') not in ('http://127.0.0.1:5173','http://localhost:5173',None):
         await socket.close(code=1008); return
@@ -114,53 +117,12 @@ async def ws(socket:WebSocket):
     log.info(f'Loaded history for {bot_id}: {len(history)} turns')
     bot_histories={bot_id:history}
     task=None;approvals={}
-    async def send(kind, turn=None, **data): await socket.send_json({'type':kind,'turn':turn,**data})
-    async def greet():
-        if os.environ.get('MYAVATAR_TOKEN','development')=='development':return
-        bot=config.get('conversation',{}).get('persona','nova')
-        import datetime
-        hour=datetime.datetime.now().hour
-        time_cat='night'
-        if 5<=hour<12:time_cat='morning'
-        elif 12<=hour<18:time_cat='afternoon'
-        elif 18<=hour<22:time_cat='evening'
-        lines={
-            'nova':{
-                'morning':['Good morning, darling. Ready to conquer the day?','Morning! I have your schedule ready when you are.','A fresh start. What are we making happen this morning?'],
-                'afternoon':['Good afternoon. How is your day shaping up?','I am here. What needs attention this afternoon?','Hello! Ready for the second half of the day?'],
-                'evening':['Good evening. Let us wrap up the day with something productive.','Evening. I am here to help you wind down and organize.','Hello again. What shall we finish before the day ends?'],
-                'night':['Still awake? I am here if you need a late-night partner.','Good evening. A quiet time for a clear mind. What is on your mind?','Night time. I am ready for any midnight inspirations.']
-            },
-            'robot':{
-                'morning':['Systems online. Morning diagnostics clear. What is the mission?','Morning. Code is waiting. Let us fix something before lunch.','Signal acquired. Ready for a productive morning.'],
-                'afternoon':['Afternoon. The machine is humming. What needs repair?','Diagnostics stable. Hand me the tricky part of the day.','Back online. What are we shipping this afternoon?'],
-                'evening':['Evening. Let us clean up these bugs before shutdown.','Systems awake. Ready to polish the final compile of the day.','Diagnostics clear. What is the evening mission?'],
-                'night':['Midnight shift active. What code are we debugging in the dark?','Systems awake. I brought tools and sarcasm for the late hours.','Still compiling? I am here for the night watch.']
-            },
-            'butler':{
-                'morning':['Good morning. I have prepared your priorities for the day.','A splendid morning. Where shall we focus our energy first?','Good morning, sir. Your agenda is ready for your review.'],
-                'afternoon':['Good afternoon. I trust your day is proceeding smoothly.','At your service this afternoon. What deserves our focus now?','Good afternoon. Shall we turn the afternoon loose ends into a list?'],
-                'evening':['Good evening. Shall we organize the remaining matters of the day?','A pleasant evening. I am ready to make a plan for tomorrow.','Good evening. How may I be most useful as the day closes?'],
-                'night':['Good evening. A quiet hour for strategic planning.','At your service in the late hours. What shall we organize?','A peaceful night. I am here to ensure everything is in order.']
-            },
-            'pixel':{
-                'morning':['Morning! Let us make something viral before noon.','Wake up! I have a brand new hook for the morning campaign.','Morning. Give me the brief, I will make it marketable.'],
-                'afternoon':['Afternoon! The vibe is shifting. Let us pivot the strategy.','Hey. I am ready to make the brand less boring this afternoon.','Afternoon. What are we trying to sell before the day ends?'],
-                'evening':['Evening! Time to polish those posts for tomorrow.','Hey. Give me the messy draft, I will make it punchy.','Evening. Let us find the angle people will actually care about.'],
-                'night':['Late night energy is the best energy. What is the midnight vibe?','Still awake? Let us brainstorm something bold while the world sleeps.','Night shift. I am ready for the scroll-stopping version.']
-            },
-            'luma':{
-                'morning':['Morning. Let us make the first decision of the day obvious.','Good morning. What should we make clearer today?','A fresh canvas. Where should we start our design today?'],
-                'afternoon':['Good afternoon. How is the visual hierarchy holding up?','Afternoon. I am here for the sharpest version of the idea.','Let us refine the interaction design this afternoon.'],
-                'evening':['Good evening. Let us review the day\'s creative direction.','Evening. I am ready to critique the final layouts.','A peaceful evening for some deep design thinking.'],
-                'night':['Night time. The perfect hour for inventive thinking.','Good evening. What visual system are we exploring tonight?','Designing in the dark. I am ready for the creative spark.']
-            }
-        }
-        bot_lines=lines.get(bot,lines['nova']).get(time_cat,lines['nova'][time_cat])
-        choices=bot_lines;indexes=config.setdefault('_greetingIndexes',{});index=indexes.get(bot,0)%len(choices);text=choices[index];indexes[bot]=(index+1)%len(choices);save_preferences(config)
-        loop=asyncio.get_running_loop()
-        wav=await loop.run_in_executor(tts_pool,speech.generate,text,config['tts'])
-        await send('greeting',text=text,audio=base64.b64encode(wav).decode())
+    runtime=RuntimeSession(bot_id)
+    async def send(kind, turn=None, operation_id=None, **data):
+        await socket.send_json(runtime.event(kind,turn=turn,operation_id=operation_id,**data))
+    greetings=GreetingCoordinator(
+        generate=speech.generate,executor=tts_pool,send=send,save_preferences=save_preferences,
+        enabled=client_token!='development')
     async def respond(msg):
         turn_config=copy.deepcopy(config)
         turn=msg['turn'];start=time.perf_counter();metrics={};loop=asyncio.get_running_loop()
@@ -199,15 +161,10 @@ async def ws(socket:WebSocket):
                     chunk=await queue.get()
                     if chunk is None:return
                     spoken=speech_text(chunk)
-                    # A streamed model reply can contain only a decorative symbol or
-                    # an internal tag after chunking. Kokoro cannot synthesize an
-                    # empty string, so treat it as a silent fragment instead of
-                    # failing the whole turn.
                     if not spoken:
                         log.debug('Skipped an empty speech fragment')
                         continue
                     synth_start=time.perf_counter()
-                    # Apply emotion-based speed modifier to the current TTS config
                     current_tts=copy.deepcopy(turn_config['tts'])
                     if 'current_emotion' in turn_config:
                         emotion=turn_config['current_emotion']
@@ -220,7 +177,6 @@ async def ws(socket:WebSocket):
                     await send('audio',turn,audio=base64.b64encode(wav).decode())
             speaker=asyncio.create_task(speak())
             async def enqueue(chunk):
-                # Surface synthesis failures before a full queue can stall generation.
                 put=asyncio.create_task(queue.put(chunk))
                 try:
                     done,_=await asyncio.wait([put,speaker],return_when=asyncio.FIRST_COMPLETED)
@@ -230,7 +186,6 @@ async def ws(socket:WebSocket):
                 finally:
                     if not put.done():put.cancel()
             try:
-                import re
                 tag_checked=False
                 async for token in stream(messages,turn_config['llm']):
                     if first is None:
@@ -304,20 +259,25 @@ async def ws(socket:WebSocket):
                 await send('setup_error',message=str(e))
                 return
         await send('ready')
-        await greet()
+        # A delivered greeting advances this index. This avoids speaking before
+        # first-run onboarding and lets the shared guard suppress quick reconnects.
+        if config.get('_greetingIndexes',{}).get(bot_id,0)>0:
+            greetings.request(config,reason='startup')
         while True:
-            msg=await socket.receive_json()
-            if msg['type'] in ('stop','turn','settings','clear','bot'):
+            msg=await socket.receive_json();kind=msg.get('type')
+            if kind in ('stop','turn','settings','clear','bot','onboarding'):
+                greetings.cancel()
+            if kind in ('stop','turn','settings','clear','bot'):
                 if task:
                     task.cancel()
                     try:await task
                     except asyncio.CancelledError:pass
                     task=None
-            if msg['type']=='turn':task=asyncio.create_task(respond(msg))
-            elif msg['type']=='clear':
+            if kind=='turn':task=asyncio.create_task(respond(msg))
+            elif kind=='clear':
                 history.clear()
                 if memory_enabled:clear_history(config['conversation']['persona'])
-            elif msg['type']=='bot':
+            elif kind=='bot':
                 bot_id=msg.get('bot')
                 profile=config.get('bots',{}).get(bot_id)
                 if not profile:continue
@@ -328,33 +288,39 @@ async def ws(socket:WebSocket):
                 config['conversation'].update(persona=bot_id,system=profile['system'])
                 config['tts']['voice']=profile['voice']
                 config['avatar']['type']='robot'
+                runtime.switch_bot(bot_id)
                 save_preferences(config)
                 await send('config',config=config)
                 await send('bot_history',history=history)
-                await greet()
-            elif msg['type']=='settings':
+                greetings.request(config,reason='bot_switch')
+            elif kind=='settings':
                 config.setdefault('audio',{})['mode']='manual' if msg.get('interaction')=='manual' else 'live'
                 memory_enabled=bool(msg.get('memoryEnabled',memory_enabled));config.setdefault('memory',{})['enabled']=memory_enabled
                 profile_name=msg.get('performanceProfile')
                 apply_profile(config,profile_name)
                 save_preferences(config)
                 await send('config',config=config)
-                await greet()
-            elif msg['type']=='action_decision':
+                # Settings changes are intentionally quiet. They must not replay
+                # a welcome greeting or unexpectedly restart an audio interaction.
+            elif kind=='action_decision':
                 resolve_approval(approvals,msg.get('requestId'),msg.get('decision'))
-            elif msg['type']=='onboarding':
+            elif kind=='onboarding':
                 bot_id=msg.get('bot')
                 profile=config.get('bots',{}).get(bot_id)
                 if profile:
                     config['conversation'].update(persona=bot_id,system=profile['system'])
                     config['tts']['voice']=profile['voice']
                     history=bot_histories.setdefault(bot_id,[])
+                    runtime.switch_bot(bot_id)
                 config.setdefault('audio',{})['mode']='manual' if msg.get('interaction')=='manual' else 'live'
                 apply_profile(config,msg.get('performanceProfile'))
                 save_preferences(config)
                 await send('config',config=config)
                 await send('bot_history',history=history)
-            elif msg['type']=='metrics':timing.info(json.dumps(msg))
+                greetings.request(config,reason='onboarding')
+            elif kind=='metrics':timing.info(json.dumps(msg))
     except WebSocketDisconnect:pass
     finally:
+        greetings.cancel()
         if task:task.cancel()
+        await greetings.close()

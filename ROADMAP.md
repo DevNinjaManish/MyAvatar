@@ -4,7 +4,7 @@ Updated 2026-09-09. This is a development plan, not a promise of dates or a clai
 
 ## Integration status
 
-The maintainer requested integration of the accumulated cockpit, attached-panel and UI-polish work from PR #1 into `main`, together with the engine roadmap. This supersedes the earlier draft-only hold. Native Mac validation remains outstanding; integration does not qualify a release. Continue later work in focused branches from the integrated baseline.
+The maintainer requested integration of the accumulated cockpit, attached-panel and UI-polish work from PR #1 into `main`, together with the engine roadmap. Native Mac validation remains outstanding; integration does not qualify a release. Continue engine work in focused branches. Batch progress and limitations are recorded in [ENGINE_BATCH_LOG.md](ENGINE_BATCH_LOG.md).
 
 ## Implemented baseline
 
@@ -20,15 +20,13 @@ The coding panels are a UI shell, not an executor. Existing narrow Mac action ta
 
 ## P0 — Shared runtime and trustworthy startup
 
-Batch progress, scope and test limitations: [ENGINE_BATCH_LOG.md](ENGINE_BATCH_LOG.md).
-
-- [ ] Add typed runtime/engine events with session, bot, operation, turn and task identities.
-- [ ] Separate readiness, microphone, playback and task state; reject stale events.
-- [~] Validate defaults/preferences: Batch 01 resolves selected profiles, validates saved choices and recovers malformed settings with atomic writes. Full provider/numeric configuration validation and in-widget recovery messages remain.
+- [~] Add typed runtime/engine events with session, bot, operation, turn and task identities. Batch 02 adds versioned session/bot/sequence envelopes and greeting operation IDs; task and detailed engine identities remain.
+- [ ] Separate readiness, microphone, playback and task state; reject stale events. Backend event identity now exists, but central readiness and browser-side stale-event rejection remain.
+- [~] Validate defaults/preferences: Batch 01 resolves selected profiles, validates saved choices and recovers malformed settings with atomic writes. Full provider/numeric validation and in-widget recovery messages remain.
 - [ ] Migrate legacy High preferences to the agreed Fast/Balanced-only interface.
 - [x] Fix approval-ID generation (`random.token_hex` -> `secrets.token_hex`) with regression coverage; revoke pending approvals on timeout/cancellation and reject invalid, duplicate and stale decisions.
 - [ ] Add bounded startup/recovery, component readiness and text-only degradation where possible.
-- [ ] Make greetings cancellable, once-per-event, identity-safe and truthful; silence settings/reconnect greeting spam.
+- [~] Make greetings cancellable, once-per-event, identity-safe and truthful; silence settings/reconnect greeting spam. Batch 02 implements cancellable authored greetings, settings silence, onboarding ordering and quick-reconnect cooldown; full reconnect/client stale-event work remains.
 - [ ] Preserve explicit microphone and quiet-mode preferences through all transitions.
 
 ## P1 — Listening and speech
@@ -75,7 +73,7 @@ Batch progress, scope and test limitations: [ENGINE_BATCH_LOG.md](ENGINE_BATCH_L
 
 ## Deferred native/release checks
 
-Real microphone/speaker echo and interruption, OS permissions, all five live bots, native window/monitor behaviour, voice selection and hardware performance remain deferred until the maintainer is ready. Pure logic, fixtures and isolated UI work need not wait. Track the checklist in [ENGINE_IMPROVEMENT_PLAN.md](ENGINE_IMPROVEMENT_PLAN.md).
+Real microphone/speaker echo and interruption, OS permissions, all five live bots, native window/monitor behaviour, voice selection and hardware performance remain deferred until the maintainer is ready. Pure logic, fixtures and isolated UI work need not wait. Track the detailed checklist in [ENGINE_IMPROVEMENT_PLAN.md](ENGINE_IMPROVEMENT_PLAN.md).
 
 Before release qualification, rerun complete tests/build and finish applicable native checks. Prior automated or mocked results do not certify live audio or native appearance.
 
