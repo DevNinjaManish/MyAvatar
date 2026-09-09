@@ -1,12 +1,14 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' blob: ws://127.0.0.1:8765; img-src 'self' blob: data:; worker-src 'self' blob:;"><title>MyAvatar</title><link rel="stylesheet" href="/src/widget-cockpit.css"></head><body>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' blob: ws://127.0.0.1:8765; img-src 'self' blob: data:; worker-src 'self' blob:;"><title>MyAvatar</title></head><body>
 <div id="widget-drag" aria-label="Drag handle"><span></span></div>
 <div id="widget-tools">
-  <button id="widget-picker-toggle" class="widget-caption" aria-label="Choose companion" aria-expanded="false" aria-controls="bot-library" title="Choose companion"><img id="widget-bot-icon" alt=""><span id="widget-emoji" hidden></span><span id="widget-name">Companion</span><span id="widget-status" aria-live="polite">Connecting…</span><span class="picker-chevron" aria-hidden="true">⌄</span></button>
+  <div class="cockpit-heading">
+    <button id="widget-picker-toggle" class="widget-caption" aria-label="Choose companion" aria-expanded="false" aria-controls="bot-library" title="Choose companion"><img id="widget-bot-icon" alt=""><span id="widget-emoji" hidden></span><span id="widget-name">Companion</span><span id="widget-status" aria-live="polite">Connecting…</span><span class="picker-chevron" aria-hidden="true">⌄</span></button>
+    <button id="widget-stop" aria-label="Stop speaking" title="Stop speaking" hidden></button>
+  </div>
   <div class="widget-toolbar">
     <button id="widget-mic" aria-label="Start conversation" title="Start conversation" disabled></button>
-    <button id="widget-stop" aria-label="Stop speaking" title="Stop speaking" hidden></button>
     <button id="widget-chat-toggle" aria-label="Open chat" title="Open chat" aria-expanded="false" aria-controls="widget-chat"></button>
-    <button id="expand" aria-label="Open tools workspace" title="Open tools workspace"></button>
+    <button id="widget-coding-tools" aria-label="Open coding tools" title="Open coding tools" aria-expanded="false" aria-controls="widget-coding-panels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg></button>
     <button id="widget-more" aria-label="More options" title="More options" aria-expanded="false" aria-controls="widget-menu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
   </div>
 </div>
@@ -15,9 +17,42 @@
   <div id="widget-messages" aria-live="polite"><p class="hint">Talk naturally or type a message.</p></div>
   <form id="widget-text-form"><input id="widget-text" placeholder="Message companion…" maxlength="2000" aria-label="Message"><button>Send</button></form>
 </section>
+<section id="widget-coding-panels" aria-labelledby="widget-panels-title" hidden>
+  <div class="widget-panels-heading"><h2 id="widget-panels-title" tabindex="-1">Coding tools</h2><div><button id="widget-panels-collapse" data-small-label title="Collapse all panels">Collapse all</button><button id="widget-panels-close" aria-label="Close coding tools" title="Close coding tools">×</button></div></div>
+  <div class="widget-panels-scroll">
+    <div class="widget-project-row"><span id="widget-project-name">No folder selected</span><button id="widget-project-select">Choose folder</button></div>
+    <p id="widget-panel-notice" role="status">UI preview · coding executor not connected. Your files are not being read or changed.</p>
+    <section class="widget-panel" data-widget-panel="task">
+      <button class="widget-panel-toggle" data-panel-toggle aria-expanded="true" aria-controls="widget-task-body"><span class="panel-glyph" aria-hidden="true">□</span>Task<span class="panel-state">Draft</span></button>
+      <div class="widget-panel-body" id="widget-task-body"><label for="widget-brief">Task brief<textarea id="widget-brief" maxlength="2000" placeholder="Describe the change…"></textarea></label><p id="widget-brief-status" role="status">No task started</p><button id="widget-brief-to-chat" disabled>Discuss in chat</button><p>Kept in this window only. This does not start a coding task.</p></div>
+    </section>
+    <section class="widget-panel" data-widget-panel="changes">
+      <button class="widget-panel-toggle" data-panel-toggle aria-expanded="false" aria-controls="widget-changes-body"><span class="panel-glyph" aria-hidden="true">⧉</span>Files / Changes<span class="panel-state">Not connected</span></button>
+      <div class="widget-panel-body" id="widget-changes-body" hidden><p id="widget-files-empty">Select a folder to prepare a workspace. File reading and editing are not connected yet.</p><button data-open-wide="changes">Expand file view</button></div>
+    </section>
+    <section class="widget-panel" data-widget-panel="terminal">
+      <button class="widget-panel-toggle" data-panel-toggle aria-expanded="false" aria-controls="widget-terminal-body"><span class="panel-glyph" aria-hidden="true">&gt;_</span>Terminal<span class="panel-state">Not connected</span></button>
+      <div class="widget-panel-body" id="widget-terminal-body" hidden><pre>No commands have been run.</pre><button disabled title="Requires the local coding executor and command permissions">Run command</button><p>Command execution will require a scoped local executor.</p></div>
+    </section>
+    <section class="widget-panel" data-widget-panel="tests">
+      <button class="widget-panel-toggle" data-panel-toggle aria-expanded="false" aria-controls="widget-tests-body"><span class="panel-glyph" aria-hidden="true">✓</span>Tests<span class="panel-state">Not run</span></button>
+      <div class="widget-panel-body" id="widget-tests-body" hidden><p>No test results. No suite has been executed.</p><button disabled title="Requires the local coding executor">Run tests</button></div>
+    </section>
+    <section class="widget-panel" data-widget-panel="diff">
+      <button class="widget-panel-toggle" data-panel-toggle aria-expanded="false" aria-controls="widget-diff-body"><span class="panel-glyph" aria-hidden="true">±</span>Git / Diff<span class="panel-state">Not inspected</span></button>
+      <div class="widget-panel-body" id="widget-diff-body" hidden><p>Git status is unknown. No branch or changes have been inspected.</p><div class="panel-actions"><button data-open-wide="diff">Expand diff view</button><button disabled title="No Git executor is connected">Commit</button></div></div>
+    </section>
+  </div>
+</section>
+<section id="widget-code-wing" aria-labelledby="widget-wing-title" hidden>
+  <div class="widget-panels-heading"><h2 id="widget-wing-title">Git / Diff</h2><button id="widget-wing-close" aria-label="Collapse expanded file view" title="Collapse expanded file view">×</button></div>
+  <div class="widget-wing-content"><div class="widget-wing-empty"><strong>No file content loaded</strong>This wider view is ready for file content and diffs. The coding executor is not connected, so no code has been read, generated, applied, or committed.</div></div>
+  <div class="widget-wing-footer">Local workspace · no running commands · no pending approvals</div>
+</section>
 <section id="widget-menu" aria-label="Companion options" hidden>
   <div class="menu-heading">COMPANION<button id="menu-close" aria-label="Close options">×</button></div>
   <div class="menu-control-row"><span>Screen awareness</span><button id="widget-awareness" aria-label="Screen awareness off" title="Screen awareness off" aria-pressed="false"></button></div>
+  <div class="menu-control-row"><span>Expanded conversation</span><button id="expand" aria-label="Open expanded conversation" title="Open expanded conversation"></button></div>
   <button id="widget-bot">Choose companion <span>↗</span></button>
   <button id="widget-settings">Settings <span>↗</span></button>
   <button id="widget-quality" aria-expanded="false" aria-controls="widget-quality-panel">Performance</button>
@@ -42,4 +77,4 @@
   <button id="onboarding-start" value="default">Save choices and test microphone</button>
   <button id="onboarding-later" value="cancel">Set up later</button>
 </form></dialog>
-<script type="module" src="/src/main.js"></script></body></html>
+<script type="module" src="/src/widget-entry.js"></script></body></html>

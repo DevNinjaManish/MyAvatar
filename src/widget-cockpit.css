@@ -1,31 +1,36 @@
+/* Widget-only overrides. The original avatar, hardware equaliser and audio stay intact. */
 body.widget{padding:8px 10px 10px}
 body.widget main{--widget-avatar-size:224px;width:var(--widget-avatar-size);height:226px}
-body.widget #stage::before{inset:auto 20px 0;width:auto;height:78px;border:0;border-radius:50%;background:radial-gradient(ellipse at 50% 62%,#79d8ef33,transparent 68%);box-shadow:none}
-body.widget[data-state=listening] #stage::before,body.widget[data-state=thinking] #stage::before,body.widget[data-state=speaking] #stage::before{animation:none}
-body.widget #widget-tools{position:relative;width:238px;margin:-19px auto 0;padding:15px 14px 12px;gap:8px;border:1px solid #ffffff20;border-radius:22px 22px 18px 18px;background:linear-gradient(180deg,#1b2429f2,#11191df7);box-shadow:0 12px 28px #0007,inset 0 1px #ffffff12;backdrop-filter:blur(16px)}
+body.widget #stage::before,body.widget[data-bot] #stage::before{inset:auto 20px 0;width:auto;height:78px;border:0;border-radius:50%;background:radial-gradient(ellipse at 50% 62%,#79d8ef25,transparent 68%);box-shadow:none;animation:none}
+body.widget #widget-tools{position:relative;flex:none;width:238px;margin:-19px auto 0;padding:15px 14px 12px;gap:8px;border:1px solid #ffffff20;border-radius:22px 22px 18px 18px;background:linear-gradient(180deg,#1b2429f2,#11191df7);box-shadow:0 8px 18px #0005,inset 0 1px #ffffff12}
 body.widget #widget-tools::before{content:'';position:absolute;left:28px;right:28px;top:-8px;height:13px;border:1px solid #ffffff1d;border-bottom:0;border-radius:50% 50% 0 0;background:#1b252ae8;pointer-events:none}
-body.widget #widget-tools::after{content:'';position:absolute;left:46px;right:46px;top:-4px;height:2px;border-radius:99px;background:var(--accent);opacity:.62;box-shadow:0 0 8px var(--accent);pointer-events:none}
-.widget-caption{width:100%;max-width:none;height:25px;justify-content:center;gap:7px;padding:3px 8px;border:0;border-radius:7px;background:transparent;box-shadow:none}
-.widget-caption:hover{background:#ffffff08;border-color:transparent}
-#widget-bot-icon{width:16px;height:16px;margin-left:0;opacity:.88}
-#widget-name{max-width:72px;font-size:11px;letter-spacing:.25px}
-#widget-status{font-size:9px;color:#aeb9bc}
-.picker-chevron{display:none}
-.widget-toolbar{width:100%;justify-content:space-between;gap:5px;padding:5px 8px;border-radius:15px;border:1px solid #ffffff16;background:#0e1519b8;box-shadow:inset 0 1px #ffffff08}
-.widget-toolbar button{width:38px;height:34px;border:1px solid transparent;border-radius:12px;padding:7px;color:#b9c5c8}
-.widget-toolbar button:hover{border-color:#ffffff16;background:#ffffff0b}
-.widget-toolbar #widget-mic{background:#243a3a;color:#bdeffc}
-.widget-toolbar #widget-mic.active{background:var(--accent);color:#10262a;box-shadow:0 0 16px #79d8ef44}
-.widget-toolbar #widget-stop{background:#4d2f31;color:#ffd0ca}
-body.widget[data-state=speaking] #widget-mic{display:none}
-body.widget[data-state=speaking] #widget-stop:not([hidden]){display:grid}
+body.widget #widget-tools::after{content:'';position:absolute;left:46px;right:46px;top:-4px;height:2px;border-radius:99px;background:var(--accent);opacity:.55;box-shadow:0 0 6px var(--accent);pointer-events:none}
+body.widget .cockpit-heading{display:flex;align-items:center;width:100%;gap:3px;min-width:0}
+body.widget .widget-caption{flex:1;min-width:0;max-width:none;height:25px;justify-content:center;gap:7px;padding:3px 4px;border:0;border-radius:7px;background:transparent;box-shadow:none}
+body.widget .widget-caption:hover{background:#ffffff08}
+body.widget #widget-bot-icon{width:16px;height:16px;margin-left:0;opacity:.88}
+body.widget #widget-name{max-width:66px;font-size:11px;letter-spacing:.25px}
+body.widget #widget-status{font-size:9px;color:#aeb9bc}
+body.widget .picker-chevron{display:none}
+body.widget .widget-toolbar{width:100%;justify-content:space-between;gap:5px;padding:5px 8px;border-radius:15px;border:1px solid #ffffff16;background:#0e1519b8;box-shadow:inset 0 1px #ffffff08}
+body.widget .widget-toolbar button,body.widget.widget-chat-open .widget-toolbar button{width:38px;height:34px;border:1px solid transparent;border-radius:12px;padding:7px;color:#b9c5c8}
+body.widget .widget-toolbar button:hover{border-color:#ffffff16;background:#ffffff0b}
+body.widget .widget-toolbar #widget-mic{background:#243a3a;color:#bdeffc}
+body.widget .widget-toolbar #widget-mic.active{background:var(--accent);color:#10262a}
+body.widget .widget-toolbar #widget-mic.muted{background:#613c42;color:#ffd1d6}
+/* Stop is contextual beside status; never remove the mic/mute control. */
+body.widget #widget-stop{flex:none;width:25px;height:25px;padding:4px;border:1px solid #ffb2a52a;border-radius:8px;background:#4d2f31;color:#ffd0ca}
+body.widget #widget-stop svg{width:16px;height:16px}
+body.widget .widget-toolbar button[aria-expanded=true]{background:#ffffff10;border-color:var(--accent);color:var(--accent)}
 body.widget.widget-chat-open main{--widget-avatar-size:152px;width:152px;height:158px}
-body.widget.widget-chat-open #widget-tools{width:238px;margin-top:-13px;padding-top:13px}
-body.widget.widget-chat-open #widget-chat{width:238px;margin:7px auto 0;padding:11px;border-radius:16px;border-color:#ffffff1b;background:#121a1ef4;box-shadow:0 12px 26px #0005,inset 0 1px #ffffff08}
+body.widget.widget-chat-open #widget-tools{width:238px;margin-top:-13px;padding-top:13px;gap:8px}
+body.widget.widget-chat-open #widget-chat{width:238px;margin:7px auto 0;padding:11px;border-radius:16px;border-color:#ffffff1b;background:#121a1ef4;box-shadow:0 8px 18px #0004,inset 0 1px #ffffff08}
 #widget-menu .menu-control-row{display:flex;align-items:center;justify-content:space-between;min-height:39px;padding:5px 10px;border-radius:8px;color:var(--ink);font-size:12px}
 #widget-menu .menu-control-row:hover{background:#ffffff08}
-#widget-menu .menu-control-row #widget-awareness{width:30px;height:30px;padding:6px;border:0;border-radius:9px;background:#ffffff08;color:#b8c4c7}
-#widget-menu .menu-control-row #widget-awareness[aria-pressed=true]{background:#3b3948;color:#ddd0ff;box-shadow:0 0 10px #c7afff35}
+#widget-menu .menu-control-row button{width:30px;height:30px;padding:5px;border:0;border-radius:9px;background:#ffffff08;color:#b8c4c7}
+#widget-menu #widget-awareness[aria-pressed=true]{background:#3b3948;color:#ddd0ff}
+body.widget #widget-more{position:relative}
+body.widget:has(#widget-awareness[aria-pressed=true]) #widget-more::after{content:'';position:absolute;right:3px;top:3px;width:5px;height:5px;background:#ddd0ff;border-radius:50%}
 body.widget[data-bot=robot]{--accent:#79d8ef}
 body.widget[data-bot=nova]{--accent:#f0a8d0}
 body.widget[data-bot=butler]{--accent:#d1b26f}
