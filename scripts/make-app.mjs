@@ -20,12 +20,15 @@ LOG="$HOME/Library/Logs/MyAvatar-launcher.log"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 mkdir -p "$HOME/Library/Logs"
 START_PROCESS='[n]ode scripts/start\\.mjs'
+ELECTRON_PROCESS="$ROOT/node_modules/electron/dist/[E]lectron.app/Contents/MacOS/Electron $ROOT"
+if pgrep -f "$ELECTRON_PROCESS" >/dev/null; then
+  # Electron may outlive the launcher wrapper. Never start a second visible
+  # companion while the existing MyAvatar window is still running.
+  exit 0
+fi
 if pgrep -f "$START_PROCESS" >/dev/null; then
   # Keep an existing visible companion running, but recover when its services
   # outlive Electron after the window was closed.
-  if pgrep -f "$ROOT/node_modules/electron/dist/[E]lectron.app/Contents/MacOS/Electron $ROOT" >/dev/null; then
-    exit 0
-  fi
   pkill -TERM -f "$START_PROCESS"
   for _ in {1..30}; do
     pgrep -f "$START_PROCESS" >/dev/null || break
