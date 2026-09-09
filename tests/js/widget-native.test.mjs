@@ -47,7 +47,7 @@ test('tools and chat resize independently without dropping the other state',asyn
   await handlers.get('widget-panels')(trusted,{open:true,wide:false});assert.equal(window.bounds.height,780);
   await handlers.get('widget-chat')(trusted,true);assert.equal(window.bounds.height,780);
   await handlers.get('widget-chat')(trusted,false);assert.equal(window.bounds.height,780);
-  await handlers.get('widget-panels')(trusted,{open:false,wide:false});assert.equal(window.bounds.height,370);
+  await handlers.get('widget-panels')(trusted,{open:false,wide:false});assert.equal(window.bounds.height,780);
 });
 test('foreign renderer and subframe IPC requests cannot resize the widget',async()=>{
   const {window,handlers,trusted}=await boot();const before=window.getBounds();
@@ -78,5 +78,5 @@ test('full conversation remains optional and returns to compact widget',async()=
   const {handlers,trusted,window}=await boot();
   await handlers.get('widget-panels')(trusted,{open:true,wide:true});
   assert.equal(await handlers.get('window-mode')(trusted,'full'),'full');assert.equal(window.bounds.width,1120);
-  assert.equal(await handlers.get('window-mode')(trusted,'widget'),'widget');assert.equal(window.bounds.width,260);assert.equal(window.bounds.height,370);
+  assert.equal(await handlers.get('window-mode')(trusted,'widget'),'widget');assert.equal(window.bounds.width,260);assert.equal(window.bounds.height,780);
 });

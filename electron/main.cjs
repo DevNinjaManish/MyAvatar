@@ -113,7 +113,10 @@ else app.whenReady().then(async()=>{
   if(process.platform==='darwin')await systemPreferences.askForMediaAccess('microphone');
   const area=screen.getPrimaryDisplay().workArea;
   const initialY=area.y+area.height-Math.min(UTILITY_HEIGHT,area.height);
-  const win=new BrowserWindow({width:WIDTH,height:COMPACT_HEIGHT,x:area.x+area.width-270,y:initialY,minWidth:WIDTH,minHeight:COMPACT_HEIGHT,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  // Keep one native rectangle for the entire widget lifetime. Utility panels
+  // reveal content inside it; resizing the transparent window causes macOS to
+  // re-clamp its top edge and produces the visible platform jump.
+  const win=new BrowserWindow({width:WIDTH,height:Math.min(UTILITY_HEIGHT,area.height),x:area.x+area.width-270,y:initialY,minWidth:WIDTH,minHeight:COMPACT_HEIGHT,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   mainWindow=win;
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
@@ -129,7 +132,7 @@ else app.whenReady().then(async()=>{
     layout=widgetLayout(anchor,view,display.workArea);
     anchor.y=layout.bounds.y;
     win.setMinimumSize(Math.min(WIDTH,display.workArea.width),Math.min(COMPACT_HEIGHT,display.workArea.height));
-    win.setBounds(layout.bounds);
+    win.setBounds({...layout.bounds,height:Math.min(UTILITY_HEIGHT,display.workArea.height)});
     win.webContents.send('widget-layout-changed',layout);
     return layout;
   };
