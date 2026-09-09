@@ -173,7 +173,7 @@ Status: implemented with automated race coverage; live Mac validation deferred.
 - Existing VAD behavior tests remain in place; one compatibility regression found by
   CI was fixed without changing detector thresholds.
 - Exact-head GitHub Actions passed JavaScript tests, Python tests and production
-  build for commit `821031be37e8cadeb2bf10f59960c1a9596aa2fe`.
+  build for final squashed commit `300ba2d492ed7c7ecdc9caae27a777315204eb35`.
 - No real microphone, headset change, echo path, speaker playback or macOS permission
   flow has been certified by these automated checks.
 
@@ -183,10 +183,57 @@ Natural barge-in, speaker-safe interruption tuning, audio-device-change recovery
 Silero evaluation, final recognition/voice selection and live latency remain future
 work. Disconnect still requires the current application restart policy.
 
+## Batch 05 - Turn and playback coordination
+
+Base: Batch 04 commit `300ba2d492ed7c7ecdc9caae27a777315204eb35`.
+Branch: `engine/batch-05-turn-playback`.
+Status: implemented with deterministic interruption-order coverage; final squashed
+exact-head CI is required before integration.
+
+### Implemented
+
+- `src/audio/turn-playback.js` provides one deterministic coordinator for the
+  current user turn, expected server audio chunks, decode work, queued playback,
+  active playback and server completion.
+- The WebSocket boundary records actual outgoing `turn` and `stop` messages and
+  feeds only accepted, identity-checked server audio/done/error events into that
+  coordinator. Old turns cannot regain authority after a new turn begins.
+- `AudioEngine.setListening(true)` now refuses to reopen the live VAD gate while
+  the active turn, expected audio, decode, queued audio or playback is unfinished.
+  The legacy 800 ms callback in `main.js` is therefore no longer authoritative and
+  cannot reopen listening during a reply; its later source cleanup remains safe to
+  do separately from this bounded coordination change.
+- Audio decode and playback are represented by generation-scoped tokens. Stop or a
+  newer turn invalidates old decode results and prevents stale queued/playing audio
+  from affecting the current turn.
+- Stop speaking keeps the live microphone capture allocated, cancels the current
+  turn, stops playback, and then explicitly resumes listening only for an active
+  unmuted live conversation. Mute and End conversation retain their distinct Batch
+  04 meanings.
+- Existing VAD thresholds, STT/TTS providers, mouth equaliser, bot artwork, widget
+  layout and coding panels remain unchanged.
+
+### Validation scope
+
+- New deterministic tests cover server-done-before-decode ordering, multiple audio
+  chunks, stale old-turn tokens/events, replacement by a newer turn and immediate
+  error cancellation.
+- Lifecycle tests cover Stop-speaking resume only for active, unmuted live capture.
+- Existing JavaScript and Python regression suites and production build passed on
+  the pre-squash Batch 05 head; final squashed exact-head CI remains the authority.
+- Live speaker echo, headset/device changes, real microphone behavior and natural
+  barge-in are still not certified by these automated tests.
+
+### Not implemented or certified by this batch
+
+Natural speaker-safe barge-in, VAD quality tuning, Silero evaluation, audio-device
+recovery, final speech providers/voices, canonical chat storage, animation lifecycle
+and coding execution remain later work.
+
 ## Next bounded batch
 
-Turn/playback coordination and interruption semantics. Replace the remaining
-fixed-timer listening reopen path with explicit playback/turn state, keep Stop
-speaking distinct from Cancel task, and add deterministic tests for speech ending,
-late audio chunks, mute during reply, and interruption ordering. Do not tune VAD
-sensitivity or introduce a new speech model in the same batch.
+Speech output delivery and TTS queue reliability. Separate display text from spoken
+text, bound synthesis/playback queues, make TTS failure degrade to text without
+invalidating the answer, and add deterministic chunk/cancellation tests. Keep final
+voice selection and real-device listening tests deferred until the maintainer is
+ready for the Mac checkpoint.

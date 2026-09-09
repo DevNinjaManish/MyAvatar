@@ -1,3 +1,5 @@
+import {turnPlayback} from '../audio/turn-playback.js';
+
 export const RUNTIME_EVENT_VERSION=1;
 const BOT_TRANSITION_TYPES=new Set(['config']);
 
@@ -21,8 +23,17 @@ export class RuntimeEventGate{
   }
 }
 
+function noteClientMessage(data){
+  if(typeof data!=='string')return;
+  try{
+    const message=JSON.parse(data);
+    if(message?.type==='turn')turnPlayback.beginTurn(message.turn);
+    else if(message?.type==='stop')turnPlayback.cancelTurn();
+  }catch{}
+}
+
 /** Install before main.js creates the socket. It filters obsolete runtime events
- * at the WebSocket EventTarget boundary without parsing message text into state.
+ * and coordinates turn/audio freshness without deriving authority from prose.
  */
 export function installRuntimeEventGuard(win=window){
   if(win.__myavatarRuntimeGuardInstalled)return;
@@ -33,15 +44,19 @@ export function installRuntimeEventGuard(win=window){
     construct(Target,args,newTarget){
       const socket=Reflect.construct(Target,args,newTarget===win.WebSocket?Target:newTarget);
       const gate=new RuntimeEventGate();
+      const nativeSend=socket.send.bind(socket);
+      socket.send=data=>{noteClientMessage(data);return nativeSend(data);};
       socket.addEventListener('message',event=>{
         let payload;
         try{payload=JSON.parse(event.data);}catch{return;}
         if(!gate.accept(payload)){event.stopImmediatePropagation();return;}
+        turnPlayback.noteServerEvent(payload);
         if(payload.readiness&&typeof payload.readiness==='object'){
           win.dispatchEvent(new CustomEvent('myavatar:readiness',{detail:payload.readiness}));
         }
       },{capture:true});
       socket.addEventListener('close',()=>{
+        turnPlayback.cancelTurn();
         win.dispatchEvent(new CustomEvent('myavatar:socket-close'));
       },{once:true});
       return socket;

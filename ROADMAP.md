@@ -20,8 +20,8 @@ The coding panels are a UI shell, not an executor. Existing narrow Mac action ta
 
 ## P0 — Shared runtime and trustworthy startup
 
-- [~] Add typed runtime/engine events with session, bot, operation, turn and task identities. Batch 02 adds versioned session/bot/sequence envelopes and greeting operation IDs; Batch 03 adds client-side session/bot/sequence enforcement and engine-readiness payloads. Task identities and a fuller cross-engine event model remain.
-- [~] Separate readiness, microphone, playback and task state; reject stale events. Batch 03 adds independent LLM/STT/TTS readiness and stale-event rejection; Batch 04 adds explicit microphone capture ownership/generation. Playback and task state remain future work.
+- [~] Add typed runtime/engine events with session, bot, operation, turn and task identities. Batch 02 adds versioned session/bot/sequence envelopes and greeting operation IDs; Batch 03 adds client-side session/bot/sequence enforcement and engine-readiness payloads. Batch 05 adds explicit local turn/playback coordination; task identities and a fuller cross-engine event model remain.
+- [~] Separate readiness, microphone, playback and task state; reject stale events. Batch 03 adds independent LLM/STT/TTS readiness and stale-event rejection; Batch 04 adds explicit microphone capture ownership/generation; Batch 05 adds active-turn, decode, queue and playback freshness. Task state remains future work.
 - [~] Validate defaults/preferences: Batch 01 resolves selected profiles, validates saved choices and recovers malformed settings with atomic writes. Full provider/numeric validation and richer in-widget recovery remain.
 - [ ] Migrate legacy High preferences to the agreed Fast/Balanced-only interface.
 - [x] Fix approval-ID generation (`random.token_hex` -> `secrets.token_hex`) with regression coverage; revoke pending approvals on timeout/cancellation and reject invalid, duplicate and stale decisions.
@@ -32,14 +32,14 @@ The coding panels are a UI shell, not an executor. Existing narrow Mac action ta
 ## P1 — Listening and speech
 
 - [~] Centralise MediaStream/worklet ownership and cleanup for end-session, failure, disconnect and device changes. Batch 04 adds single capture ownership, generation-based stale callback rejection, idempotent cleanup, pending-permission cancellation, disconnect and unload cleanup. Device-change recovery remains.
-- [ ] Replace timer-only listening reopen behaviour with explicit turn/playback coordination.
-- [~] Separate Stop speaking, mute, End conversation, Cancel task and Undo. Batch 04 separates Stop speaking, Mute and End conversation at the microphone lifecycle layer; Cancel task and Undo remain future agent work.
+- [~] Replace timer-only listening reopen behaviour with explicit turn/playback coordination. Batch 05 makes active turn, expected audio, decode, queue and playback state authoritative; the legacy 800 ms callback can no longer reopen listening during an active reply, though its source cleanup remains.
+- [~] Separate Stop speaking, mute, End conversation, Cancel task and Undo. Batch 04 separates Stop speaking, Mute and End conversation at the microphone lifecycle layer; Batch 05 makes Stop speaking cancel current playback/turn and explicitly resume only an unmuted live conversation. Cancel task and Undo remain future agent work.
 - [ ] Build repeatable noise, pause, short-command, accent and technical-vocabulary fixtures.
 - [ ] Benchmark optional speech-aware VAD before changing the default detector.
 - [ ] Introduce recognition-provider contracts; evaluate Intel compatibility and multilingual support separately.
 - [ ] Add validated per-bot voice/language profiles; select final voices through listening tests.
 - [ ] Separate spoken summaries from detailed display content; normalise markup and technical pronunciation.
-- [ ] Improve chunk continuity, bounded queues, stale-audio discard and recoverable TTS failure.
+- [~] Improve chunk continuity, bounded queues, stale-audio discard and recoverable TTS failure. Batch 05 rejects stale decode/queued/playback work after interruption; bounded synthesis queues and recoverable TTS failure remain.
 
 ## P2 — Chat and controlled agent behaviour
 

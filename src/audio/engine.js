@@ -1,4 +1,5 @@
 import {TurnDetector} from './vad.js';
+import {turnPlayback} from './turn-playback.js';
 
 let activeCaptureOwner=null;
 
@@ -10,11 +11,15 @@ export function resample(input, rate, target=16000){
 export function toBase64(bytes){let s='';for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(s);}
 export function getActiveCaptureSnapshot(){return activeCaptureOwner?.captureSnapshot()||{active:false,mode:null,muted:false,generation:0};}
 export function endActiveCapture(){return activeCaptureOwner?.endCapture()||new Float32Array();}
+export function resumeActiveLiveCapture(){
+  if(!activeCaptureOwner||activeCaptureOwner.captureMode!=='live'||!activeCaptureOwner.captureActive)return false;
+  activeCaptureOwner.setListening(true);return activeCaptureOwner.liveGate;
+}
 
 export class AudioEngine{
   constructor(onAmplitude){
     this.onAmplitude=onAmplitude;this.queue=[];this.playing=false;this.generation=0;this.captureGeneration=0;
-    this.captureMode=null;this.captureActive=false;this.liveGate=false;this.chunks=[];
+    this.captureMode=null;this.captureActive=false;this.liveGate=false;this.chunks=[];this.sourceTurnToken=null;
   }
   async ready(){this.ctx??=new AudioContext();await this.ctx.resume();}
   captureSnapshot(){return {active:this.captureActive||activeCaptureOwner===this,mode:this.captureMode,muted:this.captureMode==='live'&&!this.liveGate,generation:this.captureGeneration};}
@@ -69,8 +74,6 @@ export class AudioEngine{
       }
     },{mode:'live'});
     if(started===false)return false;
-    // Keep test adapters and future capture providers compatible when they
-    // override record() but do not manage the shared ownership fields themselves.
     if(this.captureMode===null){
       if(activeCaptureOwner&&activeCaptureOwner!==this)activeCaptureOwner.endCapture();
       activeCaptureOwner=this;this.captureMode='live';this.captureActive=true;
@@ -79,7 +82,9 @@ export class AudioEngine{
   }
   setListening(enabled){
     this.detector?.reset();
-    this.liveGate=Boolean(enabled)&&this.captureMode==='live'&&this.captureActive&&activeCaptureOwner===this;
+    const allowed=!enabled||turnPlayback.canResumeListening();
+    this.liveGate=Boolean(enabled)&&allowed&&this.captureMode==='live'&&this.captureActive&&activeCaptureOwner===this;
+    return this.liveGate;
   }
   endCapture({collect=false}={}){
     const sampleRate=this.ctx?.sampleRate||16000;
@@ -93,18 +98,31 @@ export class AudioEngine{
   }
   stopRecord(){return this.endCapture({collect:true});}
   async enqueue(encoded,onStart,onEnd){
-    const generation=this.generation;await this.ready();const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const buffer=await this.ctx.decodeAudioData(bytes.buffer);
-    if(generation!==this.generation)return;this.queue.push({buffer,onStart,onEnd});this.pump();
+    const generation=this.generation;const turnToken=turnPlayback.beginAudioDecode();
+    try{
+      await this.ready();const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const buffer=await this.ctx.decodeAudioData(bytes.buffer);
+      if(generation!==this.generation){turnPlayback.finishAudioDecode(turnToken,false);return false;}
+      turnPlayback.finishAudioDecode(turnToken,true);this.queue.push({buffer,onStart,onEnd,turnToken});this.pump();return true;
+    }catch(error){turnPlayback.finishAudioDecode(turnToken,false);throw error;}
   }
   pump(){
     if(this.playing||!this.queue.length)return;
-    const {buffer,onStart,onEnd}=this.queue.shift();this.playing=true;
+    const {buffer,onStart,onEnd,turnToken}=this.queue.shift();this.playing=true;this.sourceTurnToken=turnToken;turnPlayback.playbackStarted(turnToken);
     this.source=this.ctx.createBufferSource();this.source.buffer=buffer;this.analyser=this.ctx.createAnalyser();this.analyser.fftSize=256;
     this.source.connect(this.analyser).connect(this.ctx.destination);const source=this.source;
-    source.onended=()=>{if(this.source!==source)return;this.playing=false;source.disconnect();this.analyser.disconnect();this.onAmplitude(0);onEnd();this.pump();};source.start();onStart();
+    source.onended=()=>{
+      if(this.source!==source)return;
+      this.playing=false;source.disconnect();this.analyser.disconnect();this.onAmplitude(0);turnPlayback.playbackEnded(turnToken);this.sourceTurnToken=null;onEnd();this.pump();
+    };source.start();onStart();
     const data=new Float32Array(256);const tick=()=>{if(!this.playing||this.source!==source)return;this.analyser.getFloatTimeDomainData(data);const rms=Math.sqrt(data.reduce((n,x)=>n+x*x,0)/data.length);this.onAmplitude(Math.min(1,rms*9));requestAnimationFrame(tick);};tick();
   }
-  stop(){this.generation++;this.queue=[];if(this.source){this.source.onended=null;try{this.source.stop();this.source.disconnect();this.analyser?.disconnect();}catch{}}this.source=null;this.playing=false;this.onAmplitude(0);}
+  stop(){
+    this.generation++;
+    for(const item of this.queue)turnPlayback.discardAudio(item.turnToken);
+    this.queue=[];
+    if(this.source){this.source.onended=null;turnPlayback.discardAudio(this.sourceTurnToken);try{this.source.stop();this.source.disconnect();this.analyser?.disconnect();}catch{}}
+    this.source=null;this.sourceTurnToken=null;this.playing=false;this.onAmplitude(0);
+  }
   dispose(){this.endCapture();this.stop();}
   playFiller(){
     if(!this.ctx)return;
