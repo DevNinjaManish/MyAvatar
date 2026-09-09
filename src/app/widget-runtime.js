@@ -220,6 +220,7 @@ setWorkspaceMode('coding',false);
 $('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar');panel.hidden=!panel.hidden;document.body.classList.toggle('widget-calendar-open',!panel.hidden);if(!panel.hidden)void loadMiniCalendar();};
 $('widget-mini-calendar-close').onclick=()=>{$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');};
 $('widget-mini-calendar-refresh').onclick=()=>void loadMiniCalendar();
+$('widget-creative-toggle').onclick=()=>{setWorkspaceMode('creative');window.desktop?.mode('full');};
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value,memoryEnabled:$('memory-enabled').checked});$('settings').close();window.desktop?.mode('widget');};
@@ -374,6 +375,7 @@ function syncBotUI(){
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
  setWorkspaceMode(recommendedWorkspace[id]||'coding',false);
  $('widget-calendar-toggle').hidden=id!=='nova';if(id!=='nova'){$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');}
+ $('widget-coding-tools').hidden=id!=='robot';$('widget-creative-toggle').hidden=!['luma','pixel'].includes(id);if(id==='butler'){$('widget-calendar-toggle').hidden=false;$('widget-calendar-toggle').setAttribute('aria-label','Open planning calendar');$('widget-calendar-toggle').title='Open planning calendar';}else{$('widget-calendar-toggle').setAttribute('aria-label','Open calendar');$('widget-calendar-toggle').title='Open calendar';}
  $('widget-name').textContent=name;const profile=config.performanceProfile||'medium';$('widget-quality').textContent='Performance · '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended');$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended')+' · click to change';$('widget-quality-slider').value=String({low:0,medium:1}[profile]??1);$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
  $('stage').setAttribute('aria-label',name+' avatar');
  $('widget-drag').setAttribute('aria-label','Drag to move '+name);

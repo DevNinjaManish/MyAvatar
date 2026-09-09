@@ -97,7 +97,7 @@ test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
   assert.equal(new Set(ids).size,ids.length);
   const toolbar=html.match(/<div class="widget-toolbar">([\s\S]*?)<\/div>/)[1];
-  assert.deepEqual([...toolbar.matchAll(/<button id="([^"]+)"/g)].map(match=>match[1]),['widget-mic','widget-chat-toggle','widget-coding-tools','widget-calendar-toggle','widget-more']);
+  assert.deepEqual([...toolbar.matchAll(/<button id="([^"]+)"/g)].map(match=>match[1]),['widget-mic','widget-chat-toggle','widget-coding-tools','widget-calendar-toggle','widget-creative-toggle','widget-more']);
   assert.ok(!toolbar.includes('widget-stop'));assert.ok(ids.includes('widget-stop'));
   assert.equal((html.match(/id="stage"/g)||[]).length,1);
 });
