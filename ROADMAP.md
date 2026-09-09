@@ -20,11 +20,13 @@ The coding panels are a UI shell, not an executor. Existing narrow Mac action ta
 
 ## P0 — Shared runtime and trustworthy startup
 
+Batch progress, scope and test limitations: [ENGINE_BATCH_LOG.md](ENGINE_BATCH_LOG.md).
+
 - [ ] Add typed runtime/engine events with session, bot, operation, turn and task identities.
 - [ ] Separate readiness, microphone, playback and task state; reject stale events.
-- [ ] Validate defaults/preferences; always resolve the selected profile; recover malformed settings with atomic writes.
+- [~] Validate defaults/preferences: Batch 01 resolves selected profiles, validates saved choices and recovers malformed settings with atomic writes. Full provider/numeric configuration validation and in-widget recovery messages remain.
 - [ ] Migrate legacy High preferences to the agreed Fast/Balanced-only interface.
-- [ ] Fix approval-ID generation (`random.token_hex` -> `secrets.token_hex`) with regression coverage.
+- [x] Fix approval-ID generation (`random.token_hex` -> `secrets.token_hex`) with regression coverage; revoke pending approvals on timeout/cancellation and reject invalid, duplicate and stale decisions.
 - [ ] Add bounded startup/recovery, component readiness and text-only degradation where possible.
 - [ ] Make greetings cancellable, once-per-event, identity-safe and truthful; silence settings/reconnect greeting spam.
 - [ ] Preserve explicit microphone and quiet-mode preferences through all transitions.
