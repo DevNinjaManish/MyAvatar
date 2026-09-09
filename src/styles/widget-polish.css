@@ -308,3 +308,6 @@ body.widget #widget-tools {
   left:11px;
   margin:0 !important;
 }
+/* The cockpit's decorative rim must sit below the portrait, not cut into it. */
+body.widget #widget-tools::before { top:2px; }
+body.widget #widget-tools::after { top:6px; }
