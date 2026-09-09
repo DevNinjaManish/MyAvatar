@@ -85,7 +85,9 @@ body.widget.widget-chat-open #widget-chat {
   max-height:420px;
   /* Chat is attached below the platform, never another flex item beside it. */
   position:absolute;
-  top:370px;
+  /* 338px is the platform's fixed bottom edge inside the 780px widget
+   * frame; the panel's own 8px visual gap matches Calendar. */
+  top:338px;
   left:11px;
   width:238px;
   margin:0;
