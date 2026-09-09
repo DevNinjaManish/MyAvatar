@@ -218,7 +218,7 @@ async function loadMiniCalendar(){const status=$('widget-mini-calendar-status'),
 document.querySelectorAll('[data-workspace-mode]').forEach(button=>button.onclick=()=>setWorkspaceMode(button.dataset.workspaceMode));
  $('calendar-refresh').onclick=()=>void loadCalendarWorkspace();
 setWorkspaceMode('coding',false);
-$('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar');panel.hidden=true;document.body.classList.remove('widget-calendar-open');window.openAttachedWorkspace?.('calendar');void loadMiniCalendar();};
+$('widget-calendar-toggle').onclick=()=>{window.closeAttachedWorkspace?.();document.body.dataset.attachedWorkspace='';const panel=$('widget-mini-calendar');panel.hidden=!panel.hidden;document.body.classList.toggle('widget-calendar-open',!panel.hidden);if(!panel.hidden)void loadMiniCalendar();};
 $('widget-mini-calendar-close').onclick=()=>{window.closeAttachedWorkspace?.();$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');};
 $('widget-mini-calendar-refresh').onclick=()=>void loadMiniCalendar();
 $('widget-creative-toggle').onclick=()=>{setWorkspaceMode('creative');window.desktop?.mode('full');};
