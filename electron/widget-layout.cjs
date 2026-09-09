@@ -9,8 +9,12 @@ const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, m
  */
 function widgetLayout(anchor, view, area) {
   const width = Math.min(WIDTH, area.width);
-  const wantedHeight = view.calendar ? CALENDAR_HEIGHT : view.tools ? (view.chat ? COMBINED_HEIGHT : TOOLS_HEIGHT)
-    : view.chat ? CHAT_HEIGHT : COMPACT_HEIGHT;
+  const extras = (view.chat ? CHAT_HEIGHT - COMPACT_HEIGHT : 0)
+    + (view.calendar ? CALENDAR_HEIGHT - COMPACT_HEIGHT : 0)
+    + (view.tools ? TOOLS_HEIGHT - COMPACT_HEIGHT : 0);
+  const wantedHeight = view.chat && view.tools && !view.calendar
+    ? COMBINED_HEIGHT
+    : extras ? COMPACT_HEIGHT + extras : COMPACT_HEIGHT;
   const height = Math.min(wantedHeight, area.height);
   let x = clamp(anchor.x, area.x, area.x + area.width - width);
   const y = clamp(anchor.y, area.y, area.y + area.height - height);

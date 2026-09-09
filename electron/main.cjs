@@ -202,7 +202,7 @@ else app.whenReady().then(async()=>{
   });
   ipcMain.handle('widget-calendar',async(event,next)=>{
     if(!trusted(event)||!next||typeof next.open!=='boolean')return {ok:false,error:'Invalid calendar view request.'};
-    stopDrag();view.calendar=next.open;view.tools=false;view.wide=false;view.chat=false;return {ok:true,...reflow()};
+    stopDrag();view.calendar=next.open;return {ok:true,...reflow()};
   });
   // Explicit directory selection only. No arbitrary path arguments, file reads,
   // shell commands, writes, or backend permissions are exposed by this handler.
