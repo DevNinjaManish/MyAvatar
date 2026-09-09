@@ -88,19 +88,12 @@ body.widget .widget-caption { height:25px; padding:3px 4px; }
 body.widget .widget-toolbar,
 body.widget.widget-chat-open .widget-toolbar {
   display:grid;
-  grid-template-columns:repeat(6,minmax(0,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:4px;
   justify-content:stretch;
   height:46px;
   box-sizing:border-box;
   padding:5px 8px;
-}
-/* Keep each specialist action in its own slot even when that companion does
- * not expose the action. This prevents the visible icons from sliding. */
-body.widget .widget-toolbar button[hidden] {
-  display:grid !important;
-  visibility:hidden;
-  pointer-events:none;
 }
 body.widget .widget-toolbar button,
 body.widget.widget-chat-open .widget-toolbar button {

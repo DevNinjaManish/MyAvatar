@@ -380,6 +380,7 @@ function interactWithAvatar(){
 function syncBotUI(){
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
  setWorkspaceMode(recommendedWorkspace[id]||'coding',false);
+ syncSpecialistButton(id);
  $('widget-calendar-toggle').hidden=id!=='nova';if(id!=='nova'){$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');}
  $('widget-coding-tools').hidden=id!=='robot';$('widget-creative-toggle').hidden=!['luma','pixel'].includes(id);if(id==='butler'){$('widget-calendar-toggle').hidden=false;$('widget-calendar-toggle').setAttribute('aria-label','Open planning calendar');$('widget-calendar-toggle').title='Open planning calendar';}else{$('widget-calendar-toggle').setAttribute('aria-label','Open calendar');$('widget-calendar-toggle').title='Open calendar';}
  $('widget-name').textContent=name;const profile=config.performanceProfile||'medium';$('widget-quality').textContent='Performance · '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended');$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended')+' · click to change';$('widget-quality-slider').value=String({low:0,medium:1}[profile]??1);$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
@@ -428,6 +429,9 @@ const widgetIcons={
  'widget-mute':'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 10.5 6.1M12 19v3M9 22h6M3 3l18 18"/>',
  'widget-stop':'<rect x="6" y="6" width="12" height="12" rx="3"/>',
  'widget-chat-toggle':'<path d="M5 5h14v10H9l-4 4V5Z"/><path d="M8 9h8M8 12h5"/>',
+ 'widget-calendar':'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/>',
+ 'widget-coding':'<path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>',
+ 'widget-creative':'<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/>',
  'widget-awareness':'<path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>',
  'widget-bot':'<path d="M4 8h15l-4-4M20 16H5l4 4"/>',
  'widget-settings':'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.1 2.1-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V20h-3v-.08A1.7 1.7 0 0 0 10.68 18.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.1-2.1.06-.06A1.7 1.7 0 0 0 7.04 15a1.7 1.7 0 0 0-1.56-1.04H5v-3h.08A1.7 1.7 0 0 0 6.6 9.92a1.7 1.7 0 0 0-.34-1.88L6.2 7.98l2.1-2.1.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.28 4.7V4h3v.08a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.1 2.1-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04H20v3h-.08A1.7 1.7 0 0 0 18.4 15Z"/>',
@@ -437,6 +441,18 @@ const widgetIcons={
 };
 const iconSvg=paths=>'<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
 for(const [id,paths] of Object.entries(widgetIcons).filter(([id])=>['widget-mic','widget-stop','widget-chat-toggle','widget-awareness','expand'].includes(id)))$(id).innerHTML=iconSvg(paths);
+
+const specialistByBot={nova:{kind:'calendar',label:'Open calendar',title:'Open Nova calendar'},butler:{kind:'calendar',label:'Open planning calendar',title:'Open Butler planning calendar'},robot:{kind:'coding',label:'Open coding tools',title:'Open Rivet coding tools'},pixel:{kind:'creative',label:'Open creative workspace',title:'Open Pixel creative workspace'},luma:{kind:'creative',label:'Open creative workspace',title:'Open Luma creative workspace'}};
+let activeSpecialist='';
+function syncSpecialistButton(id){
+ const specialist=specialistByBot[id],button=$('widget-specialist-toggle');
+ activeSpecialist=specialist?.kind||'';
+ button.hidden=!specialist;
+ if(!specialist)return;
+ button.innerHTML=iconSvg(widgetIcons[`widget-${specialist.kind}`]);
+ button.setAttribute('aria-label',specialist.label);button.title=specialist.title;
+}
+$('widget-specialist-toggle').onclick=()=>{if(activeSpecialist==='calendar')$('widget-calendar-toggle').click();else if(activeSpecialist==='coding')$('widget-coding-tools').click();else if(activeSpecialist==='creative')$('widget-creative-toggle').click();};
 
 function setWidgetChat(open,focus=true){
  const shouldOpen=Boolean(open)&&document.body.classList.contains('widget');
