@@ -1,0 +1,51 @@
+/* Full-mode workspace: calm canvas, readable console, no dashboard clutter. */
+body:not(.widget) {
+  background: radial-gradient(circle at 50% -10%, #263638 0%, var(--bg) 46%);
+}
+body:not(.widget) header {
+  height: 72px;
+  padding: 0 34px;
+  background: #111719c9;
+  border-bottom-color: #ffffff1d;
+  backdrop-filter: blur(16px);
+}
+body:not(.widget) header strong { font-size: 20px; letter-spacing: -.7px; }
+body:not(.widget) header>div:last-child { gap: 7px; }
+body:not(.widget) header button,
+body:not(.widget) header select { min-height: 36px; border-radius: 9px; }
+body:not(.widget) main { gap: 20px; padding: 22px 34px 28px; }
+body:not(.widget) #stage {
+  min-height: 0;
+  border-radius: 22px;
+  background: radial-gradient(ellipse at 50% 42%, #304342 0%, #1c2729 57%, #172022 100%);
+  box-shadow: 0 18px 50px #0003, inset 0 1px #ffffff0d;
+}
+body:not(.widget) aside {
+  width: min(390px, 34vw);
+  padding: 20px;
+  border-radius: 18px;
+  background: #182124c9;
+  border-color: #ffffff1d;
+  box-shadow: 0 18px 50px #0002, inset 0 1px #ffffff08;
+}
+body:not(.widget) aside h2 { margin: 0 0 16px; color: var(--ink); font-size: 14px; letter-spacing: -.2px; }
+body:not(.widget) #messages { padding: 4px 2px 12px; }
+body:not(.widget) #text-form { gap: 8px; }
+body:not(.widget) #text-form input { min-height: 42px; }
+body:not(.widget) #text-form button { min-width: 66px; background: var(--accent); color: #163329; font-weight: 700; }
+body:not(.widget) footer { padding: 16px 34px 20px; background: #11171980; border-top-color: #ffffff12; }
+body:not(.widget) #status { font-weight: 650; color: var(--ink); }
+@media (max-width: 900px) {
+  body:not(.widget) main { gap: 14px; padding-inline: 18px; }
+  body:not(.widget) aside { width: min(330px, 38vw); padding: 16px; }
+  body:not(.widget) header { padding-inline: 18px; }
+  body:not(.widget) footer { padding-inline: 18px; }
+}
+@media (max-width: 700px) {
+  body:not(.widget) header { height: auto; min-height: 64px; align-items: flex-start; padding-block: 12px; gap: 10px; }
+  body:not(.widget) header>div:last-child { flex-wrap: wrap; justify-content: flex-end; }
+  body:not(.widget) main { flex-direction: column; padding: 14px; }
+  body:not(.widget) #stage { flex: 1 1 52vh; min-height: 260px; }
+  body:not(.widget) aside { width: 100%; height: min(38vh, 300px); }
+  body:not(.widget) footer { padding: 12px 14px 16px; }
+}

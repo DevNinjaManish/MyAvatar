@@ -5,6 +5,7 @@ await import('./widget-runtime.js');
 import '../styles/widget-cockpit.css';
 import '../styles/widget-panels.css';
 import '../styles/widget-polish.css';
+import '../styles/full-polish.css';
 import '../conversation/chat-actions.css';
 import {mountWidgetPanels} from '../widget/panels.js';
 import {mountReadinessUI} from '../conversation/readiness-ui.js';
