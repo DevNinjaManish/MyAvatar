@@ -11,6 +11,10 @@ body:not(.widget) header {
 }
 body:not(.widget) header strong { font-size: 20px; letter-spacing: -.7px; }
 body:not(.widget) header>div:last-child { gap: 7px; }
+body:not(.widget) .full-header-tools { display:flex; align-items:center; gap:8px; }
+body:not(.widget) #workspace-nav { display:flex; gap:3px; padding:3px; border:1px solid #ffffff16; border-radius:11px; background:#ffffff05; }
+body:not(.widget) #workspace-nav button { min-height:30px; padding:5px 9px; border:0; border-radius:8px; color:var(--muted); font-size:11px; }
+body:not(.widget) #workspace-nav button.active { color:#173329; background:var(--accent); font-weight:700; }
 body:not(.widget) header button,
 body:not(.widget) header select { min-height: 36px; border-radius: 9px; }
 body:not(.widget) main { gap: 20px; padding: 22px 34px 28px; }
@@ -40,10 +44,14 @@ body:not(.widget) #status { font-weight: 650; color: var(--ink); }
   body:not(.widget) aside { width: min(330px, 38vw); padding: 16px; }
   body:not(.widget) header { padding-inline: 18px; }
   body:not(.widget) footer { padding-inline: 18px; }
+  body:not(.widget) #workspace-nav button { padding-inline:6px; }
 }
 @media (max-width: 700px) {
   body:not(.widget) header { height: auto; min-height: 64px; align-items: flex-start; padding-block: 12px; gap: 10px; }
   body:not(.widget) header>div:last-child { flex-wrap: wrap; justify-content: flex-end; }
+  body:not(.widget) .full-header-tools { justify-content:flex-end; }
+  body:not(.widget) #workspace-nav { order:3; width:100%; justify-content:space-between; }
+  body:not(.widget) #workspace-nav button { flex:1; padding-inline:4px; }
   body:not(.widget) main { flex-direction: column; padding: 14px; }
   body:not(.widget) #stage { flex: 1 1 52vh; min-height: 260px; }
   body:not(.widget) aside { width: 100%; height: min(38vh, 300px); }

@@ -195,6 +195,15 @@ $('widget-copy-last').onclick=async()=>{
  $('widget-copy-last').textContent='Copied';setTimeout(()=>{$('widget-copy-last').textContent='Copy';},900);
 };
 $('transcript-toggle').onclick=()=>{$('transcript').hidden=!$('transcript').hidden;};
+const workspaceModes={calendar:'Plan time, review events, and prepare meeting notes.',coding:'Inspect the project, plan changes, review diffs, and run checks.',creative:'Create images, refine ideas, and review visual drafts.',inbox:'Review messages and prepare replies for your approval.',system:'See local CPU, memory, disk, model, and task health.'};
+const recommendedWorkspace={nova:'calendar',robot:'coding',butler:'calendar',pixel:'creative',luma:'creative'};
+function setWorkspaceMode(mode,announce=true){
+ const selected=workspaceModes[mode]?mode:'coding';document.body.dataset.workspace=selected;
+ document.querySelectorAll('[data-workspace-mode]').forEach(button=>{const active=button.dataset.workspaceMode===selected;button.classList.toggle('active',active);button.setAttribute('aria-current',active?'page':'false');});
+ $('detail').textContent=workspaceModes[selected];if(announce)$('status').setAttribute('aria-label',`${selected} workspace`);
+}
+document.querySelectorAll('[data-workspace-mode]').forEach(button=>button.onclick=()=>setWorkspaceMode(button.dataset.workspaceMode));
+setWorkspaceMode('coding',false);
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value,memoryEnabled:$('memory-enabled').checked});$('settings').close();window.desktop?.mode('widget');};
@@ -346,6 +355,7 @@ function interactWithAvatar(){
 
 function syncBotUI(){
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
+ setWorkspaceMode(recommendedWorkspace[id]||'coding',false);
  $('widget-name').textContent=name;const profile=config.performanceProfile||'medium';$('widget-quality').textContent='Performance · '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended');$('widget-quality').title='Performance: '+(config.performanceProfiles?.[profile]?.name||'Balanced · Recommended')+' · click to change';$('widget-quality-slider').value=String({low:0,medium:1}[profile]??1);$('widget-bot').title='Choose a robot · current: '+name;$('widget-bot').setAttribute('aria-label',$('widget-bot').title);$('bot-select').value=id;
  $('stage').setAttribute('aria-label',name+' avatar');
  $('widget-drag').setAttribute('aria-label','Drag to move '+name);
