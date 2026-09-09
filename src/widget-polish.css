@@ -1,0 +1,148 @@
+/* Presentation-only refinement of the attached widget. No avatar/audio effects.
+ * Keep the original 260px native column and all four primary controls stable.
+ */
+body.widget {
+  --widget-surface: #172024;
+  --widget-text-soft: #b3c0c4;
+  --widget-hairline: #ffffff1c;
+  --widget-inset: #10181c;
+}
+body.widget :where(button, input, textarea, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+body.widget .widget-toolbar button,
+body.widget.widget-chat-open .widget-toolbar button {
+  flex: none;
+  width: 38px;
+  height: 36px;
+  border-radius: 11px;
+}
+body.widget .widget-toolbar button[aria-expanded=true] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--widget-inset));
+}
+body.widget #widget-name { font-size: 12px; }
+body.widget #widget-status { font-size: 10px; }
+body.widget #widget-stop {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+}
+body.widget .widget-chat-heading,
+body.widget .widget-panels-heading h2 { font-size: 12px; letter-spacing: -.1px; }
+body.widget .widget-chat-actions button { min-height: 26px; font-size: 10px; }
+body.widget #widget-messages .message { font-size: 12px; line-height: 1.55; padding: 9px 0; }
+body.widget #widget-messages .role { font-size: 10px; margin-bottom: 4px; }
+body.widget #widget-messages .hint { font-size: 11px; line-height: 1.55; }
+body.widget #widget-text { font-size: 12px; min-height: 34px; }
+body.widget #widget-text-form button { font-size: 11px; min-height: 34px; }
+body.widget .widget-panels-heading { padding: 9px 10px 8px; }
+body.widget .widget-panels-heading button { min-width: 28px; height: 28px; }
+body.widget .widget-panels-heading button[data-small-label] { font-size: 10px; padding: 4px 5px; }
+body.widget .widget-panels-scroll { padding: 0 9px 10px; scrollbar-color: #526166 transparent; }
+body.widget .widget-project-row { padding: 4px 0 9px; font-size: 11px; }
+body.widget .widget-project-row button { min-height: 32px; font-size: 11px; }
+body.widget #widget-panel-notice {
+  margin: 0 0 9px;
+  padding: 8px 9px;
+  border: 1px solid var(--widget-hairline);
+  border-radius: 9px;
+  background: var(--widget-inset);
+  color: var(--widget-text-soft);
+  font-size: 11px;
+  line-height: 1.5;
+}
+body.widget #widget-panel-notice[data-tone=error] {
+  border-color: #ffb2a561;
+  background: #331f20;
+  color: #ffd0c7;
+}
+body.widget #widget-brief-status[data-tone=warning] { color: #edd4a1; }
+body.widget .widget-panel {
+  margin-top: 6px;
+  border-color: var(--widget-hairline);
+  background: #ffffff02;
+  border-radius: 11px;
+}
+body.widget .widget-panel[data-expanded=true] {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--widget-hairline));
+  background: var(--widget-surface);
+}
+body.widget .widget-panel-toggle {
+  min-height: 42px;
+  padding: 9px 9px;
+  gap: 6px;
+  font-size: 12px;
+}
+body.widget .widget-panel-toggle .panel-glyph { flex: none; width: 15px; font-size: 13px; }
+body.widget .widget-panel-toggle .panel-state { font-size: 10px; white-space: nowrap; }
+/* The notice and panel body already explain unavailable connections. Avoid
+ * repeating a long badge in the narrow Files and Terminal disclosure rows.
+ * Keep that information in the accessible name and the visible empty state.
+ */
+body.widget [data-widget-panel=changes] .panel-state,
+body.widget [data-widget-panel=terminal] .panel-state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+body.widget [data-widget-panel=changes] .widget-panel-toggle::after,
+body.widget [data-widget-panel=terminal] .widget-panel-toggle::after { margin-left: auto; }
+body.widget .widget-panel-body { padding: 0 10px 11px; font-size: 12px; line-height: 1.55; }
+body.widget .widget-panel-body p { color: var(--widget-text-soft); margin: 6px 0 9px; }
+body.widget .widget-panel-body label { font-size: 11px; gap: 6px; }
+body.widget #widget-brief {
+  min-height: 86px;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 9px;
+  border-color: #ffffff26;
+  background: var(--widget-inset);
+}
+body.widget #widget-brief::placeholder,
+body.widget #widget-text::placeholder { color: #9aadb2; opacity: 1; }
+body.widget .widget-panel-body button { font-size: 11px; min-height: 32px; padding: 7px 9px; }
+body.widget #widget-brief-to-chat:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 12%, var(--widget-inset));
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+}
+body.widget .widget-panel-body pre { font-size: 11px; line-height: 1.6; }
+/* Disabled actions stay legible; their adjacent text explains why. */
+body.widget .widget-panel-body button:disabled,
+body.widget .widget-project-row button:disabled,
+body.widget .widget-panels-heading button:disabled {
+  opacity: 1;
+  color: #a1b0b5;
+  background: #ffffff04;
+  border-color: #ffffff14;
+  cursor: not-allowed;
+}
+body.widget .widget-project-row button[aria-busy=true] { cursor: progress; }
+body.widget .widget-wing-content { display: flex; align-items: center; }
+body.widget .widget-wing-empty {
+  width: 100%;
+  padding: 20px;
+  border-style: solid;
+  background: var(--widget-inset);
+  color: var(--widget-text-soft);
+  font-size: 13px;
+}
+body.widget .widget-wing-empty strong { font-size: 15px; margin-bottom: 8px; }
+body.widget .widget-wing-footer { font-size: 11px; color: var(--widget-text-soft); }
+@media (prefers-reduced-motion: reduce) {
+  body.widget .widget-toolbar button,
+  body.widget .widget-panel,
+  body.widget .widget-panel-toggle { transition: none; }
+}
+@media (prefers-contrast: more) {
+  body.widget { --widget-hairline: #ffffff61; --widget-text-soft: #edf3f1; }
+  body.widget .widget-panel-toggle .panel-state { color: var(--ink); }
+}
