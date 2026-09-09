@@ -270,3 +270,16 @@ body.widget .mini-calendar-grid span.today { background:var(--accent); color:#16
 body.widget .mini-calendar-grid span.has-event::after { content:''; position:absolute; bottom:2px; width:3px; height:3px; border-radius:50%; background:#f09ab9; }
 /* Keep More below the portrait/platform so it never obscures the companion. */
 body.widget #widget-menu { top:250px; left:10px; right:auto; width:238px; max-height:430px; overflow:auto; box-sizing:border-box; }
+/* Final geometry contract: the platform never participates in document flow. */
+body.widget main {
+  position:absolute;
+  top:10px;
+  left:18px;
+  margin:0 !important;
+}
+body.widget #widget-tools {
+  position:absolute;
+  top:226px;
+  left:11px;
+  margin:0 !important;
+}
