@@ -79,6 +79,9 @@ body.widget.widget-chat-open #widget-tools {
   box-sizing:border-box;
 }
 body.widget.widget-chat-open #widget-chat {
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  gap:8px;
   flex:none;
   height:400px;
   min-height:400px;
@@ -87,11 +90,23 @@ body.widget.widget-chat-open #widget-chat {
   position:absolute;
   /* 338px is the platform's fixed bottom edge inside the 780px widget
    * frame; the panel's own 8px visual gap matches Calendar. */
-  top:368px;
+  top:380px;
   left:11px;
   width:238px;
   margin:0;
+  padding:12px;
+  box-sizing:border-box;
 }
+/* A compact, useful chat: heading and composer never move; the transcript
+ * uses the available room and sits above the composer when it is short. */
+body.widget #widget-chat .widget-chat-heading { margin:0; min-height:26px; }
+body.widget #widget-messages { display:flex; flex-direction:column; padding:0 2px 0 0; }
+body.widget #widget-messages > :first-child { margin-top:auto; }
+body.widget #widget-messages .message { padding:9px 0; border-top:1px solid #ffffff10; }
+body.widget #widget-messages .message:first-child { border-top:0; }
+body.widget #widget-text-form { display:grid; grid-template-columns:minmax(0,1fr) auto; margin:0; }
+body.widget #widget-text { min-height:38px; padding:8px 10px; border-radius:10px; }
+body.widget #widget-text-form button { min-height:38px; padding:7px 11px; border-radius:10px; }
 /* Chat is an attached panel, not a new avatar mode. Keep the platform's
  * portrait and toolbar footprint identical in compact and chat states. */
 body.widget.widget-chat-open main {
@@ -146,7 +161,7 @@ body.widget.widget-calendar-open { overflow:hidden; }
 body.widget.widget-calendar-open #widget-mini-calendar {
   position:absolute;
   z-index:8;
-  top:368px;
+  top:380px;
   left:11px;
   right:auto;
   order:initial;
@@ -289,7 +304,7 @@ body.widget main {
 }
 body.widget #widget-tools {
   position:absolute;
-  top:256px;
+  top:268px;
   left:11px;
   margin:0 !important;
 }
