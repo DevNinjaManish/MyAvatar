@@ -1,6 +1,7 @@
 'use strict';
-const WIDTH = 260, COMPACT_HEIGHT = 370, CHAT_HEIGHT = 720;
-const TOOLS_HEIGHT = 720, COMBINED_HEIGHT = 850, CALENDAR_HEIGHT = 780, WING_WIDTH = 440, GAP = 10;
+const WIDTH = 260, COMPACT_HEIGHT = 370, UTILITY_HEIGHT = 780;
+const CHAT_HEIGHT = UTILITY_HEIGHT, TOOLS_HEIGHT = UTILITY_HEIGHT;
+const COMBINED_HEIGHT = UTILITY_HEIGHT, CALENDAR_HEIGHT = UTILITY_HEIGHT, WING_WIDTH = 440, GAP = 10;
 const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, max)));
 
 /** A pure, testable layout function in Electron device-independent pixels.
@@ -40,4 +41,4 @@ function validPanelsRequest(value) {
     && typeof value.open === 'boolean' && typeof value.wide === 'boolean'
     && (!value.wide || value.open);
 }
-module.exports = {widgetLayout, validPanelsRequest, WIDTH, COMPACT_HEIGHT, CALENDAR_HEIGHT};
+module.exports = {widgetLayout, validPanelsRequest, WIDTH, COMPACT_HEIGHT, UTILITY_HEIGHT, CALENDAR_HEIGHT};

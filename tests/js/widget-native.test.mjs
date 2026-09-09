@@ -44,9 +44,9 @@ test('native window still has a sandboxed isolated renderer',async()=>{
 });
 test('tools and chat resize independently without dropping the other state',async()=>{
   const {window,handlers,trusted}=await boot();
-  await handlers.get('widget-panels')(trusted,{open:true,wide:false});assert.equal(window.bounds.height,720);
-  await handlers.get('widget-chat')(trusted,true);assert.equal(window.bounds.height,820);
-  await handlers.get('widget-chat')(trusted,false);assert.equal(window.bounds.height,720);
+  await handlers.get('widget-panels')(trusted,{open:true,wide:false});assert.equal(window.bounds.height,780);
+  await handlers.get('widget-chat')(trusted,true);assert.equal(window.bounds.height,780);
+  await handlers.get('widget-chat')(trusted,false);assert.equal(window.bounds.height,780);
   await handlers.get('widget-panels')(trusted,{open:false,wide:false});assert.equal(window.bounds.height,370);
 });
 test('foreign renderer and subframe IPC requests cannot resize the widget',async()=>{

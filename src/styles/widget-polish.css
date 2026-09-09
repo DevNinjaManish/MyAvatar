@@ -80,9 +80,9 @@ body.widget.widget-chat-open #widget-tools {
 }
 body.widget.widget-chat-open #widget-chat {
   flex:none;
-  height:360px;
-  min-height:360px;
-  max-height:360px;
+  height:420px;
+  min-height:420px;
+  max-height:420px;
 }
 body.widget .widget-caption { height:25px; padding:3px 4px; }
 body.widget .widget-toolbar,
