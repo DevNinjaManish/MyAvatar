@@ -87,19 +87,24 @@ body.widget.widget-chat-open #widget-chat {
 body.widget .widget-caption { height:25px; padding:3px 4px; }
 body.widget .widget-toolbar,
 body.widget.widget-chat-open .widget-toolbar {
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:4px;
-  justify-content:stretch;
+  position:relative !important;
+  display:block;
   height:46px;
   box-sizing:border-box;
-  padding:5px 8px;
+  padding:0;
 }
 body.widget .widget-toolbar button,
 body.widget.widget-chat-open .widget-toolbar button {
-  width:100%;
-  min-width:0;
+  position:absolute;
+  top:5px;
+  width:38px !important;
+  min-width:38px;
+  height:34px;
 }
+body.widget .widget-toolbar #widget-mic { position:absolute !important; top:5px !important; left:7px; }
+body.widget .widget-toolbar #widget-chat-toggle { position:absolute !important; top:5px !important; left:57px; }
+body.widget .widget-toolbar #widget-specialist-toggle { position:absolute !important; top:5px !important; left:107px; }
+body.widget .widget-toolbar #widget-more { position:absolute !important; top:5px !important; right:auto !important; bottom:auto !important; left:157px; }
 /* Opening a utility never restyles or resizes the platform controls. The
  * panel below is the only open-state indicator; Mic colors stay reserved for
  * actual audio state. */
