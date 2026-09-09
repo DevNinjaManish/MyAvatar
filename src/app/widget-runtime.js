@@ -48,6 +48,7 @@ function setMessageEmotion(body,role,emotion){
  body.roleNode.dataset.emotion=emotion||'relaxed';
 }
 function appendMessage(container,role,text,compact=false,emotion='relaxed'){
+ if(compact)container.querySelector('.widget-empty-state')?.remove();
  const item=document.createElement('div');item.className='message '+(role==='You'?'user':'assistant');
  const label=document.createElement('div');label.className='role';label.textContent=role;
  const body=document.createElement('div');body.textContent=text;item.append(label,body);container.append(item);
@@ -69,7 +70,12 @@ function message(role,text,emotion=expressionEmotion){
 }
 function clearMessages(){
  $('messages').replaceChildren();$('widget-messages').replaceChildren();
- const hint=document.createElement('p');hint.className='hint';hint.textContent='Talk naturally or type a message.';$('widget-messages').append(hint);
+ const empty=document.createElement('div');empty.className='widget-empty-state';
+ const title=document.createElement('strong');title.textContent='What can I help with?';
+ const hint=document.createElement('span');hint.textContent='Talk naturally or choose a quick start.';
+ const prompts=document.createElement('div');prompts.className='widget-quick-prompts';
+ for(const [label,prompt] of [['Plan my day','Plan my day'],['Today’s calendar','What is on my calendar today?'],['Start a task','Help me get started with a task']]){const button=document.createElement('button');button.type='button';button.dataset.widgetPrompt=prompt;button.textContent=label;prompts.append(button);}
+ empty.append(title,hint,prompts);$('widget-messages').append(empty);
  latestWidgetReply=null;widgetUnread=0;$('widget-copy-last').disabled=true;syncWidgetUnread();
 }
 function actionRequest(request){
@@ -185,6 +191,8 @@ async function submitText(input){
 }
 $('text-form').onsubmit=event=>{event.preventDefault();submitText($('text'));};
 $('widget-text-form').onsubmit=event=>{event.preventDefault();submitText($('widget-text'));};
+$('widget-text').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();$('widget-text-form').requestSubmit();}});
+document.addEventListener('click',event=>{const button=event.target.closest('[data-widget-prompt]');if(!button)return;$('widget-text').value=button.dataset.widgetPrompt;$('widget-text-form').requestSubmit();});
 for(const [source,target] of [[$('text'),$('widget-text')],[$('widget-text'),$('text')]])source.addEventListener('input',()=>{target.value=source.value;});
 function clearConversation(){interrupt();send({type:'clear'});clearMessages();}
 $('clear').onclick=clearConversation;
@@ -302,6 +310,7 @@ function syncWidgetStatus(){
  $('widget-end-conversation').hidden=!liveOn;
  if(micMuted)$('widget-status').textContent='Muted';
  $('widget-stop').hidden=state.value!=='SPEAKING';
+ const chatState=$('widget-chat-state');if(chatState)chatState.textContent=failed?'Needs attention':preparing?'Preparing':state.value==='THINKING'?'Working…':state.value==='SPEAKING'?'Replying…':state.value==='LISTENING'?'Listening…':'Ready';
 }
 function syncScreenAwareness(){
  $('widget-awareness').setAttribute('aria-pressed',String(screenAwareness));

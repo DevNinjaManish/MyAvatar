@@ -100,12 +100,18 @@ body.widget.widget-chat-open #widget-chat {
 /* A compact, useful chat: heading and composer never move; the transcript
  * uses the available room and sits above the composer when it is short. */
 body.widget #widget-chat .widget-chat-heading { margin:0; min-height:26px; }
+body.widget #widget-chat .widget-chat-heading > div:first-child { display:flex; align-items:baseline; gap:7px; }
+body.widget #widget-chat-state { color:var(--widget-text-soft); font-size:10px; font-weight:500; }
 body.widget #widget-messages { display:flex; flex-direction:column; padding:0 2px 0 0; }
-body.widget #widget-messages > :first-child { margin-top:auto; }
 body.widget #widget-messages .message { padding:9px 0; border-top:1px solid #ffffff10; }
 body.widget #widget-messages .message:first-child { border-top:0; }
+body.widget .widget-empty-state { display:grid; gap:8px; align-content:center; min-height:100%; color:var(--widget-text-soft); font-size:11px; line-height:1.4; }
+body.widget .widget-empty-state strong { color:var(--ink); font-size:13px; }
+body.widget .widget-quick-prompts { display:grid; gap:6px; margin-top:3px; }
+body.widget .widget-quick-prompts button { min-height:30px; padding:6px 8px; border-radius:9px; border:1px solid var(--widget-hairline); background:#ffffff08; color:var(--ink); font-size:11px; text-align:left; }
+body.widget .widget-quick-prompts button:hover { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,#ffffff08); }
 body.widget #widget-text-form { display:grid; grid-template-columns:minmax(0,1fr) auto; margin:0; }
-body.widget #widget-text { min-height:38px; padding:8px 10px; border-radius:10px; }
+body.widget #widget-text { min-height:38px; max-height:76px; resize:none; padding:8px 10px; border-radius:10px; line-height:1.35; }
 body.widget #widget-text-form button { min-height:38px; padding:7px 11px; border-radius:10px; }
 /* Chat is an attached panel, not a new avatar mode. Keep the platform's
  * portrait and toolbar footprint identical in compact and chat states. */
