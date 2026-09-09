@@ -18,22 +18,22 @@
   <form id="widget-text-form"><input id="widget-text" placeholder="Message companion…" maxlength="2000" aria-label="Message"><button>Send</button></form>
 </section>
 <section id="widget-coding-panels" aria-labelledby="widget-panels-title" hidden>
-  <div class="widget-panels-heading"><h2 id="widget-panels-title" tabindex="-1">Coding tools</h2><div><button id="widget-panels-collapse" data-small-label title="Collapse all panels">Collapse all</button><button id="widget-panels-close" aria-label="Close coding tools" title="Close coding tools">×</button></div></div>
+  <div class="widget-panels-heading"><h2 id="widget-panels-title" tabindex="-1">Build with Nova</h2><div><button id="widget-panels-collapse" data-small-label title="Collapse all panels">Collapse all</button><button id="widget-panels-close" aria-label="Close coding tools" title="Close coding tools">×</button></div></div>
   <div class="widget-panels-scroll">
     <div class="widget-project-row"><span id="widget-project-name">No folder selected</span><button id="widget-project-select">Choose folder</button></div>
-    <p id="widget-panel-notice" role="status">UI preview · coding executor not connected. Your files are not being read or changed.</p>
+    <p id="widget-panel-notice" role="status">Tell me what you want to make. I’ll inspect, explain, and verify each step locally.</p>
     <section class="widget-panel" data-widget-panel="task">
       <button class="widget-panel-toggle" data-panel-toggle aria-expanded="true" aria-controls="widget-task-body"><span class="panel-glyph" aria-hidden="true">□</span>Task<span class="panel-state">Draft</span></button>
       <div class="widget-panel-body" id="widget-task-body">
-        <label for="widget-brief">Task brief</label>
+        <label for="widget-brief">What are we building?</label>
         <textarea id="widget-brief" maxlength="2000" placeholder="Describe the change…"></textarea>
         <p id="widget-brief-status" role="status">No task started</p>
         <div class="quick-actions" aria-label="Beginner automations">
-          <span class="quick-actions-label">Try a quick action</span>
-          <button type="button" data-quick-task="check">Check project</button>
-          <button type="button" data-quick-task="test">Run tests</button>
-          <button type="button" data-quick-task="build">Build app</button>
-          <button type="button" data-quick-task="review">Review changes</button>
+          <span class="quick-actions-label">Jump in</span>
+          <button type="button" data-quick-task="check">✦ Check in</button>
+          <button type="button" data-quick-task="test">✓ Test it</button>
+          <button type="button" data-quick-task="build">⚡ Build it</button>
+          <button type="button" data-quick-task="review">◌ See changes</button>
         </div>
         <div class="panel-actions">
         <button id="widget-task-run" disabled>Run task locally</button>

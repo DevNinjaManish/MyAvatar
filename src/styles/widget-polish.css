@@ -55,7 +55,12 @@ body.widget #widget-panel-notice {
   color: var(--widget-text-soft);
   font-size: 11px;
   line-height: 1.5;
+  background: linear-gradient(135deg, #19282b, #162024);
 }
+body.widget #widget-panels-title { letter-spacing: .01em; }
+body.widget .quick-actions-label { color: var(--accent); font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+body.widget .quick-actions button { border-color: #ffffff20; background: #ffffff08; }
+body.widget .quick-actions button:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 13%, #ffffff08); }
 body.widget #widget-panel-notice[data-tone=error] {
   border-color: #ffb2a561;
   background: #331f20;
