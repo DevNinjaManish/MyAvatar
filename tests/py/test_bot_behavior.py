@@ -20,6 +20,9 @@ class BotBehaviorTests(unittest.TestCase):
             self.assertIn('unless that information was actually supplied', prompt)
             self.assertIn('Session continuity is temporary context', prompt)
             self.assertIn('conversation history', prompt)
+            self.assertIn('already asked for a specific action', prompt)
+            self.assertIn('do not add a second competing suggestion', prompt)
+            self.assertIn('end every reply with an offer to help', prompt)
 
     def test_next_step_policy_is_role_specific(self):
         instructions = {bot: next_step_policy(bot)['instruction'] for bot in BEHAVIORS}
@@ -27,6 +30,14 @@ class BotBehaviorTests(unittest.TestCase):
         self.assertIn('marketing', instructions['pixel'])
         self.assertIn('design', instructions['luma'])
         self.assertIn('coding', instructions['robot'])
+
+    def test_goal_policy_matches_each_specialty(self):
+        goals = {bot: next_step_policy(bot)['goal'] for bot in BEHAVIORS}
+        self.assertIn('reduce friction', goals['nova'])
+        self.assertIn('highest consequence', goals['butler'])
+        self.assertIn('measurable experiment', goals['pixel'])
+        self.assertIn('clarity, usability', goals['luma'])
+        self.assertIn('smallest safe coding step', goals['robot'])
 
     def test_continuity_policy_matches_each_specialty(self):
         continuity = {bot: next_step_policy(bot)['continuity'] for bot in BEHAVIORS}
