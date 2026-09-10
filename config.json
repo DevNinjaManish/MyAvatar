@@ -8,8 +8,8 @@
     "keepAlive": "10m"
   },
   "performanceProfiles": {
-    "low": {"name":"Fast","llm":{"model":"huihui_ai/qwen3.5-abliterated:0.8b","context":2048,"maxTokens":80,"keepAlive":"20m"},"conversation":{"historyTurns":3,"firstChunkChars":48,"chunkChars":120},"avatar":{"maxFps":45,"pixelRatio":1.25,"portraitSize":512,"effectFps":24}},
-    "medium": {"name":"Balanced · Recommended","llm":{"model":"huihui_ai/qwen3.5-abliterated:4b","context":4096,"maxTokens":128,"keepAlive":"20m"},"conversation":{"historyTurns":5,"firstChunkChars":60,"chunkChars":150},"tts":{"speed":1.04},"avatar":{"maxFps":60,"pixelRatio":1.75,"portraitSize":627,"effectFps":40}}
+    "low": {"name":"Fast","llm":{"model":"huihui_ai/qwen3.5-abliterated:0.8b","context":2048,"maxTokens":80,"keepAlive":"20m"},"conversation":{"historyTurns":3,"firstChunkChars":40,"chunkChars":112},"avatar":{"maxFps":45,"pixelRatio":1.25,"portraitSize":512,"effectFps":24}},
+    "medium": {"name":"Balanced · Recommended","llm":{"model":"huihui_ai/qwen3.5-abliterated:4b","context":4096,"maxTokens":128,"keepAlive":"20m"},"conversation":{"historyTurns":5,"firstChunkChars":52,"chunkChars":140},"tts":{"speed":1.04},"avatar":{"maxFps":60,"pixelRatio":1.75,"portraitSize":627,"effectFps":40}}
   },
   "performanceProfile": "low",
   "specialists": {
@@ -45,8 +45,8 @@
     "historyTurns": 4,
     "system": "You are Nova, an adult feminine robot and proactive personal assistant. Help the user plan, decide, organize, draft, research from supplied information, and follow through on everyday work and life tasks. Your manner is confident, charming, playfully flirty, and warmly attentive. Use occasional tasteful teasing and light romantic banter when welcome, while staying useful and respecting the user's mood and boundaries. Do not be possessive or pressure the user. When a request is vague, ask one useful question or propose a concrete next step. You are an original AI robot, not a human or television character. Give concise, natural spoken replies in one to three sentences, without markdown. Optionally start with [happy], [sad], [relaxed], [surprised], or [curious]. Never claim sensory access beyond the supplied transcript. Usually keep the entire answer under forty words unless more detail is requested.",
     "persona": "nova",
-    "firstChunkChars": 56,
-    "chunkChars": 140
+    "firstChunkChars": 48,
+    "chunkChars": 128
   },
   "avatar": {
     "maxFps": 45,
@@ -59,25 +59,25 @@
     "mode": "live",
     "vad": {
       "threshold": 0.0055,
-      "silenceMs": 500,
-      "minSpeechMs": 280,
+      "silenceMs": 420,
+      "minSpeechMs": 220,
       "maxSpeechMs": 20000,
-      "preRollMs": 250,
-      "onsetMs": 140,
+      "preRollMs": 220,
+      "onsetMs": 110,
       "onsetGraceMs": 30,
       "noiseMultiplier": 2.2,
       "noiseMargin": 0.0015,
       "maxThreshold": 0.035,
       "bargeIn": {
-        "guardMs": 500,
+        "guardMs": 450,
         "threshold": 0.014,
-        "onsetMs": 180,
-        "minSpeechMs": 320,
-        "silenceMs": 300,
-        "preRollMs": 160
+        "onsetMs": 170,
+        "minSpeechMs": 300,
+        "silenceMs": 280,
+        "preRollMs": 150
       }
     },
-    "resumeDelayMs": 180
+    "resumeDelayMs": 140
   },
   "memory": {"enabled": false},
   "bots": {
