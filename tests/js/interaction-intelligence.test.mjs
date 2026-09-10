@@ -36,6 +36,24 @@ test('all five bots have three concise non-authoritative quick prompts',()=>{
   assert.notDeepEqual(quickActionsForBot('robot'),quickActionsForBot('pixel'));
 });
 
+test('quick prompts can carry bounded current focus without changing labels',()=>{
+  const focus='Launch the new landing page and decide which CTA should be primary';
+  const actions=quickActionsForBot('pixel',{focus});
+  assert.equal(actions.length,3);
+  assert.ok(actions.every(action=>action.prompt.includes('Current focus:')));
+  assert.ok(actions.every(action=>action.prompt.includes(focus)));
+  const long=quickActionsForBot('nova',{focus:'x'.repeat(500)});
+  assert.ok(long.every(action=>action.prompt.length<340));
+});
+
+test('recently used quick prompts are suppressed until all choices are exhausted',()=>{
+  const first=quickActionsForBot('nova');
+  const next=quickActionsForBot('nova',{excludeLabels:[first[0].label,first[1].label]});
+  assert.deepEqual(next.map(item=>item.label),[first[2].label]);
+  const reset=quickActionsForBot('nova',{excludeLabels:first.map(item=>item.label)});
+  assert.equal(reset.length,3);
+});
+
 test('unknown bot falls back to safe Nova prompts',()=>{
   assert.deepEqual(quickActionsForBot('unknown'),quickActionsForBot('nova'));
 });

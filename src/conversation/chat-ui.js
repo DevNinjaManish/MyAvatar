@@ -82,17 +82,23 @@ function renderMessage(doc,item,botName,store,win){
   return wrapper;
 }
 
-function renderQuickActions(doc,store){
+function renderQuickActions(doc,store,usage){
   const row=doc.createElement('div');row.className='bot-quick-actions';row.setAttribute('aria-label',`${store.botName} quick actions`);
-  for(const action of quickActionsForBot(store.botId)){
+  const used=usage.get(store.botId)||[];
+  for(const action of quickActionsForBot(store.botId,{focus:store.focus(),excludeLabels:used.slice(-2)})){
     const control=button(doc,action.label,'quick-prompt');control.classList.add('quick-prompt');
-    control.onclick=()=>{if(store.draft().trim())return;store.setDraft(action.prompt);const input=doc.body.classList.contains('widget')?doc.getElementById('widget-text'):doc.getElementById('text');input?.focus?.();};
+    control.onclick=()=>{
+      if(store.draft().trim())return;
+      const next=[...(usage.get(store.botId)||[]),action.label].slice(-4);usage.set(store.botId,next);
+      store.setDraft(action.prompt);
+      const input=doc.body.classList.contains('widget')?doc.getElementById('widget-text'):doc.getElementById('text');input?.focus?.();
+    };
     row.append(control);
   }
   return row;
 }
 
-function renderContainer(doc,container,store,win,{compact=false}={}){
+function renderContainer(doc,container,store,win,usage,{compact=false}={}){
   if(!container)return;
   const follow=shouldFollowScroll(container);
   const oldHeight=container.scrollHeight;const oldTop=container.scrollTop;
@@ -108,7 +114,8 @@ function renderContainer(doc,container,store,win,{compact=false}={}){
   if(compact&&!messages.length){const hint=doc.createElement('p');hint.className='hint';hint.textContent='Talk naturally or type a message.';fragment.append(hint);}
   for(const item of messages)fragment.append(renderMessage(doc,item,store.botName,store,win));
   const latestAssistant=[...messages].reverse().find(item=>item.role==='assistant'&&item.type==='message');
-  if(!latestAssistant||latestAssistant.status==='complete'||latestAssistant.status==='interrupted'||latestAssistant.status==='failed')fragment.append(renderQuickActions(doc,store));
+  const pendingApproval=messages.some(item=>item.type==='approval'&&item.meta?.approvalState==='pending');
+  if(!pendingApproval&&(!latestAssistant||latestAssistant.status==='complete'||latestAssistant.status==='interrupted'||latestAssistant.status==='failed'))fragment.append(renderQuickActions(doc,store,usage));
   container.replaceChildren(fragment);
   if(follow){container.scrollTop=container.scrollHeight;container.dataset.newMessages='false';}
   else{container.scrollTop=Math.max(0,oldTop+(container.scrollHeight-oldHeight));container.dataset.newMessages='true';}
@@ -117,10 +124,11 @@ function renderContainer(doc,container,store,win,{compact=false}={}){
 export function mountCanonicalChat(win=window,doc=document){
   if(win.__myavatarChatStore)return win.__myavatarChatStore;
   const store=new ChatStore();win.__myavatarChatStore=store;
+  const quickUsage=new Map();
   const full=doc.getElementById('messages'),compact=doc.getElementById('widget-messages');
   const fullInput=doc.getElementById('text'),widgetInput=doc.getElementById('widget-text');
   let queued=false;
-  const render=()=>{queued=false;renderContainer(doc,full,store,win);renderContainer(doc,compact,store,win,{compact:true});};
+  const render=()=>{queued=false;renderContainer(doc,full,store,win,quickUsage);renderContainer(doc,compact,store,win,quickUsage,{compact:true});};
   const queueRender=()=>{if(queued)return;queued=true;queueMicrotask(render);};
   const syncDraft=()=>{const value=store.draft();if(fullInput&&fullInput.value!==value)fullInput.value=value;if(widgetInput&&widgetInput.value!==value)widgetInput.value=value;};
   store.addEventListener('change',event=>{if(event.detail?.kind==='bot'||event.detail?.kind==='draft')syncDraft();queueRender();});
