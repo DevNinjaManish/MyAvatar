@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 
 MAX_PATCH_CHARS = 48 * 1024
 MAX_PATCH_FILES = 8
@@ -15,6 +16,11 @@ MAX_PATCH_LINES = 1200
 BLOCKED_PREFIXES = (
     '.git/', 'data/', 'logs/', 'node_modules/', '.venv/', 'venv/',
 )
+TEXT_SUFFIXES = {
+    '.py', '.js', '.jsx', '.ts', '.tsx', '.json', '.md', '.html', '.css',
+    '.scss', '.cjs', '.mjs', '.yml', '.yaml', '.toml', '.txt', '.sh', '.sql',
+}
+TEXT_NAMES = {'Dockerfile', 'Makefile', '.gitignore'}
 
 
 @dataclass(frozen=True)
@@ -35,6 +41,9 @@ def _normalize_path(raw: str) -> str:
         raise ValueError('Patch contains an unsafe path.')
     if value.startswith(BLOCKED_PREFIXES) or value in {p.rstrip('/') for p in BLOCKED_PREFIXES}:
         raise ValueError('Patch targets a blocked repository path.')
+    path = PurePosixPath(value)
+    if path.name not in TEXT_NAMES and path.suffix.lower() not in TEXT_SUFFIXES:
+        raise ValueError('Patch preview is limited to supported text files.')
     return value
 
 
@@ -58,11 +67,12 @@ def extract_unified_diff(text: str) -> str:
 
 
 def summarize_unified_diff(patch: str) -> list[PatchFile]:
-    """Validate paths and return per-file addition/deletion counts."""
+    """Validate paths/hunks and return per-file addition/deletion counts."""
     lines = patch.splitlines()
     files: list[PatchFile] = []
     current_path: str | None = None
     additions = deletions = 0
+    saw_hunk = False
     index = 0
     while index < len(lines):
         line = lines[index]
@@ -70,6 +80,8 @@ def summarize_unified_diff(patch: str) -> list[PatchFile]:
             if index + 1 >= len(lines) or not lines[index + 1].startswith('+++ '):
                 raise ValueError('Patch file header is incomplete.')
             if current_path is not None:
+                if not saw_hunk or additions + deletions == 0:
+                    raise ValueError('Patch file contains no actual changes.')
                 files.append(PatchFile(current_path, additions, deletions))
             old_path = _normalize_path(line[4:])
             new_path = _normalize_path(lines[index + 1][4:])
@@ -77,16 +89,21 @@ def summarize_unified_diff(patch: str) -> list[PatchFile]:
             if current_path == '/dev/null':
                 raise ValueError('Patch file path is missing.')
             additions = deletions = 0
+            saw_hunk = False
             index += 2
             continue
         if current_path is None:
             raise ValueError('Patch content appears before a file header.')
-        if line.startswith('+') and not line.startswith('+++'):
+        if line.startswith('@@ '):
+            saw_hunk = True
+        elif line.startswith('+') and not line.startswith('+++'):
             additions += 1
         elif line.startswith('-') and not line.startswith('---'):
             deletions += 1
         index += 1
     if current_path is not None:
+        if not saw_hunk or additions + deletions == 0:
+            raise ValueError('Patch file contains no actual changes.')
         files.append(PatchFile(current_path, additions, deletions))
     if not files:
         raise ValueError('Patch proposal contains no files.')
