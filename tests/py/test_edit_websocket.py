@@ -16,6 +16,13 @@ class EditWebSocketTests(unittest.TestCase):
             if event['type']==kind:return event,events
         self.fail(f'event {kind} not received: {[e["type"] for e in events]}')
 
+    def _until_message(self,ws,kind,needle,limit=30):
+        events=[]
+        for _ in range(limit):
+            event=ws.receive_json();events.append(event)
+            if event['type']==kind and needle in str(event.get('message','')):return event,events
+        self.fail(f'{kind} containing {needle!r} not received: {[(e["type"],e.get("message")) for e in events]}')
+
     def test_patch_preview_approval_apply_and_rollback(self):
         async def ready(_config):return None
         async def inspect(_messages,_config):
@@ -37,7 +44,6 @@ class EditWebSocketTests(unittest.TestCase):
                 self.assertEqual(patch_event['transaction']['files'][0]['path'],'demo.py')
                 self.assertEqual(target.read_text(encoding='utf-8'),'old = 1\n')
                 tx_id=patch_event['transaction']['id']
-                # Finish the coding turn before deciding so approval is a separate action.
                 if not any(e['type']=='done' for e in events):self._until(ws,'done')
                 ws.send_json({'type':'coding_edit_decision','transactionId':tx_id,'decision':'approve','turn':41})
                 applied,_=self._until(ws,'coding_edit_result')
@@ -45,7 +51,7 @@ class EditWebSocketTests(unittest.TestCase):
                 self.assertTrue(applied['result']['rollbackAvailable'])
                 self.assertEqual(target.read_text(encoding='utf-8'),'old = 2\n')
                 ws.send_json({'type':'coding_rollback','transactionId':tx_id,'turn':41})
-                rolled,_=self._until(ws,'coding_edit_result')
+                rolled,_=self._until_message(ws,'coding_edit_result','rolled back')
                 self.assertIn('rolled back',rolled['message'])
                 self.assertEqual(target.read_text(encoding='utf-8'),'old = 1\n')
 

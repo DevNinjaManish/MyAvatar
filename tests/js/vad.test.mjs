@@ -6,53 +6,14 @@ const frame=(v)=>new Float32Array(160).fill(v); // 10 ms at 16k
 const feed=(vad,n,v)=>Array.from({length:n},()=>vad.push(frame(v))).filter(Boolean);
 test('silence stays bounded and never creates a turn',()=>{const v=new TurnDetector(16000);assert.equal(feed(v,6000,0).length,0);assert.ok(v.samples<=4160);});
 test('a short noise is discarded',()=>{const v=new TurnDetector(16000);assert.equal([...feed(v,15,.1),...feed(v,150,0)].length,0);});
-test('steady ambient noise raises the local floor without creating a turn',()=>{
- const v=new TurnDetector(16000,{threshold:.004});
- assert.equal(feed(v,500,.008).length,0);
- assert.ok(v.currentThreshold>.008);
- const turns=[...feed(v,50,.04),...feed(v,100,0)];
- assert.equal(turns.length,1);
-});
-test('isolated clicks never satisfy speech onset',()=>{
- const v=new TurnDetector(16000,{threshold:.004});
- const click=new Float32Array(160);click[0]=.9;
- const turns=[];
- for(let i=0;i<12;i++){turns.push(v.push(click));turns.push(...feed(v,8,0));}
- turns.push(...feed(v,100,0));
- assert.equal(turns.filter(Boolean).length,0);
-});
-test('brief non-verbal burst is rejected but a short spoken turn remains valid',()=>{
- const v=new TurnDetector(16000,{threshold:.004,minSpeechMs:280,onsetMs:140,rejectCooldownMs:0});
- assert.equal([...feed(v,22,.08),...feed(v,100,0)].length,0);
- assert.equal([...feed(v,34,.08),...feed(v,100,0)].length,1);
-});
+test('steady ambient noise raises the local floor without creating a turn',()=>{const v=new TurnDetector(16000,{threshold:.004});assert.equal(feed(v,500,.008).length,0);assert.ok(v.currentThreshold>.008);const turns=[...feed(v,50,.04),...feed(v,100,0)];assert.equal(turns.length,1);});
+test('isolated clicks never satisfy speech onset',()=>{const v=new TurnDetector(16000,{threshold:.004});const click=new Float32Array(160);click[0]=.9;const turns=[];for(let i=0;i<12;i++){turns.push(v.push(click));turns.push(...feed(v,8,0));}turns.push(...feed(v,100,0));assert.equal(turns.filter(Boolean).length,0);});
+test('brief non-verbal burst is rejected but a short spoken turn remains valid',()=>{const v=new TurnDetector(16000,{threshold:.004,minSpeechMs:280,onsetMs:140,rejectCooldownMs:0});assert.equal([...feed(v,22,.08),...feed(v,100,0)].length,0);assert.equal([...feed(v,34,.08),...feed(v,100,0)].length,1);});
 test('speech emits once after the silence deadline and retains the start',()=>{const v=new TurnDetector(16000);feed(v,40,0);assert.equal(feed(v,60,.08).length,0);assert.equal(feed(v,59,0).length,0);const out=v.push(frame(0));assert.ok(out instanceof Float32Array);assert.ok(out.some(x=>x>.07));assert.equal(v.lastDetectionDelayMs,600);assert.equal(feed(v,200,0).length,0);});
-test('release hysteresis keeps softer syllables inside the same utterance',()=>{
- const v=new TurnDetector(16000,{threshold:.0055,onsetMs:120,minSpeechMs:220,silenceMs:450,releaseRatio:.72,rejectCooldownMs:0});
- feed(v,20,.03);
- assert.equal(feed(v,35,.0052).length,0);
- const turns=feed(v,46,0);
- assert.equal(turns.length,1);
- assert.ok(turns[0].some(x=>x>.004));
-});
-test('non-finite worklet samples do not poison the detector',()=>{
- const v=new TurnDetector(16000,{threshold:.004,rejectCooldownMs:0});
- const broken=new Float32Array(160).fill(Number.NaN);broken[0]=Number.POSITIVE_INFINITY;
- for(let i=0;i<30;i++)assert.equal(v.push(broken),null);
- assert.ok(Number.isFinite(v.currentThreshold));assert.ok(Number.isFinite(v.noiseFloor));
- const turns=[...feed(v,40,.05),...feed(v,100,0)];
- assert.equal(turns.length,1);assert.ok(turns[0].every(Number.isFinite));
-});
+test('release hysteresis keeps softer syllables inside the same utterance',()=>{const v=new TurnDetector(16000,{threshold:.0055,onsetMs:120,minSpeechMs:220,silenceMs:450,releaseRatio:.72,rejectCooldownMs:0});feed(v,20,.03);assert.equal(feed(v,35,.0052).length,0);const turns=feed(v,46,0);assert.equal(turns.length,1);assert.ok(turns[0].some(x=>x>.004));});
+test('non-finite worklet samples do not poison the detector',()=>{const v=new TurnDetector(16000,{threshold:.004,rejectCooldownMs:0});const broken=new Float32Array(160).fill(Number.NaN);broken[0]=Number.POSITIVE_INFINITY;for(let i=0;i<30;i++)assert.equal(v.push(broken),null);assert.ok(Number.isFinite(v.currentThreshold));assert.ok(Number.isFinite(v.noiseFloor));const turns=[...feed(v,40,.05),...feed(v,100,0)];assert.equal(turns.length,1);assert.ok(turns[0].every(Number.isFinite));});
 test('reset prevents an interrupted partial turn from leaking',()=>{const v=new TurnDetector(16000);feed(v,60,.1);v.reset();assert.equal(feed(v,100,0).length,0);assert.equal([...feed(v,60,.1),...feed(v,100,0)].length,1);});
 test('long speech is bounded',()=>{const v=new TurnDetector(16000,{maxSpeechMs:1000});const turns=feed(v,100,.1);assert.equal(turns.length,1);assert.ok(turns[0].length<=16000);});
-test('live capture suppresses playback audio and resumes for the next turn',async()=>{
- const engine=new AudioEngine(()=>{});engine.ctx={state:'running',sampleRate:16000,resume:async()=>{}};
- let capture;engine.record=async(_timer,onFrame)=>{capture=onFrame;};let count=0;
- await engine.startLive(()=>count++);
- const utterance=()=>{for(let i=0;i<60;i++)capture(frame(.1));for(let i=0;i<100;i++)capture(frame(0));};
- utterance();assert.equal(count,0); // paused while preparing / speaking
- engine.setListening(true);utterance();assert.equal(count,1);
- utterance();assert.equal(count,1); // automatically closed until reply finishes
- engine.setListening(true);utterance();assert.equal(count,2);
- engine.setListening(false);utterance();assert.equal(count,2);
-});
+test('live capture suppresses playback audio and resumes for the next turn',async()=>{const engine=new AudioEngine(()=>{});engine.ctx={state:'running',sampleRate:16000,resume:async()=>{}};let capture;engine.record=async(_timer,onFrame)=>{capture=onFrame;};let count=0;await engine.startLive(()=>count++);const utterance=()=>{for(let i=0;i<60;i++)capture(frame(.1));for(let i=0;i<100;i++)capture(frame(0));};utterance();assert.equal(count,0);engine.setListening(true);utterance();assert.equal(count,1);utterance();assert.equal(count,1);engine.setListening(true);utterance();assert.equal(count,2);engine.setListening(false);utterance();assert.equal(count,2);});
+test('speech can barge in while playback is active after the guard window',async()=>{const engine=new AudioEngine(()=>{});engine.ctx={state:'running',sampleRate:16000,resume:async()=>{}};let capture,meta;engine.record=async(_timer,onFrame)=>{capture=onFrame;};await engine.startLive((_pcm,m)=>{meta=m;},{threshold:.0055,bargeIn:{guardMs:0,threshold:.014,onsetMs:120,minSpeechMs:220,silenceMs:200}});engine.playing=true;engine.playbackStartedAt=Date.now()-1000;for(let i=0;i<35;i++)capture(frame(.04));for(let i=0;i<25;i++)capture(frame(0));assert.equal(meta?.bargeIn,true);});
+test('barge-in ignores speech-like energy during the initial speaker guard',async()=>{const engine=new AudioEngine(()=>{});engine.ctx={state:'running',sampleRate:16000,resume:async()=>{}};let capture,count=0;engine.record=async(_timer,onFrame)=>{capture=onFrame;};await engine.startLive(()=>count++,{bargeIn:{guardMs:500,threshold:.014,onsetMs:120,minSpeechMs:220,silenceMs:200}});engine.playing=true;engine.playbackStartedAt=Date.now();for(let i=0;i<80;i++)capture(frame(.08));assert.equal(count,0);});

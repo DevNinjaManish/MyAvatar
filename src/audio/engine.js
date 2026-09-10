@@ -24,32 +24,19 @@ export class AudioEngine{
   constructor(onAmplitude){
     this.onAmplitude=onAmplitude;this.queue=[];this.playing=false;this.generation=0;this.captureGeneration=0;
     this.captureMode=null;this.captureActive=false;this.liveGate=false;this.chunks=[];this.sourceTurnToken=null;
-    this.readyPromise=null;this.workletPromise=null;this.workletLoaded=false;
+    this.readyPromise=null;this.workletPromise=null;this.workletLoaded=false;this.playbackStartedAt=0;this.bargeDetector=null;
   }
   async ready(){
-    if(this.ctx?.state==='closed'){
-      this.ctx=null;this.workletLoaded=false;this.workletPromise=null;
-    }
+    if(this.ctx?.state==='closed'){this.ctx=null;this.workletLoaded=false;this.workletPromise=null;}
     this.ctx??=new AudioContext();
     if(this.ctx.state==='running')return;
-    if(!this.readyPromise){
-      const ctx=this.ctx;
-      this.readyPromise=Promise.resolve(ctx.resume()).finally(()=>{if(this.readyPromise)this.readyPromise=null;});
-    }
+    if(!this.readyPromise){const ctx=this.ctx;this.readyPromise=Promise.resolve(ctx.resume()).finally(()=>{if(this.readyPromise)this.readyPromise=null;});}
     await this.readyPromise;
-    if(this.ctx?.state==='closed'){
-      this.ctx=null;this.workletLoaded=false;this.workletPromise=null;
-      return this.ready();
-    }
+    if(this.ctx?.state==='closed'){this.ctx=null;this.workletLoaded=false;this.workletPromise=null;return this.ready();}
   }
   async _ensureWorklet(){
     if(this.workletLoaded)return;
-    if(!this.workletPromise){
-      const ctx=this.ctx;
-      this.workletPromise=Promise.resolve(ctx.audioWorklet.addModule('/capture-worklet.js'))
-        .then(()=>{if(this.ctx===ctx)this.workletLoaded=true;})
-        .finally(()=>{this.workletPromise=null;});
-    }
+    if(!this.workletPromise){const ctx=this.ctx;this.workletPromise=Promise.resolve(ctx.audioWorklet.addModule('/capture-worklet.js')).then(()=>{if(this.ctx===ctx)this.workletLoaded=true;}).finally(()=>{this.workletPromise=null;});}
     await this.workletPromise;
   }
   captureSnapshot(){return {active:this.captureActive||activeCaptureOwner===this,mode:this.captureMode,muted:this.captureMode==='live'&&!this.liveGate,generation:this.captureGeneration};}
@@ -65,15 +52,11 @@ export class AudioEngine{
     if(this.recorder){try{this.recorder.port.onmessage=null;this.recorder.port.close();}catch{}}
     clearTimeout(this.timer);this.timer=null;
     for(const node of [this.recorder,this.highpass,this.input,this.silent]){try{node?.disconnect();}catch{}}
-    this._stopStream(stream);
-    this.recorder=null;this.highpass=null;this.input=null;this.silent=null;this.stream=null;
+    this._stopStream(stream);this.recorder=null;this.highpass=null;this.input=null;this.silent=null;this.stream=null;
   }
   _abandonCapture(stream,generation){
     this._releaseCaptureNodes(stream);
-    if(this._isCaptureCurrent(generation)){
-      this.captureActive=false;this.captureMode=null;this.liveGate=false;this.chunks=[];
-      if(activeCaptureOwner===this)activeCaptureOwner=null;
-    }
+    if(this._isCaptureCurrent(generation)){this.captureActive=false;this.captureMode=null;this.liveGate=false;this.chunks=[];if(activeCaptureOwner===this)activeCaptureOwner=null;}
   }
   async record(onTimeout,onFrame,{mode='manual'}={}){
     const captureGeneration=this._claimCapture(mode);
@@ -82,94 +65,72 @@ export class AudioEngine{
     const request=navigator.mediaDevices.getUserMedia({audio:{channelCount:{ideal:1},echoCancellation:{ideal:true},noiseSuppression:{ideal:true},autoGainControl:{ideal:true}}});
     request.then(stream=>{if(timedOut||!this._isCaptureCurrent(captureGeneration))this._stopStream(stream);},()=>{});
     let stream;
-    try{
-      stream=await Promise.race([request,new Promise((_,reject)=>{timeout=setTimeout(()=>{timedOut=true;reject(Error('Microphone permission is pending. Allow microphone access for Electron in macOS System Settings → Privacy & Security → Microphone, then try again.'));},15000);})]);
-    }finally{clearTimeout(timeout);}
+    try{stream=await Promise.race([request,new Promise((_,reject)=>{timeout=setTimeout(()=>{timedOut=true;reject(Error('Microphone permission is pending. Allow microphone access for Electron in macOS System Settings → Privacy & Security → Microphone, then try again.'));},15000);})]);}
+    finally{clearTimeout(timeout);}
     if(!this._isCaptureCurrent(captureGeneration)){this._stopStream(stream);return false;}
     try{
-      this.stream=stream;this.input=this.ctx.createMediaStreamSource(stream);
-      this.highpass=this.ctx.createBiquadFilter();this.highpass.type='highpass';this.highpass.frequency.value=95;this.highpass.Q.value=.7;
+      this.stream=stream;this.input=this.ctx.createMediaStreamSource(stream);this.highpass=this.ctx.createBiquadFilter();this.highpass.type='highpass';this.highpass.frequency.value=95;this.highpass.Q.value=.7;
       await this._ensureWorklet();
       if(!this._isCaptureCurrent(captureGeneration)){this._abandonCapture(stream,captureGeneration);return false;}
       this.recorder=new AudioWorkletNode(this.ctx,'capture');
-      this.recorder.port.onmessage=e=>{
-        if(!this._isCaptureCurrent(captureGeneration)||!this.captureActive)return;
-        if(onFrame)onFrame(e.data);else this.chunks.push(e.data);
-      };
-      this.silent=this.ctx.createGain();this.silent.gain.value=0;this.input.connect(this.highpass).connect(this.recorder).connect(this.silent).connect(this.ctx.destination);
-      this.captureActive=true;
+      this.recorder.port.onmessage=e=>{if(!this._isCaptureCurrent(captureGeneration)||!this.captureActive)return;if(onFrame)onFrame(e.data);else this.chunks.push(e.data);};
+      this.silent=this.ctx.createGain();this.silent.gain.value=0;this.input.connect(this.highpass).connect(this.recorder).connect(this.silent).connect(this.ctx.destination);this.captureActive=true;
       if(onTimeout)this.timer=setTimeout(()=>{if(this._isCaptureCurrent(captureGeneration)&&this.captureActive)onTimeout();},59000);
       return true;
-    }catch(error){
-      this._abandonCapture(stream,captureGeneration);throw error;
-    }
+    }catch(error){this._abandonCapture(stream,captureGeneration);throw error;}
   }
   async startLive(onUtterance,settings={}){
     await this.ready();this.detector=new TurnDetector(this.ctx.sampleRate,settings);
+    const barge=settings?.bargeIn||{};
+    const bargeSettings={...settings,threshold:barge.threshold??Math.max(.014,(settings.threshold??.0055)*2.2),onsetMs:barge.onsetMs??180,minSpeechMs:barge.minSpeechMs??320,silenceMs:barge.silenceMs??300,preRollMs:barge.preRollMs??160,rejectCooldownMs:0};
+    delete bargeSettings.bargeIn;this.bargeDetector=new TurnDetector(this.ctx.sampleRate,bargeSettings);this.bargeInGuardMs=barge.guardMs??500;
     const started=await this.record(null,frame=>{
-      if(!this.liveGate||!this.captureActive)return;
-      const generation=this.captureGeneration;const utterance=this.detector.push(frame);
-      if(utterance&&this._isCaptureCurrent(generation)){
-        this.liveGate=false;
-        onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.detector.lastDetectionDelayMs,captureGeneration:generation});
+      if(!this.captureActive)return;
+      const generation=this.captureGeneration;
+      if(this.liveGate){
+        const utterance=this.detector.push(frame);
+        if(utterance&&this._isCaptureCurrent(generation)){this.liveGate=false;onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.detector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:false});}
+        return;
+      }
+      if(this.playing&&Date.now()-this.playbackStartedAt>=this.bargeInGuardMs){
+        const utterance=this.bargeDetector?.push(frame);
+        if(utterance&&this._isCaptureCurrent(generation))onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.bargeDetector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:true});
       }
     },{mode:'live'});
     if(started===false)return false;
-    if(this.captureMode===null){
-      if(activeCaptureOwner&&activeCaptureOwner!==this)activeCaptureOwner.endCapture();
-      activeCaptureOwner=this;this.captureMode='live';this.captureActive=true;
-    }
+    if(this.captureMode===null){if(activeCaptureOwner&&activeCaptureOwner!==this)activeCaptureOwner.endCapture();activeCaptureOwner=this;this.captureMode='live';this.captureActive=true;}
     return true;
   }
   setListening(enabled){
-    const allowed=!enabled||turnPlayback.canResumeListening();
-    const next=Boolean(enabled)&&allowed&&this.captureMode==='live'&&this.captureActive&&activeCaptureOwner===this;
+    const allowed=!enabled||turnPlayback.canResumeListening();const next=Boolean(enabled)&&allowed&&this.captureMode==='live'&&this.captureActive&&activeCaptureOwner===this;
     if(next===this.liveGate)return this.liveGate;
-    this.liveGate=next;this.detector?.reset();return this.liveGate;
+    this.liveGate=next;this.detector?.reset();this.bargeDetector?.reset();return this.liveGate;
   }
   endCapture({collect=false}={}){
-    const sampleRate=this.ctx?.sampleRate||16000;
-    ++this.captureGeneration;this.liveGate=false;this.detector?.reset();
-    const chunks=collect?(this.chunks||[]):[];
-    this._releaseCaptureNodes();this.captureActive=false;this.captureMode=null;this.chunks=[];
+    const sampleRate=this.ctx?.sampleRate||16000;++this.captureGeneration;this.liveGate=false;this.detector?.reset();this.bargeDetector?.reset();
+    const chunks=collect?(this.chunks||[]):[];this._releaseCaptureNodes();this.captureActive=false;this.captureMode=null;this.chunks=[];
     if(activeCaptureOwner===this)activeCaptureOwner=null;
     if(!collect)return new Float32Array();
-    const pcm=new Float32Array(chunks.reduce((n,c)=>n+c.length,0));let offset=0;for(const chunk of chunks){pcm.set(chunk,offset);offset+=chunk.length;}
-    return resample(pcm,sampleRate);
+    const pcm=new Float32Array(chunks.reduce((n,c)=>n+c.length,0));let offset=0;for(const chunk of chunks){pcm.set(chunk,offset);offset+=chunk.length;}return resample(pcm,sampleRate);
   }
   stopRecord(){return this.endCapture({collect:true});}
   async enqueue(encoded,onStart,onEnd){
     const generation=this.generation;const turnToken=turnPlayback.beginAudioDecode();
-    try{
-      await this.ready();const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const buffer=await this.ctx.decodeAudioData(bytes.buffer);
-      if(generation!==this.generation){turnPlayback.finishAudioDecode(turnToken,false);return false;}
-      turnPlayback.finishAudioDecode(turnToken,true);this.queue.push({buffer,onStart,onEnd,turnToken});this.pump();return true;
-    }catch(error){turnPlayback.finishAudioDecode(turnToken,false);throw error;}
+    try{await this.ready();const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const buffer=await this.ctx.decodeAudioData(bytes.buffer);if(generation!==this.generation){turnPlayback.finishAudioDecode(turnToken,false);return false;}turnPlayback.finishAudioDecode(turnToken,true);this.queue.push({buffer,onStart,onEnd,turnToken});this.pump();return true;}
+    catch(error){turnPlayback.finishAudioDecode(turnToken,false);throw error;}
   }
   pump(){
     if(this.playing||!this.queue.length)return;
-    const {buffer,onStart,onEnd,turnToken}=this.queue.shift();this.playing=true;this.sourceTurnToken=turnToken;turnPlayback.playbackStarted(turnToken);
-    this.source=this.ctx.createBufferSource();this.source.buffer=buffer;this.analyser=this.ctx.createAnalyser();this.analyser.fftSize=256;
-    this.source.connect(this.analyser).connect(this.ctx.destination);const source=this.source;
-    source.onended=()=>{
-      if(this.source!==source)return;
-      this.playing=false;source.disconnect();this.analyser.disconnect();this.onAmplitude(0);turnPlayback.playbackEnded(turnToken);this.sourceTurnToken=null;onEnd();this.pump();
-    };source.start();onStart();
+    const {buffer,onStart,onEnd,turnToken}=this.queue.shift();this.playing=true;this.playbackStartedAt=Date.now();this.bargeDetector?.reset();this.sourceTurnToken=turnToken;turnPlayback.playbackStarted(turnToken);
+    this.source=this.ctx.createBufferSource();this.source.buffer=buffer;this.analyser=this.ctx.createAnalyser();this.analyser.fftSize=256;this.source.connect(this.analyser).connect(this.ctx.destination);const source=this.source;
+    source.onended=()=>{if(this.source!==source)return;this.playing=false;source.disconnect();this.analyser.disconnect();this.onAmplitude(0);this.bargeDetector?.reset();turnPlayback.playbackEnded(turnToken);this.sourceTurnToken=null;onEnd();this.pump();};source.start();onStart();
     const data=new Float32Array(256);const tick=()=>{if(!this.playing||this.source!==source)return;this.analyser.getFloatTimeDomainData(data);const rms=Math.sqrt(data.reduce((n,x)=>n+x*x,0)/data.length);this.onAmplitude(Math.min(1,rms*9));requestAnimationFrame(tick);};tick();
   }
   stop(){
-    this.generation++;
-    for(const item of this.queue)turnPlayback.discardAudio(item.turnToken);
-    this.queue=[];
+    this.generation++;for(const item of this.queue)turnPlayback.discardAudio(item.turnToken);this.queue=[];
     if(this.source){this.source.onended=null;turnPlayback.discardAudio(this.sourceTurnToken);try{this.source.stop();this.source.disconnect();this.analyser?.disconnect();}catch{}}
-    this.source=null;this.sourceTurnToken=null;this.playing=false;this.onAmplitude(0);
+    this.source=null;this.sourceTurnToken=null;this.playing=false;this.playbackStartedAt=0;this.bargeDetector?.reset();this.onAmplitude(0);
   }
   dispose(){this.endCapture();this.stop();}
-  playFiller(){
-    if(!this.ctx)return;
-    const osc=this.ctx.createOscillator(),gain=this.ctx.createGain();
-    osc.type='sine';osc.frequency.setValueAtTime(880,this.ctx.currentTime);osc.frequency.exponentialRampToValueAtTime(440,this.ctx.currentTime+.05);
-    gain.gain.setValueAtTime(0.1,this.ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,this.ctx.currentTime+.05);
-    osc.connect(gain).connect(this.ctx.destination);osc.start();osc.stop(this.ctx.currentTime+.05);
-  }
+  playFiller(){if(!this.ctx)return;const osc=this.ctx.createOscillator(),gain=this.ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(880,this.ctx.currentTime);osc.frequency.exponentialRampToValueAtTime(440,this.ctx.currentTime+.05);gain.gain.setValueAtTime(0.1,this.ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,this.ctx.currentTime+.05);osc.connect(gain).connect(this.ctx.destination);osc.start();osc.stop(this.ctx.currentTime+.05);}
 }
