@@ -3,7 +3,7 @@ export class TurnDetector {
   constructor(sampleRate,{
     threshold=.009,silenceMs=600,minSpeechMs=280,maxSpeechMs=20000,preRollMs=250,
     onsetMs=140,onsetGraceMs=30,noiseMultiplier=2.2,noiseMargin=.0015,maxThreshold=.035,
-    releaseRatio=.72,rejectCooldownMs=160
+    releaseRatio=.72,rejectCooldownMs=0
   }={}){
     Object.assign(this,{sampleRate,threshold,silenceMs,minSpeechMs,maxSpeechMs,preRollMs,onsetMs,onsetGraceMs,noiseMultiplier,noiseMargin,maxThreshold,releaseRatio,rejectCooldownMs});
     // Begin below the fixed floor, then learn the room while the user is quiet.
@@ -69,7 +69,7 @@ export class TurnDetector {
     const output=new Float32Array(length);let offset=0;
     if(valid)for(const part of this.frames){const n=Math.min(part.length,length-offset);if(n<=0)break;for(let i=0;i<n;i++)output[offset+i]=Number.isFinite(part[i])?part[i]:0;offset+=n;}
     this.lastDetectionDelayMs=this.quiet;
-    if(!valid)this.cooldownMs=this.rejectCooldownMs;
+    if(!valid&&this.rejectCooldownMs>0)this.cooldownMs=this.rejectCooldownMs;
     this.reset();return valid?output:null;
   }
 }
