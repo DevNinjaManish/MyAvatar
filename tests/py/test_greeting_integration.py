@@ -49,6 +49,48 @@ class GreetingIntegration(unittest.TestCase):
             'greetingIndexes': {bot: index},
         }))
 
+    def test_startup_greeting_can_only_arrive_after_ready(self):
+        with tempfile.TemporaryDirectory() as directory:
+            prefs = Path(directory) / 'settings.json'; self.prefs(prefs, bot='nova', index=1)
+            with patch('backend.core.app.PREFERENCES_PATH', prefs), \
+                 patch('backend.core.app.speech.generate', return_value=b'RIFFtest'), \
+                 patch('backend.core.greetings.DEFAULT_STARTUP_GUARD', StartupGreetingGuard(cooldown_seconds=0)), \
+                 patch.dict('os.environ', {'MYAVATAR_TOKEN': 'test-token', 'MYAVATAR_WARMUP': '0'}):
+                with TestClient(app) as client, client.websocket_connect('/ws?token=test-token') as ws:
+                    events = []
+                    for _ in range(8):
+                        event = ws.receive_json(); events.append(event)
+                        if event['type'] == 'greeting':
+                            break
+                    kinds = [event['type'] for event in events]
+                    self.assertIn('ready', kinds)
+                    if 'greeting' in kinds:
+                        self.assertLess(kinds.index('ready'), kinds.index('greeting'))
+
+    def test_user_turn_cancels_pending_startup_greeting(self):
+        async def fake_stream(messages, config):
+            yield 'Hello.'
+        def slow_greeting(text, config):
+            time.sleep(.08)
+            return b'RIFFtest'
+        with tempfile.TemporaryDirectory() as directory:
+            prefs = Path(directory) / 'settings.json'; self.prefs(prefs, bot='nova', index=1)
+            with patch('backend.core.app.PREFERENCES_PATH', prefs), \
+                 patch('backend.core.app.stream', fake_stream), \
+                 patch('backend.core.app.speech.generate', side_effect=slow_greeting), \
+                 patch('backend.core.greetings.DEFAULT_STARTUP_GUARD', StartupGreetingGuard(cooldown_seconds=0)), \
+                 patch.dict('os.environ', {'MYAVATAR_TOKEN': 'test-token', 'MYAVATAR_WARMUP': '0'}):
+                with TestClient(app) as client, client.websocket_connect('/ws?token=test-token') as ws:
+                    ws.receive_json(); ws.receive_json(); ready = ws.receive_json()
+                    self.assertEqual(ready['type'], 'ready')
+                    ws.send_json({'type': 'turn', 'turn': 1, 'text': 'Hi'})
+                    events = []
+                    for _ in range(12):
+                        event = ws.receive_json(); events.append(event)
+                        if event['type'] in ('done', 'error') and event.get('turn') == 1:
+                            break
+                    self.assertFalse(any(event['type'] == 'greeting' for event in events))
+
     def test_settings_change_is_quiet(self):
         with tempfile.TemporaryDirectory() as directory:
             prefs = Path(directory) / 'settings.json'; self.prefs(prefs)
@@ -58,7 +100,6 @@ class GreetingIntegration(unittest.TestCase):
                  patch.dict('os.environ', {'MYAVATAR_TOKEN': 'test-token', 'MYAVATAR_WARMUP': '0'}):
                 with TestClient(app) as client, client.websocket_connect('/ws?token=test-token') as ws:
                     ws.receive_json(); ws.receive_json()
-                    # Drain the optional startup greeting if it wins the scheduling race.
                     ws.send_json({'type': 'settings', 'performanceProfile': 'low', 'interaction': 'manual', 'memoryEnabled': False})
                     seen_config = False; greetings_after_settings = 0
                     for _ in range(8):
@@ -68,7 +109,6 @@ class GreetingIntegration(unittest.TestCase):
                             break
                     self.assertTrue(seen_config)
                     ws.send_json({'type': 'metrics', 'marker': 'after-settings'})
-                    # No greeting is scheduled by settings; the receive loop remains responsive.
                     self.assertEqual(greetings_after_settings, 0)
 
     def test_onboarding_greets_selected_bot_after_config(self):

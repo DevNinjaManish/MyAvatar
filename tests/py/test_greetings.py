@@ -4,7 +4,10 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 
 from backend.core.greetings import (
+    BOT_SWITCH_LINES,
     GREETING_LINES,
+    IDLE_RETURN_LINES,
+    ONBOARDING_LINES,
     GreetingCoordinator,
     StartupGreetingGuard,
     choose_greeting,
@@ -22,7 +25,13 @@ def config(bot='nova'):
 
 class GreetingText(unittest.TestCase):
     def test_templates_avoid_claims_of_finished_agendas_or_diagnostics(self):
-        text = ' '.join(line.lower() for bot in GREETING_LINES.values() for part in bot.values() for line in part)
+        groups = [GREETING_LINES, BOT_SWITCH_LINES, ONBOARDING_LINES, IDLE_RETURN_LINES]
+        text = ' '.join(
+            line.lower()
+            for group in groups
+            for value in group.values()
+            for line in (sum(value.values(), []) if isinstance(value, dict) else value)
+        )
         for forbidden in ('your schedule ready', 'your agenda is ready', 'prepared your priorities', 'diagnostics clear'):
             self.assertNotIn(forbidden, text)
 
@@ -34,6 +43,17 @@ class GreetingText(unittest.TestCase):
         second, index = choose_greeting(cfg, hour=9)
         self.assertEqual(index, 1)
         self.assertNotEqual(first, second)
+
+    def test_reason_changes_greeting_style(self):
+        cfg = config('nova')
+        startup, _ = choose_greeting(cfg, hour=9, reason='startup')
+        switched, _ = choose_greeting(cfg, hour=9, reason='bot_switch')
+        onboarding, _ = choose_greeting(cfg, hour=9, reason='onboarding')
+        idle, _ = choose_greeting(cfg, hour=9, reason='idle_return')
+        self.assertNotEqual(startup, switched)
+        self.assertIn('Nova', switched)
+        self.assertIn('Nova', onboarding)
+        self.assertIn('here', idle.lower())
 
     def test_startup_guard_suppresses_quick_reconnect_greeting(self):
         guard = StartupGreetingGuard(cooldown_seconds=45)
@@ -97,6 +117,20 @@ class GreetingLifecycle(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(cfg['_greetingIndexes'], {})
         await coordinator.close()
 
+    async def test_mutated_bot_identity_invalidates_pending_greeting_even_without_explicit_cancel(self):
+        def slow(text, cfg):
+            time.sleep(.06)
+            return b'RIFF'
+        coordinator = await self.make(slow)
+        cfg = config('nova')
+        coordinator.request(cfg, reason='bot_switch', hour=10)
+        await asyncio.sleep(.005)
+        cfg['conversation']['persona'] = 'robot'
+        await asyncio.sleep(.09)
+        self.assertEqual(self.sent, [])
+        self.assertEqual(cfg['_greetingIndexes'], {})
+        await coordinator.close()
+
     async def test_latest_bot_wins_during_rapid_switching(self):
         def generate(text, cfg):
             if 'Nova' in text or 'morning' in text.lower():
@@ -126,6 +160,16 @@ class GreetingLifecycle(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(second)
         await self.wait_idle(coordinator)
         self.assertEqual(len(self.sent), 1)
+        await coordinator.close()
+
+    async def test_idle_return_is_supported_but_not_automatic(self):
+        coordinator = await self.make(lambda text, cfg: b'RIFF')
+        cfg = config('butler')
+        operation = coordinator.request(cfg, reason='idle_return', hour=20)
+        self.assertIsNotNone(operation)
+        await self.wait_idle(coordinator)
+        self.assertEqual(len(self.sent), 1)
+        self.assertIn('continue', self.sent[0][1]['text'].lower())
         await coordinator.close()
 
     async def test_generation_failure_is_nonfatal(self):
