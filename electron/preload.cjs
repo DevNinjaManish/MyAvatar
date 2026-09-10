@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('desktop',{
   widgetChat: expanded=>ipcRenderer.invoke('widget-chat',Boolean(expanded)),
   widgetPanels: view=>ipcRenderer.invoke('widget-panels',view),
   widgetCalendar: view=>ipcRenderer.invoke('widget-calendar',view),
+  widgetSpecialist: open=>ipcRenderer.invoke('widget-specialist',Boolean(open)),
   runAgentCommand: request=>ipcRenderer.invoke('agent-run-command',request),
   runAgentQuery: request=>ipcRenderer.invoke('agent-run-query',request),
   getAgentProject:()=>ipcRenderer.invoke('agent-project-state'),

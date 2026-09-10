@@ -66,14 +66,9 @@ test('chat+tools size is clamped to the work area',()=>{
   const result=widgetLayout({x:1170,y:100},{chat:true,tools:true},area);
   assert.equal(result.bounds.height,Math.min(UTILITY_HEIGHT,area.height));assert.equal(result.bounds.y,24);
 });
-test('right edge opens the wide panel on the left without moving the compact column',()=>{
+test('wide utility mode opens a left wing and keeps the compact anchor stable',()=>{
   const result=widgetLayout({x:1170,y:100},{tools:true,wide:true},area);
-  assert.equal(result.side,'left');assert.equal(result.bounds.x+result.offset,1120);
-  assert.equal(result.wingWidth,440);
-});
-test('left edge opens the wide panel on the right',()=>{
-  const result=widgetLayout({x:12,y:40},{tools:true,wide:true},area);
-  assert.equal(result.side,'right');assert.equal(result.bounds.x,12);assert.equal(result.offset,0);
+  assert.equal(result.side,'left');assert.equal(result.bounds.x,670);assert.equal(result.bounds.width,WIDTH+440+10);assert.equal(result.offset,450);assert.equal(result.wingWidth,440);
 });
 test('closing a large stack restores the original anchor',()=>{
   const anchor={x:1100,y:24};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
@@ -107,14 +102,17 @@ test('accept only the small boolean panel IPC contract',()=>{
   assert.equal(validPanelsRequest({open:false,wide:false}),true);
 });
 test('widget utility geometry is bottom-safe and border-box sized',()=>{
-  const css=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
-  assert.match(css,/top:420px;\s*bottom:10px;\s*height:auto;\s*max-height:none;\s*min-height:0;\s*margin:0;/);
-  assert.match(css,/Large widget geometry[\s\S]*width:298px/);
-  assert.match(css,/body\.widget \.widget-toolbar button svg \{ width:20px; height:20px; \}/);
-  assert.match(css,/body\.widget \.cockpit-heading,[\s\S]*body\.widget #widget-stop \{\s*box-sizing:border-box;/);
-  assert.match(css,/body\.widget\.widget-panels-open #widget-specialist-toggle \{\s*color:var\(--accent\);\s*border-color:color-mix/);
-  assert.match(css,/body\.widget #widget-coding-panels,[\s\S]*body\.widget #widget-code-wing \.widget-wing-footer \{\s*box-sizing:border-box;\s*min-width:0;/);
-  assert.match(css,/body\.widget\.widget-chat-open #widget-chat \.message-body,[\s\S]*min-width:0;[\s\S]*overflow-wrap:anywhere/);
+  const css=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
+  assert.ok(css.includes('body.widget #widget-chat,'));
+  assert.ok(css.includes('body.widget #widget-coding-panels,'));
+  assert.ok(css.includes('body.widget #widget-mini-calendar,'));
+  assert.ok(css.includes('body.widget #widget-creative-workspace,'));
+  assert.ok(css.includes('body.widget #widget-code-wing {'));
+  assert.ok(css.includes('top: var(--widget-shell-stack-top) !important;'));
+  assert.ok(css.includes('bottom: 10px;'));
+  assert.ok(css.includes('max-height: none !important;'));
+  assert.ok(css.includes('min-height: 0 !important;'));
+  assert.ok(css.includes('overflow: auto !important;'));
 });
 test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
@@ -132,13 +130,14 @@ test('every panel disclosure references an existing element',()=>{
   for(const match of html.matchAll(/aria-controls="([^"]+)"/g))assert.ok(html.includes(`id="${match[1]}"`),match[1]);
 });
 test('the widget has one fixed platform with a deterministic chat plus specialist stack',()=>{
-  const css=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
-  assert.match(css,/Final widget stack contract/);
-  assert.match(css,/widget-chat-open\.widget-calendar-open #widget-mini-calendar,[\s\S]*widget-chat-open\.widget-panels-open #widget-coding-panels,[\s\S]*widget-chat-open\.widget-creative-open #widget-creative-workspace/);
-  assert.match(css,/--widget-stack-specialist-height:clamp\(130px,calc\(100vh - 750px\),230px\);/);
-  assert.match(css,/top:calc\(475px \+ var\(--widget-stack-specialist-height\)\);\s*bottom:10px;\s*height:auto;/);
-  assert.match(css,/widget-wide-open #widget-coding-panels \{ display:none !important; \}/);
-  assert.match(css,/left:11px;\s*right:11px;\s*width:auto;/);
+  const css=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
+  assert.match(css,/Widget shell layout v5/);
+  assert.match(css,/body\.widget #widget-tools,\s*body\.widget #widget-chat,[\s\S]*body\.widget #widget-code-wing/);
+  assert.ok(css.includes('--widget-shell-specialist-height: clamp(140px, calc(100vh - 650px), 230px);'));
+  assert.ok(/top:\s*calc\(\s*var\(--widget-shell-stack-top\)\s*\+\s*var\(--widget-shell-specialist-height\)\s*\+\s*var\(--widget-shell-stack-gap\)\s*\)/.test(css));
+  assert.ok(css.includes('body.widget.widget-panels-open #widget-code-wing'));
+  assert.ok(css.includes('display: none !important;'));
+  assert.ok(css.includes('left: var(--widget-shell-pad) !important;'));
 });
 test('bot changes clear every attached widget surface before rendering the next companion',()=>{
   const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');

@@ -164,10 +164,8 @@ export function mountWidgetPanels(doc, desktop) {
   };
   const isWidget = () => doc.body.classList.contains('widget');
   const setLayout = layout => {
-    if (!layout?.bounds || !['none', 'left', 'right', 'inline'].includes(layout.side)) return;
+    if (!layout?.bounds || !['none', 'left', 'inline'].includes(layout.side)) return;
     doc.body.dataset.panelSide = layout.side;
-    doc.body.style.setProperty('--widget-offset', `${Number(layout.offset) || 0}px`);
-    doc.body.style.setProperty('--widget-wing-width', `${Number(layout.wingWidth) || 0}px`);
   };
 
   const render = async () => {
@@ -191,7 +189,6 @@ export function mountWidgetPanels(doc, desktop) {
 
     const fileView = state.wide === 'changes';
     const calendarView = state.wide === 'calendar';
-    document.body.dataset.attachedWorkspace = state.wide || '';
     $('widget-wing-title').textContent = calendarView ? 'Nova · Calendar' : (fileView ? 'Files / Changes' : 'Git / Diff');
     const empty = doc.querySelector('.widget-wing-empty');
     const title = doc.createElement('strong');

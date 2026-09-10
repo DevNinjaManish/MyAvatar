@@ -235,7 +235,7 @@ function openLocalCalendarDialog(){const dialog=$('local-calendar-dialog');$('lo
 $('calendar-local-add').onclick=openLocalCalendarDialog;$('widget-local-calendar-add').onclick=openLocalCalendarDialog;
 $('local-calendar-form').onsubmit=event=>{event.preventDefault();const title=$('local-calendar-title').value.trim(),start=`${$('local-calendar-date').value}T${$('local-calendar-time').value}`;if(!title||!start)return;saveLocalCalendarEvent({title,start});localCalendarEvents=readLocalCalendar();$('local-calendar-dialog').close();void loadCalendarWorkspace();if(!document.body.classList.contains('widget'))return;void loadMiniCalendar();};
 setWorkspaceMode('coding',false);
-$('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar'),opening=panel.hidden;window.closeAttachedWorkspace?.();document.body.dataset.attachedWorkspace='';panel.hidden=!opening;document.body.classList.toggle('widget-calendar-open',opening);if(opening){window.desktop?.widgetCalendar?.({open:true});renderMiniCalendar();void loadMiniCalendar();}else window.desktop?.widgetCalendar?.({open:false});};
+  $('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar'),opening=panel.hidden;window.closeAttachedWorkspace?.();panel.hidden=!opening;document.body.classList.toggle('widget-calendar-open',opening);if(opening){window.desktop?.widgetCalendar?.({open:true});renderMiniCalendar();void loadMiniCalendar();}else window.desktop?.widgetCalendar?.({open:false});};
 $('widget-mini-calendar-close').onclick=()=>{$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');window.desktop?.widgetCalendar?.({open:false});};
 $('widget-mini-calendar-refresh').onclick=()=>void loadMiniCalendar();
 $('widget-calendar-prev').onclick=()=>{miniCalendarMonth.setMonth(miniCalendarMonth.getMonth()-1);renderMiniCalendar();};
@@ -252,8 +252,8 @@ function renderCreativeWorkspace(botId){
   : [['Brief','Clarify the screen or product moment'],['Key decision','Choose the clearest hierarchy'],['Critique','Review spacing, contrast, and emphasis'],['Output','Design notes and visual prompts appear in chat']];
  for(const [label,value] of rows){const row=document.createElement('div');row.className='widget-specialist-row';const key=document.createElement('span');key.textContent=label;const text=document.createElement('strong');text.textContent=value;row.append(key,text);content.append(row);}
 }
-$('widget-creative-toggle').onclick=()=>{const panel=$('widget-creative-workspace'),opening=panel.hidden;renderCreativeWorkspace(config?.conversation?.persona);panel.hidden=!opening;document.body.classList.toggle('widget-creative-open',opening);};
-$('widget-creative-close').onclick=()=>{$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open','widget-creative-context-open');};
+$('widget-creative-toggle').onclick=()=>{const panel=$('widget-creative-workspace'),opening=panel.hidden;renderCreativeWorkspace(config?.conversation?.persona);panel.hidden=!opening;document.body.classList.toggle('widget-creative-open',opening);window.desktop?.widgetSpecialist?.(opening);};
+$('widget-creative-close').onclick=()=>{$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open','widget-creative-context-open');window.desktop?.widgetSpecialist?.(false);};
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value,memoryEnabled:$('memory-enabled').checked});$('settings').close();window.desktop?.mode('widget');};
@@ -428,7 +428,7 @@ function syncBotUI(){
 }
 function switchBot(id){
  if(!config?.bots?.[id]||socket.readyState!==1)return;
- interrupt();avatar.showRobot(id);
+ interrupt();avatar.showRobot(id);window.dispatchEvent(new Event('myavatar:bot-switch'));
  send({type:'bot',bot:id});
 }
 function openBotLibrary(){
@@ -490,7 +490,6 @@ $('widget-specialist-toggle').onclick=()=>{if(activeSpecialist==='calendar')$('w
 function setWidgetChat(open,focus=true){
  const shouldOpen=Boolean(open)&&document.body.classList.contains('widget');
  document.body.classList.toggle('widget-chat-open',shouldOpen);
- if(!shouldOpen)document.body.classList.remove('widget-coding-chat-open');
  $('widget-chat-toggle').setAttribute('aria-expanded',String(shouldOpen));
  $('widget-chat-toggle').setAttribute('aria-label',shouldOpen?'Close chat':'Open chat');
  $('widget-chat-toggle').title=shouldOpen?'Close chat':'Open chat';

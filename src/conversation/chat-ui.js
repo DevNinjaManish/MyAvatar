@@ -98,7 +98,7 @@ function renderQuickActions(doc,store,usage){
   return row;
 }
 
-function renderContainer(doc,container,store,win,usage,{compact=false}={}){
+function renderContainer(doc,container,store,win,usage,{compact=false,forceBottom=false}={}){
   if(!container)return;
   const follow=shouldFollowScroll(container);
   const oldHeight=container.scrollHeight;const oldTop=container.scrollTop;
@@ -117,7 +117,7 @@ function renderContainer(doc,container,store,win,usage,{compact=false}={}){
   const pendingApproval=messages.some(item=>item.type==='approval'&&item.meta?.approvalState==='pending');
   if(!pendingApproval&&(!latestAssistant||latestAssistant.status==='complete'||latestAssistant.status==='interrupted'||latestAssistant.status==='failed'))fragment.append(renderQuickActions(doc,store,usage));
   container.replaceChildren(fragment);
-  if(follow){container.scrollTop=container.scrollHeight;container.dataset.newMessages='false';}
+  if(forceBottom||follow){container.scrollTop=container.scrollHeight;container.dataset.newMessages='false';}
   else{container.scrollTop=Math.max(0,oldTop+(container.scrollHeight-oldHeight));container.dataset.newMessages='true';}
 }
 
@@ -128,11 +128,13 @@ export function mountCanonicalChat(win=window,doc=document){
   const full=doc.getElementById('messages'),compact=doc.getElementById('widget-messages');
   const fullInput=doc.getElementById('text'),widgetInput=doc.getElementById('widget-text');
   let queued=false;
-  const render=()=>{queued=false;renderContainer(doc,full,store,win,quickUsage);renderContainer(doc,compact,store,win,quickUsage,{compact:true});};
+  let forceLatest=false;
+  const render=()=>{queued=false;const latest=forceLatest;forceLatest=false;renderContainer(doc,full,store,win,quickUsage,{forceBottom:latest});renderContainer(doc,compact,store,win,quickUsage,{compact:true,forceBottom:latest});};
   const queueRender=()=>{if(queued)return;queued=true;queueMicrotask(render);};
   const syncDraft=()=>{const value=store.draft();if(fullInput&&fullInput.value!==value)fullInput.value=value;if(widgetInput&&widgetInput.value!==value)widgetInput.value=value;};
   store.addEventListener('change',event=>{if(event.detail?.kind==='bot'||event.detail?.kind==='draft')syncDraft();queueRender();});
   win.addEventListener('myavatar:runtime-event',event=>{store.applyRuntimeEvent(event.detail);});
+  win.addEventListener('myavatar:bot-switch',()=>{forceLatest=true;queueRender();});
   win.addEventListener('myavatar:client-message',event=>{
     const message=event.detail;
     if(message?.type==='turn')store.setDraft('');

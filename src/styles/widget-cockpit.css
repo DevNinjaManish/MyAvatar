@@ -5,7 +5,7 @@ body.widget #stage::before,body.widget[data-bot] #stage::before{inset:auto 20px 
 body.widget #widget-tools{position:relative;flex:none;width:238px;margin:-19px auto 0;padding:15px 14px 12px;gap:8px;border:1px solid #ffffff20;border-radius:22px 22px 18px 18px;background:linear-gradient(180deg,#1b2429f2,#11191df7);box-shadow:0 8px 18px #0005,inset 0 1px #ffffff12}
 body.widget #widget-tools::before{content:'';position:absolute;left:28px;right:28px;top:-8px;height:13px;border:1px solid #ffffff1d;border-bottom:0;border-radius:50% 50% 0 0;background:#1b252ae8;pointer-events:none}
 body.widget #widget-tools::after{content:'';position:absolute;left:46px;right:46px;top:-4px;height:2px;border-radius:99px;background:var(--accent);opacity:.55;box-shadow:0 0 6px var(--accent);pointer-events:none}
-body.widget .cockpit-heading{display:flex;align-items:center;width:100%;gap:3px;min-width:0}
+body.widget .cockpit-heading{position:relative;display:flex;align-items:center;width:100%;gap:3px;min-width:0}
 body.widget .widget-caption{flex:1;min-width:0;max-width:none;height:25px;justify-content:center;gap:7px;padding:3px 4px;border:0;border-radius:7px;background:transparent;box-shadow:none}
 body.widget .widget-caption:hover{background:#ffffff08}
 body.widget #widget-bot-icon{width:16px;height:16px;margin-left:0;opacity:.88}
@@ -19,7 +19,8 @@ body.widget .widget-toolbar #widget-mic{background:#243a3a;color:#bdeffc}
 body.widget .widget-toolbar #widget-mic.active{background:var(--accent);color:#10262a}
 body.widget .widget-toolbar #widget-mic.muted{background:#613c42;color:#ffd1d6}
 /* Stop is contextual beside status; never remove the mic/mute control. */
-body.widget #widget-stop{flex:none;width:25px;height:25px;padding:4px;border:1px solid #ffb2a52a;border-radius:8px;background:#4d2f31;color:#ffd0ca}
+body.widget #widget-stop-slot{position:absolute;right:0;top:0;width:28px;height:28px;display:grid;place-items:center}
+body.widget #widget-stop{width:25px;height:25px;padding:4px;border:1px solid #ffb2a52a;border-radius:8px;background:#4d2f31;color:#ffd0ca}
 body.widget #widget-stop svg{width:16px;height:16px}
 body.widget .widget-toolbar button[aria-expanded=true]{background:#ffffff10;border-color:var(--accent);color:var(--accent)}
 body.widget #widget-system-rail{display:grid;grid-template-columns:1fr 1fr auto;align-items:center;gap:6px;width:100%;padding:5px 7px 2px;color:#94a4a8;font-size:8px;letter-spacing:.06em;text-transform:uppercase}

@@ -39,8 +39,6 @@ body.widget #widget-messages .hint { font-size: 11px; line-height: 1.55; }
 body.widget #widget-text { font-size: 12px; min-height: 34px; }
 body.widget #widget-text-form button { font-size: 11px; min-height: 34px; }
 body.widget .widget-panels-heading { padding: 9px 10px 8px; }
-/* Keep the first-run coding actions above the fold in the compact widget. */
-body.widget.widget-panels-open main { --widget-avatar-size: 128px; height: 134px; }
 body.widget .widget-panels-heading button { min-width: 28px; height: 28px; }
 body.widget .widget-panels-heading button[data-small-label] { font-size: 10px; padding: 4px 5px; }
 body.widget .widget-panels-scroll { padding: 0 9px 10px; scrollbar-color: #526166 transparent; }
@@ -68,35 +66,8 @@ body.widget #widget-panel-notice[data-tone=error] {
 }
 body.widget #widget-brief-status[data-tone=warning] { color: #edd4a1; }
 body.widget #widget-calendar-toggle { font-size:15px; line-height:1; }
-/* The companion platform has a fixed footprint. Contextual controls occupy
- * reserved slots so badges and Stop never push the caption or toolbar. */
-body.widget #widget-tools,
-body.widget.widget-chat-open #widget-tools {
-  width:238px;
-  margin:-19px auto 0;
-  padding:15px 14px 12px;
-  gap:8px;
-  box-sizing:border-box;
-}
-body.widget.widget-chat-open #widget-chat {
-  display:grid;
-  grid-template-rows:auto minmax(0,1fr) auto;
-  gap:8px;
-  flex:none;
-  height:400px;
-  min-height:400px;
-  max-height:400px;
-  /* Chat is attached below the platform, never another flex item beside it. */
-  position:absolute;
-  /* 338px is the platform's fixed bottom edge inside the 820px widget
-   * frame; the panel's own 8px visual gap matches Calendar. */
-  top:380px;
-  left:11px;
-  width:238px;
-  margin:0;
-  padding:12px;
-  box-sizing:border-box;
-}
+/* Platform controls retain their visual treatment; shell geometry lives in
+ * widget-stack.css so there is one source of truth for positioning. */
 /* A compact, useful chat: heading and composer never move; the transcript
  * uses the available room and sits above the composer when it is short. */
 body.widget #widget-chat .widget-chat-heading { margin:0; min-height:26px; }
@@ -115,11 +86,6 @@ body.widget #widget-text { min-height:38px; max-height:76px; resize:none; paddin
 body.widget #widget-text-form button { min-height:38px; padding:7px 11px; border-radius:10px; }
 /* Chat is an attached panel, not a new avatar mode. Keep the platform's
  * portrait and toolbar footprint identical in compact and chat states. */
-body.widget.widget-chat-open main {
-  --widget-avatar-size:224px;
-  width:224px;
-  height:236px;
-}
 body.widget .widget-caption { height:25px; padding:3px 4px; }
 body.widget .widget-toolbar,
 body.widget.widget-chat-open .widget-toolbar {
@@ -165,33 +131,16 @@ body.widget.widget-panels-open #widget-specialist-toggle {
   background:color-mix(in srgb,var(--accent) 14%,#10181c);
   box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);
 }
-body.widget #widget-stop-slot { flex:none; display:grid; place-items:center; width:28px; height:28px; }
 body.widget #widget-stop { margin:0; }
-body.widget #widget-stop[hidden] { display:block; visibility:hidden; pointer-events:none; }
+body.widget #widget-stop[hidden] { display:none; }
 body.widget #widget-chat-toggle[data-unread]::after { right:2px; top:1px; box-shadow:0 0 0 1px #192124; pointer-events:none; }
-/* Calendar is a compact utility popover; only coding/diff use the large wing. */
-body.widget #widget-mini-calendar { position:absolute; z-index:8; top:8px; left:10px; right:10px; height:430px; display:flex; flex-direction:column; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:hidden; }
-body.widget #widget-creative-workspace { position:fixed; z-index:8; top:420px; left:11px; bottom:10px; width:238px; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:auto; box-sizing:border-box; }
-body.widget #widget-creative-workspace[hidden] { display:none; }
+/* Specialist content styling; shell geometry lives in widget-stack.css. */
 body.widget .widget-specialist-summary { display:grid; gap:7px; margin-top:12px; }
 body.widget .widget-specialist-row { display:grid; gap:4px; padding:9px; border:1px solid #ffffff14; border-radius:9px; background:#ffffff05; }
 body.widget .widget-specialist-row span { color:var(--widget-text-soft); font-size:9px; text-transform:uppercase; letter-spacing:.08em; }
 body.widget .widget-specialist-row strong { font-size:11px; line-height:1.35; }
 body.widget #widget-mini-calendar[hidden] { display:none; }
 body.widget.widget-calendar-open { overflow:hidden; }
-body.widget.widget-calendar-open #widget-mini-calendar {
-  position:absolute;
-  z-index:8;
-  top:380px;
-  left:11px;
-  right:auto;
-  order:initial;
-  width:238px;
-  height:400px;
-  margin:0;
-}
-body.widget[data-attached-workspace=calendar] #widget-coding-panels { display:none!important; }
-body.widget[data-attached-workspace=calendar] #widget-code-wing { display:flex; }
 body.widget .calendar-wing { display:grid; gap:8px; }
 body.widget .mini-calendar-heading { display:flex; align-items:flex-start; justify-content:space-between; }
 body.widget .mini-calendar-heading h2 { margin:2px 0 0; font-size:16px; }
@@ -293,15 +242,6 @@ body.widget .widget-wing-footer { font-size: 11px; color: var(--widget-text-soft
   body.widget .widget-panel-toggle .panel-state { color: var(--ink); }
 }
 
-/* The companion is the stable anchor. Utility panels expand around it and
- * never shrink its portrait when Chat, Coding, or Calendar opens. */
-body.widget.widget-chat-open main,
-body.widget.widget-panels-open main,
-body.widget.widget-calendar-open main {
-  --widget-avatar-size: 224px;
-  width: 224px !important;
-  height: 236px !important;
-}
 /* Real month grid: seven stable columns, readable dates, and event dots. */
 body.widget .mini-calendar-month { display:grid; grid-template-columns:30px 1fr 30px; align-items:center; gap:6px; margin:7px 0 8px; }
 body.widget .mini-calendar-month strong { text-align:center; font-size:12px; }
@@ -323,45 +263,12 @@ body.widget #widget-system-hud { margin:4px 0 8px; padding:10px; border:1px soli
 body.widget #widget-system-hud[hidden] { display:none; }
 body.widget .widget-system-grid strong { white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
 body.widget .workspace-heading-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
-/* Attached utilities begin below the complete platform, including its HUD. */
-body.widget.widget-chat-open #widget-chat,
-body.widget.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-panels-open #widget-coding-panels { top:420px; }
-body.widget.widget-panels-open #widget-coding-panels { position:absolute; left:11px; width:238px; height:calc(100vh - 415px); max-height:365px; min-height:0; margin:0; }
 /* Telemetry is a single readable strip, not four disconnected micro-columns. */
 body.widget #widget-system-rail { grid-template-columns:1fr 1fr .78fr; gap:4px; padding:5px 2px 1px; }
 body.widget .system-rail-item { position:relative; display:flex; align-items:center; gap:4px; min-width:0; padding:4px 6px 7px; border:1px solid #ffffff10; border-radius:8px; background:#ffffff03; }
 body.widget .system-rail-item i { position:absolute; left:6px; right:6px; bottom:3px; width:auto; height:2px; }
 body.widget .system-rail-runtime { justify-content:center; padding-inline:5px; border-color:color-mix(in srgb,var(--accent) 22%,#ffffff10); }
-/* The platform is a fixed anchor. Opening a utility may grow the native
- * window, but it must never move, resize, or inherit the utility offset. */
-body.widget #widget-tools,
-body.widget.widget-chat-open #widget-tools,
-body.widget.widget-panels-open #widget-tools,
-body.widget.widget-calendar-open #widget-tools { top:268px !important; left:11px !important; width:238px !important; height:144px !important; margin:0 !important; z-index:10; transform:none !important; box-sizing:border-box; }
 body.widget #widget-system-rail { min-height:31px; height:31px; }
-body.widget.widget-chat-open #widget-chat,
-body.widget.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-panels-open #widget-coding-panels { z-index:8; }
-/* Attached utilities are viewport overlays, never flex siblings. This keeps
- * mounting a panel from reflowing the avatar or its platform by a pixel. */
-body.widget.widget-chat-open #widget-chat,
-body.widget.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-panels-open #widget-coding-panels { position:fixed; }
-/* Final geometry contract: the platform never participates in document flow. */
-body.widget main {
-  position:fixed;
-  top:40px;
-  left:18px;
-  margin:0 !important;
-  box-sizing:border-box;
-}
-body.widget #widget-tools {
-  position:fixed;
-  top:268px;
-  left:11px;
-  margin:0 !important;
-}
 body.widget .cockpit-heading,
 body.widget .widget-toolbar,
 body.widget .widget-toolbar button,
@@ -371,43 +278,6 @@ body.widget #widget-stop {
 }
 body.widget .widget-toolbar { width:100%; }
 body.widget .widget-toolbar button svg { width:20px; height:20px; }
-/* Every attached panel fits between the platform and the native viewport
- * bottom. The available height changes with the host window, so panels never
- * rely on a fixed height that can be clipped on a shorter display. */
-body.widget.widget-chat-open #widget-chat,
-body.widget.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-panels-open #widget-coding-panels {
-  top:420px;
-  bottom:10px;
-  height:auto;
-  max-height:none;
-  min-height:0;
-  margin:0;
-}
-body.widget.widget-chat-open #widget-chat {
-  grid-template-rows:auto minmax(0,1fr) auto;
-}
-body.widget.widget-chat-open #widget-chat,
-body.widget.widget-chat-open #widget-chat #widget-messages,
-body.widget.widget-chat-open #widget-chat #widget-messages .message,
-body.widget.widget-chat-open #widget-chat .message-body,
-body.widget.widget-chat-open #widget-chat .message-actions,
-body.widget.widget-chat-open #widget-chat .bot-quick-actions,
-body.widget.widget-chat-open #widget-chat #widget-text-form,
-body.widget.widget-chat-open #widget-chat #widget-text,
-body.widget.widget-chat-open #widget-chat #widget-text-form button {
-  min-width:0;
-  max-width:100%;
-  box-sizing:border-box;
-}
-body.widget.widget-chat-open #widget-chat { overflow:hidden; }
-body.widget.widget-chat-open #widget-chat .message,
-body.widget.widget-chat-open #widget-chat .message-body { overflow-wrap:anywhere; word-break:break-word; }
-body.widget.widget-panels-open #widget-coding-panels {
-  left:11px;
-  width:238px;
-  box-sizing:border-box;
-}
 /* Coding owns several nested flex rows and scroll containers. Keep every
  * layer inside the same 238px column so borders, padding, and scrollbars do
  * not widen the panel or clip its controls. */
@@ -435,101 +305,3 @@ body.widget #widget-coding-panels .quick-actions { max-width:100%; }
 /* The cockpit's decorative rim must sit below the portrait, not cut into it. */
 body.widget #widget-tools::before { top:2px; }
 body.widget #widget-tools::after { top:6px; }
-/* Final coexistence override: the compact column is split only when the
- * user explicitly keeps chat and a specialist context open together. */
-body.widget.widget-chat-open.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-chat-open.widget-panels-open #widget-coding-panels,
-body.widget.widget-chat-open.widget-creative-open #widget-creative-workspace {
-  top:420px;
-  bottom:auto;
-  height:155px;
-}
-body.widget.widget-chat-open.widget-calendar-open #widget-chat,
-body.widget.widget-chat-open.widget-panels-open #widget-chat,
-body.widget.widget-chat-open.widget-creative-open #widget-chat {
-  top:585px;
-  bottom:10px;
-  height:auto;
-}
-/* Large widget geometry. All surfaces use the same 320px native column and
- * 298px content rail, leaving a predictable 11px inset on both sides. */
-body.widget main { --widget-avatar-size:270px; width:270px; height:272px; }
-body.widget #widget-tools { top:315px !important; width:298px !important; }
-body.widget #widget-chat,
-body.widget #widget-coding-panels,
-body.widget #widget-mini-calendar,
-body.widget #widget-creative-workspace,
-body.widget #widget-menu { width:298px; }
-body.widget.widget-chat-open #widget-chat,
-body.widget.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-panels-open #widget-coding-panels,
-body.widget.widget-creative-open #widget-creative-workspace { top:455px; }
-body.widget.widget-chat-open.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-chat-open.widget-panels-open #widget-coding-panels,
-body.widget.widget-chat-open.widget-creative-open #widget-creative-workspace { top:455px; }
-body.widget.widget-chat-open.widget-calendar-open #widget-chat,
-body.widget.widget-chat-open.widget-panels-open #widget-chat,
-body.widget.widget-chat-open.widget-creative-open #widget-chat { top:620px; }
-body.widget[data-panel-side=right] #widget-code-wing { left:330px; }
-/* Final widget stack contract. The platform is a fixed anchor; optional
- * companion workspaces sit beneath it and Chat may share that vertical rail.
- * This deliberately overrides older experimental compact/coexistence rules. */
-body.widget.widget-chat-open main,
-body.widget.widget-panels-open main,
-body.widget.widget-calendar-open main,
-body.widget.widget-creative-open main {
-  --widget-avatar-size:270px;
-  width:270px !important;
-  height:272px !important;
-}
-body.widget.widget-chat-open #widget-chat,
-body.widget.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-panels-open #widget-coding-panels,
-body.widget.widget-creative-open #widget-creative-workspace,
-body.widget.widget-wide-open #widget-code-wing {
-  position:fixed;
-  z-index:8;
-  top:465px;
-  left:11px;
-  right:11px;
-  width:auto;
-  bottom:10px;
-  height:auto;
-  max-height:none;
-  margin:0;
-  box-sizing:border-box;
-}
-/* One selected specialist plus Chat: both remain readable in a taller native
- * widget. The specialist is first; the transcript/composer is always below. */
-body.widget.widget-chat-open.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-chat-open.widget-panels-open #widget-coding-panels,
-body.widget.widget-chat-open.widget-creative-open #widget-creative-workspace,
-body.widget.widget-chat-open.widget-wide-open #widget-code-wing {
-  top:465px;
-  bottom:auto;
-  /* Preserve enough room for the chat composer on shorter displays, while
-   * using the extra space on taller ones for the specialist surface. */
-  --widget-stack-specialist-height:clamp(130px,calc(100vh - 750px),230px);
-  height:var(--widget-stack-specialist-height);
-}
-body.widget.widget-chat-open.widget-calendar-open #widget-chat,
-body.widget.widget-chat-open.widget-panels-open #widget-chat,
-body.widget.widget-chat-open.widget-creative-open #widget-chat,
-body.widget.widget-chat-open.widget-wide-open #widget-chat {
-  top:calc(475px + var(--widget-stack-specialist-height));
-  bottom:10px;
-  height:auto;
-}
-body.widget.widget-chat-open #widget-chat,
-body.widget.widget-chat-open #widget-chat #widget-messages,
-body.widget.widget-chat-open #widget-chat #widget-text-form,
-body.widget.widget-chat-open #widget-chat #widget-text,
-body.widget.widget-chat-open #widget-chat #widget-text-form button {
-  min-width:0;
-  max-width:100%;
-  box-sizing:border-box;
-}
-/* An expanded code detail replaces its coding disclosure, never creates a
- * second overlapping coding surface. */
-body.widget.widget-wide-open #widget-coding-panels { display:none !important; }
-body.widget.widget-wide-open #widget-code-wing { display:flex; flex-direction:column; }

@@ -58,8 +58,9 @@ else app.whenReady().then(async()=>{
   ipcMain.handle('agent-cancel-task',async(event,taskId)=>{if(!trusted(event)||typeof taskId!=='string')return {ok:false,error:'Task cancellation is unavailable.'};const child=activeAgentProcesses.get(taskId);if(!child||child.killed)return {ok:false,error:'No running task found.'};child.kill('SIGTERM');return {ok:true};});
   ipcMain.handle('calendar-events',async event=>trusted(event)?readMacCalendar():{ok:false,error:'Calendar access is unavailable.'});
   ipcMain.handle('widget-chat',async(event,expanded)=>{if(!trusted(event)||mode!=='widget'||typeof expanded!=='boolean')return false;stopDrag();view.chat=expanded;reflow();return expanded;});
-  ipcMain.handle('widget-panels',async(event,next)=>{if(!trusted(event)||mode!=='widget'||!validPanelsRequest(next))return {ok:false,error:'Invalid widget panel request.'};stopDrag();view.tools=next.open;view.wide=next.wide;return {ok:true,...reflow()};});
-  ipcMain.handle('widget-calendar',async(event,next)=>{if(!trusted(event)||!next||typeof next.open!=='boolean')return {ok:false,error:'Invalid calendar view request.'};stopDrag();view.calendar=next.open;return {ok:true,...reflow()};});
+  ipcMain.handle('widget-panels',async(event,next)=>{if(!trusted(event)||mode!=='widget'||!validPanelsRequest(next))return {ok:false,error:'Invalid widget panel request.'};stopDrag();view.tools=next.open;view.wide=next.open||view.calendar;return {ok:true,...reflow()};});
+  ipcMain.handle('widget-calendar',async(event,next)=>{if(!trusted(event)||!next||typeof next.open!=='boolean')return {ok:false,error:'Invalid calendar view request.'};stopDrag();view.calendar=next.open;view.wide=next.open||view.tools;return {ok:true,...reflow()};});
+  ipcMain.handle('widget-specialist',async(event,open)=>{if(!trusted(event)||mode!=='widget'||typeof open!=='boolean')return false;stopDrag();view.wide=open||view.tools||view.calendar;return reflow();});
   ipcMain.handle('widget-choose-project',async event=>trusted(event)?chooseWorkspace({exposePath:false}):{ok:false,error:'Folder selection is unavailable.'});
   // Dedicated Rivet picker returns the selected path only to this trusted, sandboxed renderer call.
   // The UI immediately forwards it to the local Python service and never renders or persists it.

@@ -10,6 +10,7 @@ import '../styles/widget-cockpit.css';
 import '../styles/widget-panels.css';
 import '../styles/widget-polish.css';
 import '../styles/full-polish.css';
+import '../styles/widget-stack.css';
 import '../conversation/chat-actions.css';
 import '../conversation/coding-edits.css';
 import '../avatar/presence-orchestrator.css';
