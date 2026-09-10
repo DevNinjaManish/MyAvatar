@@ -27,6 +27,7 @@ const BOT_QUICK_ACTIONS={
 };
 
 const SAFE_PHASES=new Set(['idle','listening','thinking','writing','speaking','complete','interrupted','failed']);
+const LONG_WORK_MS=4500;
 
 export function quickActionsForBot(botId){
   const actions=BOT_QUICK_ACTIONS[botId]||BOT_QUICK_ACTIONS.nova;
@@ -48,30 +49,41 @@ export function conversationPhaseFromEvent(event,current='idle'){
 }
 
 export function safeConversationPhase(value){return SAFE_PHASES.has(value)?value:'idle';}
+export function phaseLabel(phase,{longRunning=false}={}){
+  const labels={idle:'Ready',listening:'Listening',thinking:longRunning?'Still thinking locally…':'Thinking…',writing:longRunning?'Still preparing reply…':'Replying…',speaking:'Speaking',complete:'Ready',interrupted:'Interrupted',failed:'Needs attention'};
+  return labels[safeConversationPhase(phase)]||'Ready';
+}
 
 export function mountInteractionIntelligence(win=window,doc=document){
   if(win.__myavatarInteractionIntelligence)return win.__myavatarInteractionIntelligence;
-  let phase='idle';
+  let phase='idle',longRunning=false,longTimer=null;
+  const armLongWork=()=>{
+    clearTimeout(longTimer);longTimer=null;longRunning=false;
+    if(!['thinking','writing'].includes(phase))return;
+    longTimer=setTimeout(()=>{if(['thinking','writing'].includes(phase)){longRunning=true;render();}},LONG_WORK_MS);
+  };
   const render=()=>{
     const value=safeConversationPhase(phase);
     doc.body.dataset.conversationPhase=value;
+    doc.body.dataset.longWork=String(longRunning&&['thinking','writing'].includes(value));
     const state=doc.getElementById('widget-chat-state');
-    if(state){
-      const labels={idle:'Ready',listening:'Listening',thinking:'Thinking…',writing:'Replying…',speaking:'Speaking',complete:'Ready',interrupted:'Interrupted',failed:'Needs attention'};
-      state.textContent=labels[value]||'Ready';
-    }
+    if(state)state.textContent=phaseLabel(value,{longRunning});
   };
-  const onRuntime=event=>{phase=conversationPhaseFromEvent(event.detail||{},phase);render();};
-  const onClient=event=>{
-    if(event.detail?.type==='turn')phase='thinking';
-    else if(event.detail?.type==='stop')phase='interrupted';
+  const setPhase=next=>{
+    const value=safeConversationPhase(next);
+    if(value!==phase){phase=value;armLongWork();}
     render();
   };
-  const onClose=()=>{phase='idle';render();};
+  const onRuntime=event=>setPhase(conversationPhaseFromEvent(event.detail||{},phase));
+  const onClient=event=>{
+    if(event.detail?.type==='turn')setPhase('thinking');
+    else if(event.detail?.type==='stop')setPhase('interrupted');
+  };
+  const onClose=()=>setPhase('idle');
   win.addEventListener('myavatar:runtime-event',onRuntime);
   win.addEventListener('myavatar:client-message',onClient);
   win.addEventListener('myavatar:socket-close',onClose);
   render();
-  const api={snapshot:()=>({phase:safeConversationPhase(phase)}),dispose(){win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.removeEventListener('myavatar:socket-close',onClose);delete win.__myavatarInteractionIntelligence;}};
+  const api={snapshot:()=>({phase:safeConversationPhase(phase),longRunning}),dispose(){clearTimeout(longTimer);win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.removeEventListener('myavatar:socket-close',onClose);delete win.__myavatarInteractionIntelligence;}};
   win.__myavatarInteractionIntelligence=api;return api;
 }

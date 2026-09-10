@@ -1,6 +1,6 @@
 import {ChatStore,shouldFollowScroll} from './chat-store.js';
 import {quickActionsForBot} from './interaction-intelligence.js';
-import {toolCardTitle,toolResultPresentation} from './tool-card.js';
+import {toolCardTitle,toolResultPresentation,toolResultDetail} from './tool-card.js';
 
 const STATUS_LABEL={streaming:'Replying…',interrupted:'Stopped · ready for your next thought',failed:'Reply failed'};
 const APPROVAL_LABEL={approved:'Approved · action completed',denied:'Denied',failed:'Action failed'};
@@ -14,6 +14,16 @@ function addToolCardHeader(doc,wrapper,item){
   const title=doc.createElement('span');title.className='tool-card-title';title.textContent=toolCardTitle(item);
   const badge=doc.createElement('span');badge.className='tool-card-badge';badge.textContent=presentation.label;
   header.append(title,badge);wrapper.prepend(header);
+}
+
+function addExpandableDetail(doc,wrapper,item,body){
+  const result=toolResultDetail(item);body.textContent=result.summary;
+  if(!result.expandable)return;
+  const details=doc.createElement('details');details.className='tool-card-details';
+  const summary=doc.createElement('summary');summary.textContent='Show details';
+  const pre=doc.createElement('pre');pre.className='tool-card-output';pre.textContent=result.detail;
+  details.addEventListener('toggle',()=>{summary.textContent=details.open?'Hide details':'Show details';});
+  details.append(summary,pre);wrapper.append(details);
 }
 
 function renderMessage(doc,item,botName,store,win){
@@ -48,7 +58,7 @@ function renderMessage(doc,item,botName,store,win){
   }
 
   if(item.type==='tool-result'){
-    wrapper.classList.add('tool-result');addToolCardHeader(doc,wrapper,item);return wrapper;
+    wrapper.classList.add('tool-result');addToolCardHeader(doc,wrapper,item);addExpandableDetail(doc,wrapper,item,body);return wrapper;
   }
 
   if(item.type==='message'&&item.text){
