@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {conversationPhaseFromEvent,quickActionsForBot,safeConversationPhase} from '../../src/conversation/interaction-intelligence.js';
+import {conversationPhaseFromEvent,quickActionsForBot,safeConversationPhase,phaseLabel} from '../../src/conversation/interaction-intelligence.js';
 
 test('conversation phase follows only authored runtime milestones',()=>{
   let phase='idle';
@@ -16,6 +16,14 @@ test('safe conversation phase rejects arbitrary strings',()=>{
   assert.equal(safeConversationPhase('speaking'),'speaking');
   assert.equal(safeConversationPhase('chain-of-thought'),'idle');
   assert.equal(safeConversationPhase('../secret'),'idle');
+});
+
+test('long-running labels stay authored and phase-bound',()=>{
+  assert.equal(phaseLabel('thinking'),'Thinking…');
+  assert.equal(phaseLabel('thinking',{longRunning:true}),'Still thinking locally…');
+  assert.equal(phaseLabel('writing',{longRunning:true}),'Still preparing reply…');
+  assert.equal(phaseLabel('speaking',{longRunning:true}),'Speaking');
+  assert.equal(phaseLabel('secret',{longRunning:true}),'Ready');
 });
 
 test('all five bots have three concise non-authoritative quick prompts',()=>{
