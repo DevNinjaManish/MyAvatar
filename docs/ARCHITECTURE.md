@@ -69,8 +69,10 @@ Model downloads are explicit setup work. Normal diagnostics should remain local 
 The current runtime publishes bounded `agent_state` events for active turns.
 Rivet wraps its existing coding context, planning, approval and verification
 flow with the shared task model; Nova, Sterling, Pixel and Luma use the same
-observable lifecycle for non-tool conversation work. No new filesystem, shell,
-Git, or external-service permissions are granted to those companions.
+observable lifecycle for non-tool conversation work. The cockpit has a
+separate explicit allowlist for local build/test commands and read-only Git
+queries. No new filesystem, shell, Git mutation, or external-service
+permissions are granted to other companions.
 
 ## Proposed engine architecture — not implemented
 

@@ -32,7 +32,10 @@ filesystem, shell, Git, or external-service authority.
 Rivet’s existing workspace boundaries, patch validation, explicit approval,
 allowlisted verification, one-repair limit, and rollback checks remain the
 authority. Other companions cannot use Rivet capability IDs merely because the
-capabilities are registered.
+capabilities are registered. The Electron cockpit already has a separate
+allowlisted command/query table for its local build/test and read-only Git
+actions; it is not a general shell API and remains outside the Python
+capability registry until an explicit integration is designed.
 
 `backend/core/verification.py` provides a shared summary contract while
 preserving specialist-specific check evidence. Rivet continues to use
@@ -51,6 +54,7 @@ an observable cockpit, not a separate agent application.
 This foundation does not add unrestricted shell access, automatic Git push,
 parallel workers, cloud agents, browser automation, MCP, persistent task
 continuation, a skills marketplace, background autonomy, or bot-to-bot
-delegation. Future batches can add a safe command registry, richer Rivet
-observe/repair loops, specialist skills, structured delegation, Git lifecycle,
-and visual workflows behind the same explicit capability boundary.
+delegation. Future batches can connect the existing safe cockpit command table
+to shared task observations, add richer Rivet observe/repair loops, specialist
+skills, structured delegation, Git lifecycle, and visual workflows behind the
+same explicit capability boundary.
