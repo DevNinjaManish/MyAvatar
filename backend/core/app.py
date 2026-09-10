@@ -397,6 +397,8 @@ async def ws(socket:WebSocket):
             elif kind=='bot':
                 bot_id=msg.get('bot');profile=config.get('bots',{}) .get(bot_id)
                 if not profile:continue
+                if verification_task and not verification_task.done():edits.cancel_verification();verification_task.cancel();verification_task=None
+                agent_ref['task']=None
                 if bot_id!='robot':edits.session.reject_pending(reason='bot_changed')
                 history=bot_histories.get(bot_id)
                 if history is None:history=load_history(bot_id) if memory_enabled else [];bot_histories[bot_id]=history

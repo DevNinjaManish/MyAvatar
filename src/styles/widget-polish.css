@@ -428,3 +428,17 @@ body.widget #widget-coding-panels .quick-actions { max-width:100%; }
 /* The cockpit's decorative rim must sit below the portrait, not cut into it. */
 body.widget #widget-tools::before { top:2px; }
 body.widget #widget-tools::after { top:6px; }
+/* Final coexistence override: the compact column is split only when the
+ * user explicitly keeps chat and a specialist context open together. */
+body.widget.widget-chat-open.widget-calendar-open #widget-mini-calendar,
+body.widget.widget-chat-open.widget-panels-open #widget-coding-panels {
+  top:420px;
+  bottom:auto;
+  height:155px;
+}
+body.widget.widget-chat-open.widget-calendar-open #widget-chat,
+body.widget.widget-chat-open.widget-panels-open #widget-chat {
+  top:585px;
+  bottom:10px;
+  height:auto;
+}

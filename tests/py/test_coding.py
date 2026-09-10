@@ -74,6 +74,12 @@ class CodingWebSocketTests(unittest.TestCase):
         with TestClient(app) as client, client.websocket_connect('/ws?token=development') as ws:
             while ws.receive_json()['type'] != 'ready':
                 pass
+            # The real app persists the selected companion. Make this test
+            # explicit so an ignored local data/settings.json cannot change
+            # which permission boundary is being exercised.
+            ws.send_json({'type': 'bot', 'bot': 'nova'})
+            while ws.receive_json()['type'] != 'bot_history':
+                pass
             ws.send_json({'type': 'code_inspect', 'turn': 8, 'text': 'Review.', 'paths': ['README.md']})
             event = ws.receive_json()
             self.assertEqual(event['type'], 'error')

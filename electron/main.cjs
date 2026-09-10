@@ -1,7 +1,7 @@
 const {app,BrowserWindow,session,systemPreferences,ipcMain,screen,desktopCapturer,dialog}=require('electron');
 const {execFile}=require('node:child_process');
 const path=require('node:path');
-const {accessSync,constants,readFileSync,writeFileSync,mkdirSync}=require('node:fs');
+const {accessSync,constants,readFileSync,writeFileSync,mkdirSync,statSync}=require('node:fs');
 const PROJECT_ROOT=((() => {
   if (typeof process === 'object' && typeof process.cwd === 'function') return process.cwd();
   return path.resolve(__dirname, '..');
@@ -16,12 +16,12 @@ const ALLOWED_AGENT_COMMANDS={
 const commandError=(message)=>({ok:false,error:message||'Command rejected.'});
 const parseAgentRequest=request=>{
   if(!request||typeof request!=='object')return null;const {kind}=request;
-  if(kind==='custom'){if(request.id!=='custom'||typeof request.command!=='string'||typeof request.args==='undefined')return null;const command=request.command.trim();const args=Array.isArray(request.args)?request.args:[];if(!command||args.some(item=>typeof item!=='string'))return null;return {command,args,shell:false,label:`${command} ${args.join(' ')}`.trim()};}
+  if(kind==='custom')return null;
   if(kind==='gitCommit'){const commitMessage=(request.commitMessage||'').toString().trim();if(!commitMessage)return null;return {command:'git',args:['commit','-am',commitMessage],shell:false,label:`git commit -am "${commitMessage}"`};}
   const preset=ALLOWED_AGENT_COMMANDS[kind];return preset?{...preset,id:kind}:null;
 };
-const sanitizeProjectRoot=candidate=>{if(typeof candidate!=='string'||!candidate.trim())return PROJECT_ROOT;const root=candidate.trim();if(!path.isAbsolute(root))return PROJECT_ROOT;try{accessSync(root,constants.F_OK|constants.R_OK);}catch{return PROJECT_ROOT;}return root;};
-const runCommand=(command,args,shell=false,cwd=PROJECT_ROOT,taskId='command')=>new Promise(resolve=>{const child=execFile(command,args,{cwd,timeout:120000,maxBuffer:2_000_000,shell},(error,stdout,stderr)=>{activeAgentProcesses.delete(taskId);if(error)return resolve({ok:false,error:error.message,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:error.code||1});resolve({ok:true,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:0});});activeAgentProcesses.set(taskId,child);});
+const sanitizeProjectRoot=candidate=>{if(typeof candidate!=='string'||!candidate.trim())return PROJECT_ROOT;const root=path.resolve(candidate.trim());try{accessSync(root,constants.F_OK|constants.R_OK);if(typeof statSync==='function'&&!statSync(root).isDirectory())return PROJECT_ROOT;}catch{return PROJECT_ROOT;}return root;};
+const runCommand=(command,args,shell=false,cwd=PROJECT_ROOT,taskId)=>new Promise(resolve=>{const id=typeof taskId==='string'&&taskId.trim()?taskId:`command-${Date.now()}-${Math.random().toString(16).slice(2)}`;const child=execFile(command,args,{cwd,timeout:120000,maxBuffer:2_000_000,shell},(error,stdout,stderr)=>{activeAgentProcesses.delete(id);if(error)return resolve({ok:false,error:error.message,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:error.code||1});resolve({ok:true,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:0});});activeAgentProcesses.set(id,child);});
 const readMacCalendar=()=>new Promise(resolve=>{const namesScript='tell application "Calendar" to get name of calendars';execFile('/usr/bin/osascript',['-e',namesScript],{timeout:4000,maxBuffer:100_000},(nameError,namesOut,nameErr)=>{if(nameError)return resolve({ok:false,error:nameErr?.trim()||nameError.message,code:nameError.code||1});const names=(namesOut||'').trim().split(/,\s*/).filter(Boolean);const eventScript=`on run argv
 set calName to item 1 of argv
 tell application "Calendar"
@@ -35,7 +35,7 @@ end repeat
 return rows
 end tell
 end run`;Promise.all(names.map(name=>new Promise(done=>execFile('/usr/bin/osascript',['-e',eventScript,name],{timeout:2500,maxBuffer:200_000},(error,stdout)=>done(error?'':(stdout||'')))))).then(outputs=>{const events=outputs.join('').trim().split('\n').filter(Boolean).map((line,index)=>{const [title,start,end,calendar]=line.split('\t');return {id:`calendar-${index}`,title:title||'Untitled event',start:start||'',end:end||'',calendar:calendar||'Calendar'};});resolve({ok:true,events});});});});
-const executeAgentCommand=async request=>{const parsed=parseAgentRequest(request);if(!parsed)return commandError('This command type is not allowed.');if(parsed.command!=='git'&&parsed.command!=='npm'&&parsed.command!=='.venv/bin/python')return commandError('Command is blocked by the current policy.');return runCommand(parsed.command,parsed.args,parsed.shell,activeProjectRoot,request.taskId||'command');};
+const executeAgentCommand=async request=>{const parsed=parseAgentRequest(request);if(!parsed)return commandError('This command type is not allowed.');return runCommand(parsed.command,parsed.args,parsed.shell,activeProjectRoot,request.taskId);};
 let mainWindow=null;
 if(!app.requestSingleInstanceLock())app.quit();
 else app.whenReady().then(async()=>{

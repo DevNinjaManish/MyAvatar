@@ -249,7 +249,9 @@ export function mountWidgetPanels(doc, desktop) {
   };
 
   const runCommandNow = async request => {
-    const output = await runAgentAction(request);
+    let output;
+    try { output = await runAgentAction(request); }
+    catch (error) { output = {ok: false, error: error?.message || 'The local command bridge failed.'}; }
     if (output?.ok) {
       $('widget-terminal-output').textContent = output.stdout || '(Command completed with empty output.)';
       report(`Command ${request.kind || request.id || 'unknown'} completed.`);
@@ -288,12 +290,6 @@ export function mountWidgetPanels(doc, desktop) {
   const runAgentPlan = async () => {
     const brief = $('widget-brief').value.trim();
     if (!brief) return;
-    if (!trustedMode) {
-      trustedMode = true;
-      $('widget-trusted-mode').setAttribute('aria-pressed', 'true');
-      setTrustLabel();
-      report('Auto-enabled trusted mode for local agent execution.', 'warning');
-    }
     if (agentRunning) return;
     agentRunning = true;
     taskCancelled = false;
@@ -348,7 +344,13 @@ export function mountWidgetPanels(doc, desktop) {
       }
       const output = step.kind === 'gitStatus'
         ? await runAgentQuery({...step, taskId: activeTaskId})
-        : await runCommandNow({...step, taskId: activeTaskId});
+        : await (trustedMode ? runCommandNow({...step, taskId: activeTaskId}) : queueAction({...step, taskId: activeTaskId}));
+      if (!trustedMode && !output) {
+        taskSteps[index].status = 'blocked';
+        publishTask('NEEDS_APPROVAL', 'blocked', {blocker: 'Approve this local action to continue.'});
+        taskFailed = true;
+        break;
+      }
       const verification = agentStepVerification(step, output);
       if (verification) publishTask('VERIFYING', 'active', {verification});
       if (output && (output.ok === false)) {
@@ -399,6 +401,22 @@ export function mountWidgetPanels(doc, desktop) {
   // Core panel controls.
   on($('widget-coding-tools'), 'click', () => {
     closeMenus();
+    // Rivet starts in conversation mode. The detailed workbench is optional.
+    if (!state.open && !doc.body.classList.contains('widget-chat-open')) {
+      doc.body.classList.add('widget-coding-chat-open');
+      $('widget-chat-toggle').click();
+      $('widget-text').focus();
+      return;
+    }
+    if (doc.body.classList.contains('widget-chat-open') && !doc.body.classList.contains('widget-coding-chat-open')) {
+      doc.body.classList.add('widget-coding-chat-open');
+      $('widget-text').focus();
+      return;
+    }
+    if (!state.open && doc.body.classList.contains('widget-chat-open') && doc.body.classList.contains('widget-coding-chat-open')) {
+      dispatch({type: 'toggle-tools'});
+      return;
+    }
     if (doc.body.classList.contains('widget-chat-open')) $('widget-chat-toggle').click();
     if (doc.body.classList.contains('widget-calendar-open')) $('widget-calendar-toggle').click();
     dispatch({type: 'toggle-tools'});
@@ -560,7 +578,8 @@ export function mountWidgetPanels(doc, desktop) {
 
   on($('widget-run-tests'), 'click', async () => {
     doc.querySelector('[data-widget-panel="tests"] .panel-state').textContent = 'Running';
-    const output = await runCommandNow({kind: 'test'});
+    const output = await queueAction({kind: 'test'});
+    if (!output) return;
     $('widget-tests-status').textContent = output?.ok ? 'Tests complete' : 'Tests failed';
     doc.querySelector('[data-widget-panel="tests"] .panel-state').textContent = output?.ok ? 'Pass' : 'Fail';
     updateWingFooter(`Last action: test ${output?.ok ? 'passed' : 'failed'}`);
@@ -610,12 +629,9 @@ export function mountWidgetPanels(doc, desktop) {
       report('Commit cancelled.', 'warning');
       return;
     }
-    if (!trustedMode && pendingAction) {
-      report('Approve or cancel current pending command before committing.', 'warning');
-      return;
-    }
     const messageText = message.trim();
-    const result = await runAgentAction({kind: 'gitCommit', commitMessage: messageText});
+    const result = await queueAction({kind: 'gitCommit', commitMessage: messageText});
+    if (!result) return;
     if (result?.ok) {
       report(`Committed: ${messageText}`);
       updateWingFooter('Committed changes to git');
