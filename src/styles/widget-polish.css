@@ -1,5 +1,5 @@
 /* Presentation-only refinement of the attached widget. No avatar/audio effects.
- * Keep the 320px native column and all primary controls stable.
+ * Shell and toolbar geometry belongs to widget-stack.css.
  */
 body.widget {
   --widget-surface: #172024;
@@ -14,8 +14,6 @@ body.widget :where(button, input, textarea, summary):focus-visible {
 body.widget .widget-toolbar button,
 body.widget.widget-chat-open .widget-toolbar button {
   flex: none;
-  width: 38px;
-  height: 36px;
   border-radius: 11px;
 }
 body.widget .widget-toolbar button[aria-expanded=true] {
@@ -25,11 +23,7 @@ body.widget .widget-toolbar button[aria-expanded=true] {
 }
 body.widget #widget-name { font-size: 12px; }
 body.widget #widget-status { font-size: 10px; }
-body.widget #widget-stop {
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-}
+body.widget #widget-stop { border-radius: 9px; }
 body.widget .widget-chat-heading,
 body.widget .widget-panels-heading h2 { font-size: 12px; letter-spacing: -.1px; }
 body.widget .widget-chat-actions button { min-height: 26px; font-size: 10px; }
@@ -49,7 +43,6 @@ body.widget #widget-panel-notice {
   padding: 8px 9px;
   border: 1px solid var(--widget-hairline);
   border-radius: 9px;
-  background: var(--widget-inset);
   color: var(--widget-text-soft);
   font-size: 11px;
   line-height: 1.5;
@@ -66,10 +59,8 @@ body.widget #widget-panel-notice[data-tone=error] {
 }
 body.widget #widget-brief-status[data-tone=warning] { color: #edd4a1; }
 body.widget #widget-calendar-toggle { font-size:15px; line-height:1; }
-/* Platform controls retain their visual treatment; shell geometry lives in
- * widget-stack.css so there is one source of truth for positioning. */
-/* A compact, useful chat: heading and composer never move; the transcript
- * uses the available room and sits above the composer when it is short. */
+
+/* Chat presentation. Its fixed position, size and visibility live in widget-stack.css. */
 body.widget #widget-chat .widget-chat-heading { margin:0; min-height:26px; }
 body.widget #widget-chat .widget-chat-heading > div:first-child { display:flex; align-items:baseline; gap:7px; min-width:0; }
 body.widget #widget-chat-state { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--widget-text-soft); font-size:10px; font-weight:500; }
@@ -86,32 +77,11 @@ body.widget .widget-quick-prompts button:hover { border-color:var(--accent); bac
 body.widget #widget-text-form { display:grid; grid-template-columns:minmax(0,1fr) auto; margin:0; }
 body.widget #widget-text { min-height:38px; max-height:76px; resize:none; padding:8px 10px; border-radius:10px; line-height:1.35; }
 body.widget #widget-text-form button { min-height:38px; padding:7px 11px; border-radius:10px; }
-/* Chat is an attached panel, not a new avatar mode. Keep the platform's
- * portrait and toolbar footprint identical in compact and chat states. */
 body.widget .widget-caption { height:25px; padding:3px 4px; }
-body.widget .widget-toolbar,
-body.widget.widget-chat-open .widget-toolbar {
-  position:relative !important;
-  display:block;
-  height:46px;
-  box-sizing:border-box;
-  padding:0;
-}
-body.widget .widget-toolbar button,
-body.widget.widget-chat-open .widget-toolbar button {
-  position:absolute;
-  top:5px;
-  width:38px !important;
-  min-width:38px;
-  height:34px;
-}
-body.widget .widget-toolbar #widget-mic { position:absolute !important; top:5px !important; left:7px; }
-body.widget .widget-toolbar #widget-chat-toggle { position:absolute !important; top:5px !important; left:57px; }
-body.widget .widget-toolbar #widget-specialist-toggle { position:absolute !important; top:5px !important; left:107px; }
-body.widget .widget-toolbar #widget-more { position:absolute !important; top:5px !important; right:auto !important; bottom:auto !important; left:157px; }
 body.widget #widget-stop { margin:0; }
 body.widget #widget-stop[hidden] { display:none; }
 body.widget #widget-chat-toggle[data-unread]::after { right:2px; top:1px; box-shadow:0 0 0 1px #192124; pointer-events:none; }
+
 /* Specialist content styling; shell geometry lives in widget-stack.css. */
 body.widget .widget-specialist-summary { display:grid; gap:7px; margin-top:12px; }
 body.widget .widget-specialist-row { display:grid; gap:4px; padding:9px; border:1px solid #ffffff14; border-radius:9px; background:#ffffff05; }
@@ -131,7 +101,7 @@ body.widget .mini-calendar-event span { color:var(--widget-text-soft); font-size
 body.widget #widget-mini-calendar-events>p { margin:6px 0; color:var(--widget-text-soft); font-size:10px; }
 body.widget #widget-mini-calendar-status,
 body.widget .mini-calendar-error { overflow-wrap:anywhere; word-break:normal; }
-body.widget .mini-calendar-error { color:#ffd0c7!important; }
+body.widget .mini-calendar-error { color:#ffd0c7; }
 body.widget #widget-mini-calendar-refresh { margin-top:9px; min-height:30px; }
 body.widget .widget-panel {
   margin-top: 6px;
@@ -151,10 +121,6 @@ body.widget .widget-panel-toggle {
 }
 body.widget .widget-panel-toggle .panel-glyph { flex: none; width: 15px; font-size: 13px; }
 body.widget .widget-panel-toggle .panel-state { font-size: 10px; white-space: nowrap; }
-/* The notice and panel body already explain unavailable connections. Avoid
- * repeating a long badge in the narrow Files and Terminal disclosure rows.
- * Keep that information in the accessible name and the visible empty state.
- */
 body.widget [data-widget-panel=changes] .panel-state,
 body.widget [data-widget-panel=terminal] .panel-state {
   position: absolute;
@@ -188,7 +154,6 @@ body.widget #widget-brief-to-chat:not(:disabled) {
   color: var(--accent);
 }
 body.widget .widget-panel-body pre { font-size: 11px; line-height: 1.6; }
-/* Disabled actions stay legible; their adjacent text explains why. */
 body.widget .widget-panel-body button:disabled,
 body.widget .widget-project-row button:disabled,
 body.widget .widget-panels-heading button:disabled {
@@ -239,7 +204,6 @@ body.widget #widget-system-hud { margin:4px 0 8px; padding:10px; border:1px soli
 body.widget #widget-system-hud[hidden] { display:none; }
 body.widget .widget-system-grid strong { white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
 body.widget .workspace-heading-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
-/* Telemetry is a single readable strip, not four disconnected micro-columns. */
 body.widget #widget-system-rail { grid-template-columns:1fr 1fr .78fr; gap:4px; padding:5px 2px 1px; }
 body.widget .system-rail-item { position:relative; display:flex; align-items:center; gap:4px; min-width:0; padding:4px 6px 7px; border:1px solid #ffffff10; border-radius:8px; background:#ffffff03; }
 body.widget .system-rail-item i { position:absolute; left:6px; right:6px; bottom:3px; width:auto; height:2px; }
@@ -249,14 +213,9 @@ body.widget .cockpit-heading,
 body.widget .widget-toolbar,
 body.widget .widget-toolbar button,
 body.widget #widget-stop-slot,
-body.widget #widget-stop {
-  box-sizing:border-box;
-}
+body.widget #widget-stop { box-sizing:border-box; }
 body.widget .widget-toolbar { width:100%; }
 body.widget .widget-toolbar button svg { width:20px; height:20px; }
-/* Coding owns several nested flex rows and scroll containers. Keep every
- * layer inside the same 238px column so borders, padding, and scrollbars do
- * not widen the panel or clip its controls. */
 body.widget #widget-coding-panels,
 body.widget #widget-coding-panels .widget-panels-heading,
 body.widget #widget-coding-panels .widget-panels-scroll,
@@ -278,7 +237,5 @@ body.widget #widget-coding-panels .widget-panel-toggle,
 body.widget #widget-coding-panels .widget-panel-body,
 body.widget #widget-coding-panels .widget-project-row,
 body.widget #widget-coding-panels .quick-actions { max-width:100%; }
-/* Keep the decorative rail in the gap below the companion selector.  At the
- * top of the platform it crossed the bot name and made the picker look cut. */
 body.widget #widget-tools::before { top:31px; }
 body.widget #widget-tools::after { top:37px; }
