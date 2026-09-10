@@ -38,6 +38,27 @@ test('Sterling workspace isolates priorities and does not invent decisions or sc
   assert.notEqual(state.focus,other.focus);
 });
 
+test('Pixel workspace keeps campaign modules in the shared shell',()=>{
+  const state=companionWorkspaceState('pixel',{focus:'Launch the spring collection',draft:'Three-word launch hook',messages:[{role:'assistant',type:'message',text:'Try a warmer opening.',status:'complete'}]});
+  assert.equal(state.kind,'pixel');
+  assert.equal(state.focusLabel,'Campaign objective');
+  assert.equal(state.focus,'Launch the spring collection');
+  assert.deepEqual(state.modules.map(([label])=>label),['Current message / hook','Next marketing experiment','Copy / output','Campaign status']);
+  assert.match(state.modules[2][1],/Draft in progress/);
+  assert.match(state.modules[3][1],/Direction captured/);
+});
+
+test('Luma workspace keeps design modules isolated from Pixel output',()=>{
+  const luma=companionWorkspaceState('luma',{focus:'Improve onboarding hierarchy',messages:[{role:'assistant',type:'message',text:'Reduce competing emphasis.',status:'complete'}]});
+  const pixel=companionWorkspaceState('pixel',{focus:'Launch the spring collection'});
+  assert.equal(luma.kind,'luma');
+  assert.equal(luma.focusLabel,'Active design brief');
+  assert.deepEqual(luma.modules.map(([label])=>label),['Key design decision','Critique status','Visual output','Image tools']);
+  assert.match(luma.modules[1][1],/captured/);
+  assert.equal(luma.modules[3][1],'Not connected in this session');
+  assert.notEqual(luma.focus,pixel.focus);
+});
+
 test('Rivet patch summaries are compact and metadata-only',()=>{
   assert.equal(rivetPatchSummary({files:[{path:'a.js',additions:8,deletions:2},{path:'b.py',additions:3,deletions:1}]}),'2 files · +11/-3');
   assert.equal(rivetPatchSummary({files:[]}), 'Change ready for review');

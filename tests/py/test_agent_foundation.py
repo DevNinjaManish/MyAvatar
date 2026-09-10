@@ -31,8 +31,9 @@ class AgentFoundationTests(unittest.TestCase):
 
     def test_capabilities_are_isolated_and_descriptors_are_inert(self):
         self.assertIn('repository.read', capabilities_for_bot('robot'))
-        self.assertEqual(capabilities_for_bot('nova'), ())
-        self.assertFalse(can_use('nova', 'coding.edit'))
+        for bot_id in ('nova', 'butler', 'pixel', 'luma'):
+            self.assertEqual(capabilities_for_bot(bot_id), ())
+            self.assertFalse(can_use(bot_id, 'coding.edit'))
         self.assertIsNone(get_capability('robot', 'coding.edit').handler)
         with self.assertRaises(PermissionError):
             get_capability('nova', 'coding.edit')

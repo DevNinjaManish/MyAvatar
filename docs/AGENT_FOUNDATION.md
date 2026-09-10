@@ -49,6 +49,14 @@ The existing chat, avatar, equaliser, interruption, and unified workspace
 consume those events. Voice remains the primary control path; the workspace is
 an observable cockpit, not a separate agent application.
 
+The shared workspace provides lightweight specialist modules for every
+companion. Nova and Sterling show planning context; Pixel shows campaign
+objective, message, experiment, and copy/output state; Luma shows design brief,
+design decision, critique, visual output, and image-tool connection state.
+These labels come from the current session only: they do not claim external
+actions or create fake memory. Pixel and Luma remain capability-empty until a
+future specialist integration is explicitly designed.
+
 ## Not implemented yet
 
 This foundation does not add unrestricted shell access, automatic Git push,
