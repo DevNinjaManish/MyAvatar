@@ -380,6 +380,22 @@ body.widget.widget-panels-open #widget-coding-panels {
 body.widget.widget-chat-open #widget-chat {
   grid-template-rows:auto minmax(0,1fr) auto;
 }
+body.widget.widget-chat-open #widget-chat,
+body.widget.widget-chat-open #widget-chat #widget-messages,
+body.widget.widget-chat-open #widget-chat #widget-messages .message,
+body.widget.widget-chat-open #widget-chat .message-body,
+body.widget.widget-chat-open #widget-chat .message-actions,
+body.widget.widget-chat-open #widget-chat .bot-quick-actions,
+body.widget.widget-chat-open #widget-chat #widget-text-form,
+body.widget.widget-chat-open #widget-chat #widget-text,
+body.widget.widget-chat-open #widget-chat #widget-text-form button {
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+body.widget.widget-chat-open #widget-chat { overflow:hidden; }
+body.widget.widget-chat-open #widget-chat .message,
+body.widget.widget-chat-open #widget-chat .message-body { overflow-wrap:anywhere; word-break:break-word; }
 body.widget.widget-panels-open #widget-coding-panels {
   left:11px;
   width:238px;

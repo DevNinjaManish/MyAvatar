@@ -113,6 +113,7 @@ test('widget utility geometry is bottom-safe and border-box sized',()=>{
   assert.match(css,/body\.widget \.cockpit-heading,[\s\S]*body\.widget #widget-stop \{\s*box-sizing:border-box;/);
   assert.match(css,/body\.widget\.widget-panels-open #widget-specialist-toggle \{\s*color:var\(--accent\);\s*border-color:color-mix/);
   assert.match(css,/body\.widget #widget-coding-panels,[\s\S]*body\.widget #widget-code-wing \.widget-wing-footer \{\s*box-sizing:border-box;\s*min-width:0;/);
+  assert.match(css,/body\.widget\.widget-chat-open #widget-chat \.message-body,[\s\S]*min-width:0;[\s\S]*overflow-wrap:anywhere/);
 });
 test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
