@@ -222,7 +222,7 @@ async function loadMiniCalendar(){const status=$('widget-mini-calendar-status'),
   for(const event of events){const card=document.createElement('article');card.className='calendar-event';const title=document.createElement('strong');title.textContent=event.title;const meta=document.createElement('span');meta.textContent=`${event.start} · ${event.calendar}`;card.append(title,meta);list.append(card);}
  }
  function setWorkspaceMode(mode,announce=true){
- const selected=workspaceModes[mode]?mode:'coding';document.body.dataset.workspace=selected;
+ const selected=workspaceModes[mode]?mode:'coding';document.body.dataset.workspace=selected;window.dispatchEvent(new CustomEvent('myavatar:workspace-mode',{detail:selected}));
  document.querySelectorAll('[data-workspace-mode]').forEach(button=>{const active=button.dataset.workspaceMode===selected;button.classList.toggle('active',active);button.setAttribute('aria-current',active?'page':'false');});
   $('detail').textContent=workspaceModes[selected];$('calendar-workspace').hidden=selected!=='calendar'||document.body.classList.contains('widget');$('stage').hidden=selected==='calendar'&&!document.body.classList.contains('widget');if(selected==='calendar'&&!document.body.classList.contains('widget'))void loadCalendarWorkspace();if(announce)$('status').setAttribute('aria-label',`${selected} workspace`);
  }

@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('desktop',{
   runAgentCommand: request=>ipcRenderer.invoke('agent-run-command',request),
   runAgentQuery: request=>ipcRenderer.invoke('agent-run-query',request),
   getAgentProject:()=>ipcRenderer.invoke('agent-project-state'),
+  getSystemMetrics:()=>ipcRenderer.invoke('system-metrics'),
   cancelAgentTask:taskId=>ipcRenderer.invoke('agent-cancel-task',taskId),
   getCalendarEvents:()=>ipcRenderer.invoke('calendar-events'),
   chooseProject:()=>ipcRenderer.invoke('widget-choose-project'),

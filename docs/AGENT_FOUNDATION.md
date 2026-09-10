@@ -66,6 +66,12 @@ These labels come from the current session only: they do not claim external
 actions or create fake memory. Pixel and Luma remain capability-empty until a
 future specialist integration is explicitly designed.
 
+The Systems Cockpit is a secondary full-mode view for local health: process CPU,
+system memory, selected local model, core speech readiness, lazy coding
+readiness, and the current shared task phase. CPU and memory are read through a
+trusted local Electron bridge and sampled only while the System view is open;
+missing metrics remain unavailable rather than being guessed.
+
 ## Not implemented yet
 
 This foundation does not add unrestricted shell access, automatic Git push,
