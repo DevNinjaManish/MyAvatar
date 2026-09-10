@@ -112,6 +112,9 @@ class ActionIntegration(unittest.TestCase):
 
     def connect(self, ws):
         self.assertEqual(ws.receive_json()['type'], 'config')
+        workspace = ws.receive_json()
+        self.assertEqual(workspace['type'], 'coding_workspace')
+        self.assertTrue(workspace['workspace']['path'])
         self.assertEqual(ws.receive_json()['type'], 'ready')
 
     def test_action_requires_actual_approval_then_executes_once(self):
@@ -176,8 +179,9 @@ class ActionIntegration(unittest.TestCase):
         self.prefs.write_text('{bad')
         with self.assertLogs('avatar.settings', 'WARNING'), TestClient(server.app) as client, client.websocket_connect('/ws?token=development') as ws:
             config = ws.receive_json()['config']
-            self.assertEqual(config['performanceProfile'], 'medium')
-            self.assertEqual(config['llm']['model'], 'huihui_ai/qwen3.5-abliterated:4b')
+            self.assertEqual(config['performanceProfile'], 'low')
+            self.assertEqual(config['llm']['model'], 'huihui_ai/qwen3.5-abliterated:0.8b')
+            self.assertEqual(ws.receive_json()['type'], 'coding_workspace')
             self.assertEqual(ws.receive_json()['type'], 'ready')
 
     def test_failed_preference_save_does_not_break_bot_switch(self):
