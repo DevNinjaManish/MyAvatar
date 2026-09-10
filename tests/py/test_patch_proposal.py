@@ -16,8 +16,8 @@ class PatchProposalTests(unittest.TestCase):
 
     def test_rejects_parent_absolute_and_blocked_paths(self):
         unsafe = [
-            '--- a/../secret\n+++ b/../secret\n@@ -0,0 +1 @@\n+x\n',
-            '--- /tmp/x\n+++ /tmp/x\n@@ -1 +1 @@\n-a\n+b\n',
+            '--- a/../secret.py\n+++ b/../secret.py\n@@ -0,0 +1 @@\n+x\n',
+            '--- /tmp/x.py\n+++ /tmp/x.py\n@@ -1 +1 @@\n-a\n+b\n',
             '--- a/.git/config\n+++ b/.git/config\n@@ -1 +1 @@\n-a\n+b\n',
             '--- a/data/settings.json\n+++ b/data/settings.json\n@@ -1 +1 @@\n-a\n+b\n',
         ]
@@ -25,6 +25,20 @@ class PatchProposalTests(unittest.TestCase):
             with self.subTest(patch=patch):
                 with self.assertRaises(ValueError):
                     summarize_unified_diff(extract_unified_diff(patch))
+
+    def test_rejects_binary_or_unknown_file_types(self):
+        patch = '''--- a/public/logo.png\n+++ b/public/logo.png\n@@ -1 +1 @@\n-old\n+new\n'''
+        with self.assertRaises(ValueError):
+            parse_patch_proposal(patch)
+
+    def test_rejects_header_only_preview_without_hunk_or_changes(self):
+        for patch in (
+            '--- a/src/x.py\n+++ b/src/x.py\n',
+            '--- a/src/x.py\n+++ b/src/x.py\n@@ -1 +1 @@\n context only\n',
+        ):
+            with self.subTest(patch=patch):
+                with self.assertRaises(ValueError):
+                    parse_patch_proposal(patch)
 
     def test_supports_new_and_deleted_files_without_dev_null_as_target(self):
         new_file = '''--- /dev/null\n+++ b/src/new.py\n@@ -0,0 +1 @@\n+print("hi")\n'''
