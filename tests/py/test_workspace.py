@@ -55,8 +55,9 @@ class WorkspaceAwarenessTests(unittest.TestCase):
             'Add a button.',
             [{'path': 'src/app.ts', 'content': 'export const app = true'}],
         )
-        self.assertIn('read-only', prompt[0]['content'])
-        self.assertIn('Do not claim', prompt[0]['content'])
+        system = prompt[0]['content'].lower()
+        self.assertIn('read-only', system)
+        self.assertIn('do not claim', system)
         self.assertIn('src/app.ts', prompt[1]['content'])
         self.assertIn('Add a button.', prompt[1]['content'])
 
