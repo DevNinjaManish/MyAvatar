@@ -104,6 +104,11 @@ class AgentTask:
         self.updated_at = time.time()
         return self
 
+    def record_tool_activity(self, summary: str) -> 'AgentTask':
+        self.tool_summary = str(summary).strip()[:240]
+        self.updated_at = time.time()
+        return self
+
     def begin_action(self) -> 'AgentTask':
         self.status = 'active'
         self.blocker = ''

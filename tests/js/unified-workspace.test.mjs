@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {workspaceProfile,workspaceActivity,companionWorkspaceState,rivetWorkspaceState,rivetPatchSummary,rivetActionAvailability} from '../../src/workspace/unified-workspace.js';
+import {workspaceProfile,workspaceActivity,agentTaskSummary,companionWorkspaceState,rivetWorkspaceState,rivetPatchSummary,rivetActionAvailability} from '../../src/workspace/unified-workspace.js';
 
 test('all five companions map to one shared workspace profile model',()=>{
   const ids=['robot','nova','butler','pixel','luma'];
@@ -17,6 +17,12 @@ test('workspace activity uses authored observable phases only',()=>{
   assert.equal(workspaceActivity('writing'),'Preparing reply');
   assert.equal(workspaceActivity('speaking'),'Speaking');
   assert.equal(workspaceActivity('SECRET_REASONING'),'Ready');
+});
+
+test('agent task activity exposes only the bounded runtime summary',()=>{
+  assert.equal(agentTaskSummary({toolSummary:'Prepared a safe patch proposal for approval.'}),'Prepared a safe patch proposal for approval.');
+  assert.equal(agentTaskSummary({toolSummary:'  '}),'');
+  assert.equal(agentTaskSummary({toolSummary:'x'.repeat(200)}),'x'.repeat(119)+'…');
 });
 
 test('Nova workspace uses only session focus, conversation output, and available calendar context',()=>{

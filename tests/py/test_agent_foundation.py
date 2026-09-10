@@ -19,6 +19,8 @@ class AgentFoundationTests(unittest.TestCase):
         self.assertNotIn('transcript', public)
         task.record_observation('Context was gathered.')
         self.assertEqual(task.public()['observation'], 'Context was gathered.')
+        task.record_tool_activity('Read 2 bounded files.')
+        self.assertEqual(task.public()['toolSummary'], 'Read 2 bounded files.')
         self.assertLessEqual(len(public['contextRefs']), 8)
 
     def test_cancel_and_complete_update_steps(self):

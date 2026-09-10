@@ -149,7 +149,7 @@ async def ws(socket:WebSocket):
             await send('coding_verification',turn,status='cancelled',transactionId=transaction_id,message='Verification stopped.');raise
         message='Verification passed.' if verification['status']=='passed' else ('Verification found issues.' if verification['status']=='failed' else verification.get('message','Verification finished.'))
         if agent_task:
-            agent_task.record_observation(message)
+            agent_task.record_tool_activity('Safe verification completed.').record_observation(message)
             agent_task.record_verification(VerificationSummary.from_result(verification).public())
             if verification.get('status')=='passed':agent_task.complete('Verification passed.');await agent_update(agent_task,AgentPhase.COMPLETE,turn)
             elif verification.get('status')=='failed':agent_task.needs_approval('Verification failed; one bounded repair may be available.').offer_recovery('One bounded repair attempt is available for approval.');await agent_update(agent_task,AgentPhase.NEEDS_APPROVAL,turn)
@@ -160,11 +160,11 @@ async def ws(socket:WebSocket):
         nonlocal verification_task
         agent_task=agent_ref.get('task')
         if agent_task:
-            agent_task.begin_action().update_step('act','active')
+            agent_task.begin_action().record_tool_activity('Applying the approved edit.').update_step('act','active')
             await agent_update(agent_task,AgentPhase.WORKING,turn)
         outcome=edits.decide(transaction_id,'approve',verify=False);await send('coding_edit_result',turn,**outcome)
         if agent_task:
-            agent_task.update_step('act','complete').record_observation('Approved change applied; verification is starting.')
+            agent_task.update_step('act','complete').record_tool_activity('Approved edit applied; safe verification is starting.').record_observation('Approved change applied; verification is starting.')
             await agent_update(agent_task,AgentPhase.WORKING,turn)
         if verification_task and not verification_task.done():edits.cancel_verification();verification_task.cancel()
         verification_task=asyncio.create_task(verify_applied(turn,transaction_id,outcome['result'],outcome.get('repairRound',0)))
@@ -182,7 +182,7 @@ async def ws(socket:WebSocket):
         if preview is None:raise ValueError('Rivet could not produce a safe repair patch from the failed verification.')
         agent_task=agent_ref.get('task')
         if agent_task:
-            agent_task.needs_approval('Repair proposal is ready for approval.').record_observation('Preparing one bounded repair proposal.').offer_recovery('Repair proposal ready for approval.')
+            agent_task.needs_approval('Repair proposal is ready for approval.').record_tool_activity('Prepared one bounded repair proposal.').record_observation('Preparing one bounded repair proposal.').offer_recovery('Repair proposal ready for approval.')
             await agent_update(agent_task,AgentPhase.NEEDS_APPROVAL,turn)
         await send('coding_patch',turn,**preview);await speak_coding_answer(turn,'I prepared one repair attempt for your approval.',config['tts']);await send('done',turn)
 
@@ -222,11 +222,11 @@ async def ws(socket:WebSocket):
         try:
             await send('state',turn,state='THINKING');files=choose_context(text,root=edits.root)
             if agent_task:
-                agent_task.set_context([item['path'] for item in files]);await agent_update(agent_task,AgentPhase.CONTEXT,turn);agent_task.update_step('context','complete');await agent_update(agent_task,AgentPhase.PLANNING,turn)
+                agent_task.set_context([item['path'] for item in files]).record_tool_activity(f'Gathered bounded context from {len(files)} file' + ('s.' if len(files)!=1 else '.')).record_observation('Repository context gathered from the selected workspace.');await agent_update(agent_task,AgentPhase.CONTEXT,turn);agent_task.update_step('context','complete');await agent_update(agent_task,AgentPhase.PLANNING,turn)
             await send('coding_context',turn,paths=[item['path'] for item in files],automatic=True,workspace=edits.workspace());messages=build_change_plan_prompt(text,files);answer=await inspect_code(messages,coding_config);await send('token',turn,text=answer);preview=edits.preview(answer)
             if preview is not None:
                 await send('coding_patch',turn,**preview)
-                if agent_task:agent_task.update_step('plan','complete');await agent_update(agent_task,AgentPhase.NEEDS_APPROVAL,turn)
+                if agent_task:agent_task.update_step('plan','complete').needs_approval('Approve the proposed change before any files are modified.').record_tool_activity('Prepared a safe patch proposal for approval.');await agent_update(agent_task,AgentPhase.NEEDS_APPROVAL,turn)
             elif agent_task:
                 agent_task.complete('Plan prepared without an applicable patch.');await agent_update(agent_task,AgentPhase.COMPLETE,turn)
             await speak_coding_answer(turn,answer,tts_config);await send('done',turn);return True
