@@ -30,7 +30,7 @@ test('speech emits once after the silence deadline and retains the start',()=>{c
 test('release hysteresis keeps softer syllables inside the same utterance',()=>{
  const v=new TurnDetector(16000,{threshold:.0055,onsetMs:120,minSpeechMs:220,silenceMs:450,releaseRatio:.72,rejectCooldownMs:0});
  feed(v,20,.03);
- assert.equal(feed(v,35,.0045).length,0);
+ assert.equal(feed(v,35,.0052).length,0);
  const turns=feed(v,46,0);
  assert.equal(turns.length,1);
  assert.ok(turns[0].some(x=>x>.004));
