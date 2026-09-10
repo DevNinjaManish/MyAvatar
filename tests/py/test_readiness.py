@@ -6,12 +6,34 @@ from backend.core.readiness import EngineReadiness
 
 
 class ReadinessModel(unittest.TestCase):
-    def test_all_ready_reports_full_capabilities(self):
+    def test_all_ready_reports_full_core_capabilities(self):
         state=EngineReadiness()
         for engine in ('llm','stt','tts'):state.set(engine,'ready')
         snap=state.snapshot()
         self.assertEqual(snap['overall'],'ready')
-        self.assertEqual(snap['capabilities'],{'chat':True,'listen':True,'speak':True,'voice':True})
+        self.assertEqual(snap['capabilities'],{
+            'chat':True,'listen':True,'speak':True,'voice':True,
+            'code':False,'image':False,
+        })
+
+    def test_optional_specialists_do_not_block_core_readiness(self):
+        state=EngineReadiness()
+        for engine in ('llm','stt','tts'):state.set(engine,'ready')
+        snap=state.snapshot()
+        self.assertEqual(snap['overall'],'ready')
+        self.assertEqual(snap['engines']['coding']['state'],'deferred')
+        self.assertEqual(snap['engines']['image']['state'],'deferred')
+        self.assertFalse(snap['capabilities']['code'])
+        self.assertFalse(snap['capabilities']['image'])
+
+    def test_specialist_capability_turns_on_only_when_ready(self):
+        state=EngineReadiness()
+        for engine in ('llm','stt','tts'):state.set(engine,'ready')
+        state.set('coding','ready')
+        snap=state.snapshot()
+        self.assertTrue(snap['capabilities']['code'])
+        self.assertFalse(snap['capabilities']['image'])
+        self.assertEqual(snap['overall'],'ready')
 
     def test_partial_engine_failure_is_degraded_not_all_or_nothing(self):
         state=EngineReadiness();state.set('llm','ready');state.set('stt','ready');state.set('tts','unavailable',reason='tts_warmup_failed')
