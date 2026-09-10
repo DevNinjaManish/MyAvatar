@@ -112,6 +112,7 @@ test('widget utility geometry is bottom-safe and border-box sized',()=>{
   assert.match(css,/body\.widget \.widget-toolbar button svg \{ width:20px; height:20px; \}/);
   assert.match(css,/body\.widget \.cockpit-heading,[\s\S]*body\.widget #widget-stop \{\s*box-sizing:border-box;/);
   assert.match(css,/body\.widget\.widget-panels-open #widget-specialist-toggle \{\s*color:var\(--accent\);\s*border-color:color-mix/);
+  assert.match(css,/body\.widget #widget-coding-panels,[\s\S]*body\.widget #widget-code-wing \.widget-wing-footer \{\s*box-sizing:border-box;\s*min-width:0;/);
 });
 test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');

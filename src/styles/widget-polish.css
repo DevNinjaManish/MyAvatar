@@ -383,7 +383,32 @@ body.widget.widget-chat-open #widget-chat {
 body.widget.widget-panels-open #widget-coding-panels {
   left:11px;
   width:238px;
+  box-sizing:border-box;
 }
+/* Coding owns several nested flex rows and scroll containers. Keep every
+ * layer inside the same 238px column so borders, padding, and scrollbars do
+ * not widen the panel or clip its controls. */
+body.widget #widget-coding-panels,
+body.widget #widget-coding-panels .widget-panels-heading,
+body.widget #widget-coding-panels .widget-panels-scroll,
+body.widget #widget-coding-panels .widget-panel,
+body.widget #widget-coding-panels .widget-panel-toggle,
+body.widget #widget-coding-panels .widget-panel-body,
+body.widget #widget-coding-panels .widget-project-row,
+body.widget #widget-coding-panels .quick-actions,
+body.widget #widget-coding-panels button,
+body.widget #widget-coding-panels input,
+body.widget #widget-coding-panels textarea,
+body.widget #widget-code-wing,
+body.widget #widget-code-wing .widget-wing-content,
+body.widget #widget-code-wing .widget-wing-footer {
+  box-sizing:border-box;
+  min-width:0;
+}
+body.widget #widget-coding-panels .widget-panel-toggle,
+body.widget #widget-coding-panels .widget-panel-body,
+body.widget #widget-coding-panels .widget-project-row,
+body.widget #widget-coding-panels .quick-actions { max-width:100%; }
 /* The cockpit's decorative rim must sit below the portrait, not cut into it. */
 body.widget #widget-tools::before { top:2px; }
 body.widget #widget-tools::after { top:6px; }
