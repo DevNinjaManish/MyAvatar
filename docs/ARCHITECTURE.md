@@ -1,5 +1,8 @@
 # Architecture
 
+The shared agent lifecycle and capability boundary are documented in
+[AGENT_FOUNDATION.md](AGENT_FOUNDATION.md).
+
 Updated 2026-09-09. This document separates the implemented baseline from the proposed engine redesign in [ENGINE_IMPROVEMENT_PLAN.md](ENGINE_IMPROVEMENT_PLAN.md). Adding the plan does not implement it.
 
 ## Current implementation
@@ -60,6 +63,14 @@ Keep original bot identities, transparent busts, one full companion, four primar
 Opt-in screen awareness uses a narrow preload call and a downscaled display image. The frame is sent to the supplied loopback Ollama configuration and discarded after the turn. The backend disables action-tag handling for image-bearing turns and treats the image as untrusted. Only derived comments enter the separate local screen-awareness log. Future tools must preserve that boundary across screen text, code, logs and retrieved content.
 
 Model downloads are explicit setup work. Normal diagnostics should remain local and avoid private content. The renderer sandbox does not sandbox an OS command launched by a privileged process; project scope/cwd is also not command containment. This distinction is mandatory for future execution features.
+
+## Shared agent foundation
+
+The current runtime publishes bounded `agent_state` events for active turns.
+Rivet wraps its existing coding context, planning, approval and verification
+flow with the shared task model; Nova, Sterling, Pixel and Luma use the same
+observable lifecycle for non-tool conversation work. No new filesystem, shell,
+Git, or external-service permissions are granted to those companions.
 
 ## Proposed engine architecture — not implemented
 

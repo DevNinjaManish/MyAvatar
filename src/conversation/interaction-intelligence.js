@@ -26,7 +26,7 @@ const BOT_QUICK_ACTIONS={
   ],
 };
 
-const SAFE_PHASES=new Set(['idle','listening','thinking','writing','speaking','complete','interrupted','failed']);
+const SAFE_PHASES=new Set(['idle','listening','understanding','context','planning','working','verifying','needs_approval','thinking','writing','speaking','complete','blocked','cancelled','error','interrupted','failed']);
 const LONG_WORK_MS=4500;
 const MAX_FOCUS_PROMPT_CHARS=120;
 
@@ -55,6 +55,10 @@ export function conversationPhaseFromEvent(event,current='idle'){
     if(['idle','listening','thinking','speaking'].includes(value))return value;
     return current;
   }
+  if(event.type==='agent_state'){
+    const value=String(event.agentState?.phase||'').toLowerCase();
+    if(['understanding','context','planning','working','verifying','needs_approval','complete','blocked','cancelled','error'].includes(value))return value;
+  }
   if(event.type==='token'||event.type==='first_token')return 'writing';
   if(event.type==='audio')return 'speaking';
   if(event.type==='done')return current==='speaking'?'speaking':'complete';
@@ -64,7 +68,7 @@ export function conversationPhaseFromEvent(event,current='idle'){
 
 export function safeConversationPhase(value){return SAFE_PHASES.has(value)?value:'idle';}
 export function phaseLabel(phase,{longRunning=false}={}){
-  const labels={idle:'Ready',listening:'Listening',thinking:longRunning?'Still thinking locally…':'Thinking…',writing:longRunning?'Still preparing reply…':'Replying…',speaking:'Speaking',complete:'Ready',interrupted:'Interrupted',failed:'Needs attention'};
+  const labels={idle:'Ready',listening:'Listening',understanding:'Understanding…',context:'Checking context…',planning:'Planning…',working:'Working…',verifying:'Verifying…',needs_approval:'Needs approval',thinking:longRunning?'Still thinking locally…':'Thinking…',writing:longRunning?'Still preparing reply…':'Replying…',speaking:'Speaking',complete:'Ready',blocked:'Blocked',cancelled:'Cancelled',error:'Needs attention',interrupted:'Interrupted',failed:'Needs attention'};
   return labels[safeConversationPhase(phase)]||'Ready';
 }
 

@@ -11,6 +11,12 @@ test('conversation phase follows only authored runtime milestones',()=>{
   phase=conversationPhaseFromEvent({type:'error',message:'private log'},phase);assert.equal(phase,'failed');
 });
 
+test('shared agent phases map to authored UI labels',()=>{
+  assert.equal(conversationPhaseFromEvent({type:'agent_state',agentState:{phase:'PLANNING'}}),'planning');
+  assert.equal(phaseLabel('verifying'),'Verifying…');
+  assert.equal(safeConversationPhase('NEEDS_APPROVAL'.toLowerCase()),'needs_approval');
+});
+
 test('safe conversation phase rejects arbitrary strings',()=>{
   assert.equal(safeConversationPhase('thinking'),'thinking');
   assert.equal(safeConversationPhase('speaking'),'speaking');

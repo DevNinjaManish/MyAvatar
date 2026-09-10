@@ -6,7 +6,7 @@ const PROFILES={
   luma:{name:'Luma',eyebrow:'DESIGN WORKSPACE',title:'Refine the experience',description:'Keep the active design brief, critique, and visual direction together.',mode:'creative',action:'Open creative view'},
 };
 
-const ACTIVITY={idle:'Ready',listening:'Listening',thinking:'Thinking',writing:'Preparing reply',speaking:'Speaking',complete:'Ready',interrupted:'Ready',failed:'Needs attention'};
+const ACTIVITY={idle:'Ready',listening:'Listening',understanding:'Understanding',context:'Checking context',planning:'Planning',working:'Working',verifying:'Verifying',needs_approval:'Needs approval',speaking:'Speaking',complete:'Ready',blocked:'Blocked',cancelled:'Cancelled',error:'Needs attention',thinking:'Thinking',writing:'Preparing reply',interrupted:'Ready',failed:'Needs attention'};
 const EMPTY_RIVET={project:'No project selected',files:[],task:'No active change',verification:'Not running',transactionId:null,pending:false,repairAvailable:false,repairUsed:false,rollbackAvailable:false,repairRound:0,diffSummary:''};
 const EMPTY_CALENDAR={available:false,label:'Calendar context unavailable in this session.',events:[]};
 
@@ -93,7 +93,8 @@ export function mountUnifiedWorkspace(win=window,doc=document){
   stage.insertAdjacentElement('afterend',shell);
   const focusLabel=shell.querySelector('.uws-focus span');
   const modules=doc.createElement('div');modules.className='uws-modules';modules.hidden=true;shell.querySelector('.uws-focus').insertAdjacentElement('afterend',modules);
-  let botId='nova',phase='idle',rivet={...EMPTY_RIVET,files:[]},calendar={...EMPTY_CALENDAR,...(win.__myavatarCalendarContext||{})};
+  const taskPanel=doc.createElement('div');taskPanel.className='uws-task';taskPanel.hidden=true;shell.querySelector('.uws-focus').insertAdjacentElement('afterend',taskPanel);
+  let botId='nova',phase='idle',rivet={...EMPTY_RIVET,files:[]},calendar={...EMPTY_CALENDAR,...(win.__myavatarCalendarContext||{})},agentState=null;
   const focusText=()=>win.__myavatarChatStore?.focus?.()||'No active focus yet';
   const actionStatus=shell.querySelector('[data-uws-action-status]');
   const render=()=>{
@@ -105,6 +106,7 @@ export function mountUnifiedWorkspace(win=window,doc=document){
     const companion=companionWorkspaceState(botId,{focus:focusText(),messages:win.__myavatarChatStore?.snapshot?.(botId)||[],draft:win.__myavatarChatStore?.draft?.(botId)||'',calendar});
     focusLabel.textContent=companion.focusLabel;shell.querySelector('.uws-focus strong').textContent=companion.focus;
     modules.hidden=!companion.modules.length;modules.replaceChildren();for(const [label,value] of companion.modules){const item=doc.createElement('div');const heading=doc.createElement('span');heading.textContent=label;const detail=doc.createElement('strong');detail.textContent=value;item.append(heading,detail);modules.append(item);}
+    taskPanel.hidden=!agentState;taskPanel.replaceChildren();if(agentState){const title=doc.createElement('span');title.textContent='Active task';const goal=doc.createElement('strong');goal.textContent=agentState.goal||'Current task';const status=doc.createElement('small');status.textContent=`${agentState.phase||'IDLE'} · ${agentState.status||'active'}`;taskPanel.append(title,goal,status);const steps=(agentState.steps||[]).slice(0,5);if(steps.length){const list=doc.createElement('ol');for(const step of steps){const item=doc.createElement('li');item.dataset.status=step.status||'pending';item.textContent=step.label;list.append(item);}taskPanel.append(list);}if(agentState.blocker){const blocker=doc.createElement('small');blocker.className='uws-task-blocker';blocker.textContent=agentState.blocker;taskPanel.append(blocker);}}
     const context=shell.querySelector('.uws-context');context.hidden=botId!=='robot';
     shell.querySelector('[data-uws-project]').textContent=rivet.project;
     shell.querySelector('[data-uws-files]').textContent=rivet.files.length?rivet.files.join(' · '):'No files inspected';
@@ -136,8 +138,9 @@ export function mountUnifiedWorkspace(win=window,doc=document){
   shell.querySelector('[data-uws-rollback]').onclick=()=>act('rollback');
   const onRuntime=event=>{
     const payload=event.detail||{};
-    if(payload.type==='config'&&typeof payload.config?.conversation?.persona==='string')botId=payload.config.conversation.persona;
+    if(payload.type==='config'&&typeof payload.config?.conversation?.persona==='string'){botId=payload.config.conversation.persona;agentState=null;}
     if(payload.type==='calendar_context')calendar={...EMPTY_CALENDAR,...payload};
+    if(payload.type==='agent_state'&&payload.agentState?.phase){agentState=payload.agentState;phase=String(payload.agentState.phase).toLowerCase();}
     if(payload.type==='state')phase=String(payload.state||phase).toLowerCase();
     else if(payload.type==='token'||payload.type==='first_token')phase='writing';
     else if(payload.type==='audio')phase='speaking';
@@ -153,6 +156,6 @@ export function mountUnifiedWorkspace(win=window,doc=document){
   shell.querySelector('[data-uws-open]').onclick=()=>{const mode=shell.querySelector('[data-uws-open]').dataset.mode;doc.querySelector(`[data-workspace-mode="${mode}"]`)?.click?.();};
   shell.querySelector('[data-uws-chat]').onclick=()=>{const transcript=doc.getElementById('transcript');if(transcript){transcript.hidden=false;doc.getElementById('text')?.focus?.();}};
   render();
-  const api={snapshot:()=>({botId,phase,focus:focusText(),companion:companionWorkspaceState(botId,{focus:focusText(),messages:win.__myavatarChatStore?.snapshot?.(botId)||[],draft:win.__myavatarChatStore?.draft?.(botId)||'',calendar}),rivet:{...rivet,files:[...rivet.files]}}),dispose(){win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.removeEventListener('myavatar:calendar-context',onCalendar);win.__myavatarChatStore?.removeEventListener?.('change',onStore);shell.remove();delete win.__myavatarUnifiedWorkspace;}};
+  const api={snapshot:()=>({botId,phase,focus:focusText(),agentState,companion:companionWorkspaceState(botId,{focus:focusText(),messages:win.__myavatarChatStore?.snapshot?.(botId)||[],draft:win.__myavatarChatStore?.draft?.(botId)||'',calendar}),rivet:{...rivet,files:[...rivet.files]}}),dispose(){win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.removeEventListener('myavatar:calendar-context',onCalendar);win.__myavatarChatStore?.removeEventListener?.('change',onStore);shell.remove();delete win.__myavatarUnifiedWorkspace;}};
   win.__myavatarUnifiedWorkspace=api;return api;
 }
