@@ -69,6 +69,23 @@ class AgentFoundationTests(unittest.TestCase):
         task.complete('Verification passed.')
         self.assertIsNone(task.public()['recovery'])
 
+    def test_verification_step_can_pass_fail_or_cancel_without_hidden_actions(self):
+        task = AgentTask.create('robot', 'Check the widget', [('verify', 'Run verification')])
+        task.begin_verification().update_step('verify', 'active')
+        self.assertEqual(task.public()['steps'][0]['status'], 'active')
+        task.update_step('verify', 'complete').complete('Checks passed.')
+        self.assertEqual(task.public()['steps'][0]['status'], 'complete')
+
+        task = AgentTask.create('robot', 'Repair the widget', [('verify', 'Run verification')])
+        task.begin_verification().update_step('verify', 'active').update_step('verify', 'blocked').needs_approval('Verification needs review.').offer_recovery('One bounded repair is available.')
+        self.assertEqual(task.public()['steps'][0]['status'], 'blocked')
+        self.assertEqual(task.public()['phase'], 'NEEDS_APPROVAL')
+        self.assertTrue(task.public()['recovery']['available'])
+
+        task = AgentTask.create('robot', 'Stop checking the widget', [('verify', 'Run verification')])
+        task.begin_verification().update_step('verify', 'active').cancel()
+        self.assertEqual(task.public()['steps'][0]['status'], 'cancelled')
+
 
 if __name__ == '__main__':
     unittest.main()

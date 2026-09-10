@@ -114,6 +114,11 @@ class AgentTask:
         self.blocker = ''
         return self.set_phase(AgentPhase.WORKING)
 
+    def begin_verification(self) -> 'AgentTask':
+        self.status = 'active'
+        self.blocker = ''
+        return self.set_phase(AgentPhase.VERIFYING)
+
     def offer_recovery(self, label: str) -> 'AgentTask':
         self.recovery = {'available': True, 'label': str(label).strip()[:160]}
         self.updated_at = time.time()
