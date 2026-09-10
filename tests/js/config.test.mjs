@@ -32,6 +32,24 @@ test('Fast and Balanced are the only supported performance modes',()=>{
   assert.equal(config.performanceProfile,'low');
 });
 
+test('Fast mode is tuned to start speech earlier than Balanced',()=>{
+  const fast=config.performanceProfiles.low.conversation;
+  const balanced=config.performanceProfiles.medium.conversation;
+  assert.ok(fast.firstChunkChars<=40);
+  assert.ok(fast.firstChunkChars<balanced.firstChunkChars);
+  assert.ok(fast.chunkChars<balanced.chunkChars);
+});
+
+test('live voice latency defaults remain conservative but responsive',()=>{
+  const vad=config.audio.vad;
+  assert.ok(vad.silenceMs>=380&&vad.silenceMs<=450);
+  assert.ok(vad.minSpeechMs>=200&&vad.minSpeechMs<=240);
+  assert.ok(vad.onsetMs>=100&&vad.onsetMs<=120);
+  assert.ok(config.audio.resumeDelayMs>=100&&config.audio.resumeDelayMs<=160);
+  assert.ok(vad.bargeIn.threshold>vad.threshold);
+  assert.ok(vad.bargeIn.minSpeechMs>vad.minSpeechMs);
+});
+
 test('all performance controls expose only Fast and Balanced',()=>{
   assert.match(markup,/id="widget-quality-slider"[^>]*max="1"/);
   assert.doesNotMatch(markup,/value="high"/);
