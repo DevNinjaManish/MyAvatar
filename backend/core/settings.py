@@ -15,6 +15,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from backend.core.bot_behavior import behavior_prompt
+
 log = logging.getLogger('avatar.settings')
 SCHEMA_VERSION = 1
 MAX_PREFERENCE_BYTES = 64 * 1024
@@ -65,10 +67,7 @@ def read_preferences(path: Path) -> dict[str, Any]:
     except FileNotFoundError:
         return {}
     except (OSError, ValueError, UnicodeError, RecursionError) as exc:
-        # Do not log contents, user-supplied values or exception messages/paths.
         log.warning('Saved preferences unavailable (%s); using safe preference fallbacks. File left unchanged.', type(exc).__name__)
-        # A broken file may have held a user's manual/private choices. Do not
-        # turn its loss into automatic listening or memory persistence.
         return {'interaction': 'manual', 'memoryEnabled': False}
 
 
@@ -80,7 +79,6 @@ def select_preferences(raw: dict[str, Any], defaults: dict[str, Any]) -> dict[st
         'performanceProfile': lambda v: _known(v, defaults['performanceProfiles']) or (isinstance(v, str) and v in LEGACY_PROFILE_ALIASES),
         'interaction': lambda v: isinstance(v, str) and v in ('live', 'manual'),
         'memoryEnabled': lambda v: type(v) is bool,
-        # Syntax validation only; multilingual/provider compatibility is a later batch.
         'language': lambda v: isinstance(v, str) and re.fullmatch(r'[a-z]{2,3}', v) is not None,
     }
     for key, valid in checks.items():
@@ -135,9 +133,8 @@ The legacy High identifier is mapped to Balanced for older callers.
         if not isinstance(overrides, dict):
             raise ValueError('Performance profile overrides must be objects.')
         sections[section] = {**copy.deepcopy(defaults[section]), **copy.deepcopy(overrides)}
-    sections['conversation'].update(persona=bot, system=identity['system'])
+    sections['conversation'].update(persona=bot, system=identity['system'] + behavior_prompt(bot))
     sections['tts']['voice'] = identity['voice']
-    # Validate before mutating the session so failed switches are non-partial.
     config.update(sections)
     config['performanceProfile'] = name
 
@@ -163,12 +160,7 @@ def load_config(config_path: Path, preferences_path: Path) -> dict[str, Any]:
 
 
 def save_preferences(config: dict[str, Any], path: Path) -> bool:
-    """Write a complete private JSON file, then atomically replace in the same dir.
-
-On failure keep the last saved file and let the current in-memory session run.
-Concurrent saves are complete snapshots (last successful writer wins), not a
-cross-process preference merge or a guarantee against power loss.
-"""
+    """Write a complete private JSON file, then atomically replace in the same dir."""
     raw = {
         'persona': config['conversation']['persona'],
         'performanceProfile': config['performanceProfile'],
