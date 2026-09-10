@@ -1,5 +1,6 @@
 #stage .readiness-presence{position:absolute;top:16px;left:50%;z-index:3;transform:translateX(-50%);padding:6px 10px;border:1px solid #ffffff1f;border-radius:999px;background:#11191dcc;color:var(--ink);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;box-shadow:0 6px 18px #0003;transition:opacity .2s ease,transform .2s ease,color .2s ease,border-color .2s ease}
 #stage .readiness-presence[data-state=charging]{color:#e5c98e;border-color:#e5c98e55;animation:readiness-charge 1.8s ease-in-out infinite}
+#stage .readiness-presence[data-state=ready]{display:none}
 #stage .readiness-presence[data-state=limited]{color:#e5c98e;border-color:#e5c98e55}
 #stage .readiness-presence[data-state=broken]{color:#ffb2a5;border-color:#ffb2a555}
 #stage[data-readiness-presence=sleeping] canvas{filter:grayscale(.9) brightness(.42) saturate(.55)}
