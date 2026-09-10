@@ -1,6 +1,4 @@
 import copy
-import json
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -20,6 +18,8 @@ class BotBehaviorTests(unittest.TestCase):
             self.assertIn('easy to ignore', prompt)
             self.assertIn('Do not nag', prompt)
             self.assertIn('unless that information was actually supplied', prompt)
+            self.assertIn('Session continuity is temporary context', prompt)
+            self.assertIn('conversation history', prompt)
 
     def test_next_step_policy_is_role_specific(self):
         instructions = {bot: next_step_policy(bot)['instruction'] for bot in BEHAVIORS}
@@ -27,6 +27,14 @@ class BotBehaviorTests(unittest.TestCase):
         self.assertIn('marketing', instructions['pixel'])
         self.assertIn('design', instructions['luma'])
         self.assertIn('coding', instructions['robot'])
+
+    def test_continuity_policy_matches_each_specialty(self):
+        continuity = {bot: next_step_policy(bot)['continuity'] for bot in BEHAVIORS}
+        self.assertIn('unresolved user goal', continuity['nova'])
+        self.assertIn('unfinished commitment', continuity['butler'])
+        self.assertIn('active marketing objective', continuity['pixel'])
+        self.assertIn('active design brief', continuity['luma'])
+        self.assertIn('must not expand coding authority', continuity['robot'])
 
     def test_profile_application_appends_behavior_without_mutating_repo_defaults(self):
         config_path = Path('config.json')

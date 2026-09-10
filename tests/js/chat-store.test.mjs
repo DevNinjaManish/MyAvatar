@@ -37,6 +37,26 @@ test('history replaces only the active bot conversation',()=>{
   assert.equal(store.snapshot()[0].text,'Nova memory');assert.equal(store.snapshot('robot')[0].text,'Rivet memory');
 });
 
+test('session focus follows the latest user intent and survives bot switching',()=>{
+  const store=new ChatStore();
+  store.applyRuntimeEvent(config('nova','Nova'));store.applyRuntimeEvent({type:'transcript',botId:'nova',turn:1,text:'Help me plan tomorrow morning'});
+  assert.equal(store.focus(),'Help me plan tomorrow morning');
+  store.applyRuntimeEvent(config('pixel','Pixel'));store.applyRuntimeEvent({type:'transcript',botId:'pixel',turn:2,text:'Launch campaign for the new app'});
+  assert.equal(store.focus(),'Launch campaign for the new app');
+  store.applyRuntimeEvent(config('nova','Nova'));assert.equal(store.focus(),'Help me plan tomorrow morning');
+});
+
+test('history restores only the latest user focus and clear removes it',()=>{
+  const store=new ChatStore();store.setBot('luma','Luma');
+  store.loadHistory([{role:'user',content:'Old brief'},{role:'assistant',content:'Okay'},{role:'user',content:'Refine the settings screen'}],'luma');
+  assert.equal(store.focus(),'Refine the settings screen');store.clear();assert.equal(store.focus(),'');
+});
+
+test('session focus is bounded and never stores the whole long request',()=>{
+  const store=new ChatStore();store.setBot('butler','Sterling');store.setFocus('x'.repeat(400));
+  assert.ok(store.focus().length<=140);assert.match(store.focus(),/…$/);
+});
+
 test('old bot runtime output is ignored after companion switch',()=>{
   const store=new ChatStore();store.applyRuntimeEvent(config('nova','Nova'));store.applyRuntimeEvent({type:'token',botId:'robot',turn:1,text:'stale'});assert.equal(store.snapshot().length,0);
 });

@@ -1,25 +1,37 @@
 const FINAL_STATUSES=new Set(['complete','interrupted','failed']);
 const VALID_STATUSES=new Set(['streaming',...FINAL_STATUSES]);
+const MAX_FOCUS_CHARS=140;
 
 export function shouldFollowScroll({scrollTop=0,clientHeight=0,scrollHeight=0}={},threshold=56){
   return scrollHeight-clientHeight-scrollTop<=threshold;
 }
+function cleanFocus(text){
+  const value=String(text??'').replace(/\s+/g,' ').trim();
+  if(!value)return '';
+  return value.length<=MAX_FOCUS_CHARS?value:value.slice(0,MAX_FOCUS_CHARS-1).trimEnd()+'…';
+}
 
 export class ChatStore extends EventTarget{
-  constructor(){super();this.botId='robot';this.botName='Rivet';this.messagesByBot=new Map();this.drafts=new Map();}
+  constructor(){super();this.botId='robot';this.botName='Rivet';this.messagesByBot=new Map();this.drafts=new Map();this.focusByBot=new Map();}
   _messages(bot=this.botId){if(!this.messagesByBot.has(bot))this.messagesByBot.set(bot,[]);return this.messagesByBot.get(bot);}
   snapshot(bot=this.botId){return this._messages(bot).map(item=>({...item,meta:{...(item.meta||{})}}));}
   draft(bot=this.botId){return this.drafts.get(bot)||'';}
   setDraft(text,bot=this.botId){this.drafts.set(bot,String(text??''));this._emit('draft');}
+  focus(bot=this.botId){return this.focusByBot.get(bot)||'';}
+  setFocus(text,bot=this.botId){const value=cleanFocus(text);if(value)this.focusByBot.set(bot,value);else this.focusByBot.delete(bot);this._emit('focus');return value;}
   setBot(botId,name){if(typeof botId==='string'&&botId)this.botId=botId;if(typeof name==='string'&&name)this.botName=name;this._emit('bot');}
-  clear(bot=this.botId){this.messagesByBot.set(bot,[]);this._emit('messages');}
+  clear(bot=this.botId){this.messagesByBot.set(bot,[]);this.focusByBot.delete(bot);this._emit('messages');this._emit('focus');}
   loadHistory(history=[],bot=this.botId){
-    const items=[];let index=0;
+    const items=[];let index=0,lastUser='';
     for(const entry of Array.isArray(history)?history:[]){
       if(!entry||!['user','assistant'].includes(entry.role))continue;
-      items.push({id:`history-${bot}-${index++}`,botId:bot,role:entry.role,type:'message',text:String(entry.content||''),status:'complete',turn:null,meta:{}});
+      const text=String(entry.content||'');
+      items.push({id:`history-${bot}-${index++}`,botId:bot,role:entry.role,type:'message',text,status:'complete',turn:null,meta:{}});
+      if(entry.role==='user'&&text.trim())lastUser=text;
     }
-    this.messagesByBot.set(bot,items);this._emit('messages');
+    this.messagesByBot.set(bot,items);
+    if(lastUser)this.focusByBot.set(bot,cleanFocus(lastUser));else this.focusByBot.delete(bot);
+    this._emit('messages');this._emit('focus');
   }
   addStructured({id,type,text='',status='complete',turn=null,meta={}}){return this._upsert({id,role:'system',type,text,status,turn,meta});}
   _find(turn,role='assistant'){return this._messages().find(item=>item.turn===turn&&item.role===role);}
@@ -45,7 +57,7 @@ export class ChatStore extends EventTarget{
     if(event.botId&&event.botId!==this.botId)return;
     const turn=Number.isInteger(event.turn)?event.turn:null;
     if(event.type==='bot_history'){this.loadHistory(event.history,this.botId);return;}
-    if(event.type==='transcript'&&turn!==null){this._upsert({id:`turn-${turn}-user`,role:'user',text:String(event.text||''),status:'complete',turn});return;}
+    if(event.type==='transcript'&&turn!==null){this._upsert({id:`turn-${turn}-user`,role:'user',text:String(event.text||''),status:'complete',turn});this.setFocus(event.text);return;}
     if(event.type==='token'&&turn!==null){
       let item=this._find(turn,'assistant');
       if(!item)item=this._upsert({id:`turn-${turn}-assistant`,role:'assistant',text:'',status:'streaming',turn});

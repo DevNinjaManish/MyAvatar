@@ -67,6 +67,13 @@ function renderContainer(doc,container,store,win,{compact=false}={}){
   const oldHeight=container.scrollHeight;const oldTop=container.scrollTop;
   const messages=store.snapshot();
   const fragment=doc.createDocumentFragment();
+  const focus=store.focus();
+  if(focus&&messages.length){
+    const note=doc.createElement('div');note.className='session-focus';note.title='Temporary session context for this companion';
+    const label=doc.createElement('strong');label.textContent='Current focus';
+    const text=doc.createElement('span');text.textContent=focus;
+    note.append(label,text);fragment.append(note);
+  }
   if(compact&&!messages.length){const hint=doc.createElement('p');hint.className='hint';hint.textContent='Talk naturally or type a message.';fragment.append(hint);}
   for(const item of messages)fragment.append(renderMessage(doc,item,store.botName,store,win));
   container.replaceChildren(fragment);
