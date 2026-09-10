@@ -9,6 +9,15 @@ export function resample(input, rate, target=16000){
   return out;
 }
 export function toBase64(bytes){let s='';for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(s);}
+export function inputLevel(frame){
+  if(!frame?.length)return 0;
+  let sum=0,count=0;
+  for(const sample of frame){if(!Number.isFinite(sample))continue;sum+=sample*sample;count++;}
+  return count?Math.min(1,Math.sqrt(sum/count)*12):0;
+}
+function emitInputLevel(level){
+  try{globalThis.dispatchEvent?.(new CustomEvent('myavatar:mic-level',{detail:{level:Math.max(0,Math.min(1,Number(level)||0))}}));}catch{}
+}
 export function getActiveCaptureSnapshot(){return activeCaptureOwner?.captureSnapshot()||{active:false,mode:null,muted:false,generation:0};}
 export function endActiveCapture(){return activeCaptureOwner?.endCapture()||new Float32Array();}
 export function suspendActiveLiveCapture(){
@@ -57,6 +66,7 @@ export class AudioEngine{
   _abandonCapture(stream,generation){
     this._releaseCaptureNodes(stream);
     if(this._isCaptureCurrent(generation)){this.captureActive=false;this.captureMode=null;this.liveGate=false;this.chunks=[];if(activeCaptureOwner===this)activeCaptureOwner=null;}
+    emitInputLevel(0);
   }
   async record(onTimeout,onFrame,{mode='manual'}={}){
     const captureGeneration=this._claimCapture(mode);
@@ -73,7 +83,7 @@ export class AudioEngine{
       await this._ensureWorklet();
       if(!this._isCaptureCurrent(captureGeneration)){this._abandonCapture(stream,captureGeneration);return false;}
       this.recorder=new AudioWorkletNode(this.ctx,'capture');
-      this.recorder.port.onmessage=e=>{if(!this._isCaptureCurrent(captureGeneration)||!this.captureActive)return;if(onFrame)onFrame(e.data);else this.chunks.push(e.data);};
+      this.recorder.port.onmessage=e=>{if(!this._isCaptureCurrent(captureGeneration)||!this.captureActive)return;if(this.captureMode==='live')emitInputLevel(this.liveGate?inputLevel(e.data):0);if(onFrame)onFrame(e.data);else this.chunks.push(e.data);};
       this.silent=this.ctx.createGain();this.silent.gain.value=0;this.input.connect(this.highpass).connect(this.recorder).connect(this.silent).connect(this.ctx.destination);this.captureActive=true;
       if(onTimeout)this.timer=setTimeout(()=>{if(this._isCaptureCurrent(captureGeneration)&&this.captureActive)onTimeout();},59000);
       return true;
@@ -89,7 +99,7 @@ export class AudioEngine{
       const generation=this.captureGeneration;
       if(this.liveGate){
         const utterance=this.detector.push(frame);
-        if(utterance&&this._isCaptureCurrent(generation)){this.liveGate=false;onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.detector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:false});}
+        if(utterance&&this._isCaptureCurrent(generation)){this.liveGate=false;emitInputLevel(0);onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.detector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:false});}
         return;
       }
       if(this.playing&&Date.now()-this.playbackStartedAt>=this.bargeInGuardMs){
@@ -104,10 +114,10 @@ export class AudioEngine{
   setListening(enabled){
     const allowed=!enabled||turnPlayback.canResumeListening();const next=Boolean(enabled)&&allowed&&this.captureMode==='live'&&this.captureActive&&activeCaptureOwner===this;
     if(next===this.liveGate)return this.liveGate;
-    this.liveGate=next;this.detector?.reset();this.bargeDetector?.reset();return this.liveGate;
+    this.liveGate=next;if(!next)emitInputLevel(0);this.detector?.reset();this.bargeDetector?.reset();return this.liveGate;
   }
   endCapture({collect=false}={}){
-    const sampleRate=this.ctx?.sampleRate||16000;++this.captureGeneration;this.liveGate=false;this.detector?.reset();this.bargeDetector?.reset();
+    const sampleRate=this.ctx?.sampleRate||16000;++this.captureGeneration;this.liveGate=false;emitInputLevel(0);this.detector?.reset();this.bargeDetector?.reset();
     const chunks=collect?(this.chunks||[]):[];this._releaseCaptureNodes();this.captureActive=false;this.captureMode=null;this.chunks=[];
     if(activeCaptureOwner===this)activeCaptureOwner=null;
     if(!collect)return new Float32Array();
