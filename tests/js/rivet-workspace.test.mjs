@@ -47,6 +47,24 @@ test('agent workspace CSS keeps advanced tools secondary', () => {
   assert.match(css,/data-task-tone/);
 });
 
+test('Rivet hierarchy has a branded agent header and compact project treatment', () => {
+  const code=readFileSync(new URL('../../src/widget/rivet-workspace.js',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../../src/workspace/agent-task.css',import.meta.url),'utf8');
+  assert.match(code,/LOCAL CODING AGENT/);
+  assert.match(code,/rivet-project-main/);
+  assert.match(code,/Open project/);
+  assert.match(css,/\.rivet-heading-copy/);
+  assert.match(css,/\.rivet-project-dot/);
+  assert.match(css,/\.rivet-agent-workspace #widget-panel-notice/);
+});
+
+test('Rivet visual hierarchy avoids boxed timeline and advanced cards', () => {
+  const css=readFileSync(new URL('../../src/workspace/agent-task.css',import.meta.url),'utf8');
+  assert.match(css,/\.rivet-timeline[\s\S]*border-top:1px solid/);
+  assert.match(css,/\.rivet-details-body > \.widget-panel[\s\S]*border-radius:0/);
+  assert.match(css,/#widget-task-run,[\s\S]*#widget-view-changes[\s\S]*box-shadow/);
+});
+
 test('Rivet workspace mounts after task controller and presentation mounts after workspace', () => {
   const code=readFileSync(new URL('../../src/app/entry.js',import.meta.url),'utf8');
   assert.ok(code.indexOf('mountRivetWorkspace(window,document)') > code.indexOf('mountRivetTaskController(window,document,window.desktop)'));
