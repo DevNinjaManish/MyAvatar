@@ -1,5 +1,8 @@
 'use strict';
-const WIDTH = 320, COMPACT_HEIGHT = 430, UTILITY_HEIGHT = 820;
+// The companion platform occupies the upper rail.  A utility and Chat may be
+// open beneath it at the same time, so reserve a real working column instead
+// of compressing either surface into a tiny fragment.
+const WIDTH = 320, COMPACT_HEIGHT = 430, UTILITY_HEIGHT = 1080;
 const CHAT_HEIGHT = UTILITY_HEIGHT, TOOLS_HEIGHT = UTILITY_HEIGHT;
 const COMBINED_HEIGHT = UTILITY_HEIGHT, CALENDAR_HEIGHT = UTILITY_HEIGHT, WING_WIDTH = 440, GAP = 10;
 const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, max)));

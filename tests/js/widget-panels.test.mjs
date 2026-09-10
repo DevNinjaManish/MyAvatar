@@ -59,12 +59,12 @@ test('only disclosure preferences are persisted, never task or project content',
   assert.deepEqual(saved,{expanded:['task']});
 });
 test('compact dimensions use the larger stable widget frame',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1120,y:24,width:WIDTH,height:COMPACT_HEIGHT}));
-test('chat uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,UTILITY_HEIGHT));
-test('coding uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,UTILITY_HEIGHT));
-test('calendar leaves room for month controls and event entries',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,CALENDAR_HEIGHT));
+test('chat uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
+test('coding uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
+test('calendar leaves room for month controls and event entries within the display',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,Math.min(CALENDAR_HEIGHT,area.height)));
 test('chat+tools size is clamped to the work area',()=>{
   const result=widgetLayout({x:1170,y:100},{chat:true,tools:true},area);
-  assert.equal(result.bounds.height,UTILITY_HEIGHT);assert.equal(result.bounds.y,24);
+  assert.equal(result.bounds.height,Math.min(UTILITY_HEIGHT,area.height));assert.equal(result.bounds.y,24);
 });
 test('right edge opens the wide panel on the left without moving the compact column',()=>{
   const result=widgetLayout({x:1170,y:100},{tools:true,wide:true},area);
@@ -131,8 +131,19 @@ test('every panel disclosure references an existing element',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
   for(const match of html.matchAll(/aria-controls="([^"]+)"/g))assert.ok(html.includes(`id="${match[1]}"`),match[1]);
 });
-test('all specialist views share the widget coexistence layout',()=>{
+test('the widget has one fixed platform with a deterministic chat plus specialist stack',()=>{
   const css=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
-  assert.match(css,/widget-chat-open\.widget-calendar-open[\s\S]*widget-chat-open\.widget-panels-open[\s\S]*widget-chat-open\.widget-creative-open/);
-  assert.match(css,/widget-creative-open #widget-specialist-toggle/);
+  assert.match(css,/Final widget stack contract/);
+  assert.match(css,/widget-chat-open\.widget-calendar-open #widget-mini-calendar,[\s\S]*widget-chat-open\.widget-panels-open #widget-coding-panels,[\s\S]*widget-chat-open\.widget-creative-open #widget-creative-workspace/);
+  assert.match(css,/--widget-stack-specialist-height:clamp\(130px,calc\(100vh - 750px\),230px\);/);
+  assert.match(css,/top:calc\(475px \+ var\(--widget-stack-specialist-height\)\);\s*bottom:10px;\s*height:auto;/);
+  assert.match(css,/widget-wide-open #widget-coding-panels \{ display:none !important; \}/);
+  assert.match(css,/left:11px;\s*right:11px;\s*width:auto;/);
+});
+test('bot changes clear every attached widget surface before rendering the next companion',()=>{
+  const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');
+  const panels=readFileSync(new URL('../../src/widget/panels.js',import.meta.url),'utf8');
+  assert.match(runtime,/function syncBotUI\(\)\{\s*closeWidgetUtilities\(\);/);
+  assert.match(runtime,/function closeWidgetUtilities\(keep=''\)\{[\s\S]*widget-mini-calendar[\s\S]*widget-creative-workspace[\s\S]*closeCodingWorkspace/);
+  assert.match(panels,/win\.closeCodingWorkspace = \(\) => dispatch\(\{type: 'close-tools'\}\);/);
 });

@@ -471,3 +471,65 @@ body.widget.widget-chat-open.widget-calendar-open #widget-chat,
 body.widget.widget-chat-open.widget-panels-open #widget-chat,
 body.widget.widget-chat-open.widget-creative-open #widget-chat { top:620px; }
 body.widget[data-panel-side=right] #widget-code-wing { left:330px; }
+/* Final widget stack contract. The platform is a fixed anchor; optional
+ * companion workspaces sit beneath it and Chat may share that vertical rail.
+ * This deliberately overrides older experimental compact/coexistence rules. */
+body.widget.widget-chat-open main,
+body.widget.widget-panels-open main,
+body.widget.widget-calendar-open main,
+body.widget.widget-creative-open main {
+  --widget-avatar-size:270px;
+  width:270px !important;
+  height:272px !important;
+}
+body.widget.widget-chat-open #widget-chat,
+body.widget.widget-calendar-open #widget-mini-calendar,
+body.widget.widget-panels-open #widget-coding-panels,
+body.widget.widget-creative-open #widget-creative-workspace,
+body.widget.widget-wide-open #widget-code-wing {
+  position:fixed;
+  z-index:8;
+  top:465px;
+  left:11px;
+  right:11px;
+  width:auto;
+  bottom:10px;
+  height:auto;
+  max-height:none;
+  margin:0;
+  box-sizing:border-box;
+}
+/* One selected specialist plus Chat: both remain readable in a taller native
+ * widget. The specialist is first; the transcript/composer is always below. */
+body.widget.widget-chat-open.widget-calendar-open #widget-mini-calendar,
+body.widget.widget-chat-open.widget-panels-open #widget-coding-panels,
+body.widget.widget-chat-open.widget-creative-open #widget-creative-workspace,
+body.widget.widget-chat-open.widget-wide-open #widget-code-wing {
+  top:465px;
+  bottom:auto;
+  /* Preserve enough room for the chat composer on shorter displays, while
+   * using the extra space on taller ones for the specialist surface. */
+  --widget-stack-specialist-height:clamp(130px,calc(100vh - 750px),230px);
+  height:var(--widget-stack-specialist-height);
+}
+body.widget.widget-chat-open.widget-calendar-open #widget-chat,
+body.widget.widget-chat-open.widget-panels-open #widget-chat,
+body.widget.widget-chat-open.widget-creative-open #widget-chat,
+body.widget.widget-chat-open.widget-wide-open #widget-chat {
+  top:calc(475px + var(--widget-stack-specialist-height));
+  bottom:10px;
+  height:auto;
+}
+body.widget.widget-chat-open #widget-chat,
+body.widget.widget-chat-open #widget-chat #widget-messages,
+body.widget.widget-chat-open #widget-chat #widget-text-form,
+body.widget.widget-chat-open #widget-chat #widget-text,
+body.widget.widget-chat-open #widget-chat #widget-text-form button {
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+/* An expanded code detail replaces its coding disclosure, never creates a
+ * second overlapping coding surface. */
+body.widget.widget-wide-open #widget-coding-panels { display:none !important; }
+body.widget.widget-wide-open #widget-code-wing { display:flex; flex-direction:column; }

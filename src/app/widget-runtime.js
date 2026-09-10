@@ -235,7 +235,7 @@ function openLocalCalendarDialog(){const dialog=$('local-calendar-dialog');$('lo
 $('calendar-local-add').onclick=openLocalCalendarDialog;$('widget-local-calendar-add').onclick=openLocalCalendarDialog;
 $('local-calendar-form').onsubmit=event=>{event.preventDefault();const title=$('local-calendar-title').value.trim(),start=`${$('local-calendar-date').value}T${$('local-calendar-time').value}`;if(!title||!start)return;saveLocalCalendarEvent({title,start});localCalendarEvents=readLocalCalendar();$('local-calendar-dialog').close();void loadCalendarWorkspace();if(!document.body.classList.contains('widget'))return;void loadMiniCalendar();};
 setWorkspaceMode('coding',false);
-$('widget-calendar-toggle').onclick=()=>{window.closeAttachedWorkspace?.();if(!document.body.classList.contains('widget-calendar-open'))document.body.classList.add('widget-calendar-context-open');document.body.dataset.attachedWorkspace='';const panel=$('widget-mini-calendar');panel.hidden=!panel.hidden;document.body.classList.toggle('widget-calendar-open',!panel.hidden);if(panel.hidden)document.body.classList.remove('widget-calendar-context-open');if(!panel.hidden){window.desktop?.widgetCalendar?.({open:true});renderMiniCalendar();void loadMiniCalendar();}else window.desktop?.widgetCalendar?.({open:false});};
+$('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar'),opening=panel.hidden;window.closeAttachedWorkspace?.();document.body.dataset.attachedWorkspace='';panel.hidden=!opening;document.body.classList.toggle('widget-calendar-open',opening);if(opening){window.desktop?.widgetCalendar?.({open:true});renderMiniCalendar();void loadMiniCalendar();}else window.desktop?.widgetCalendar?.({open:false});};
 $('widget-mini-calendar-close').onclick=()=>{$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');window.desktop?.widgetCalendar?.({open:false});};
 $('widget-mini-calendar-refresh').onclick=()=>void loadMiniCalendar();
 $('widget-calendar-prev').onclick=()=>{miniCalendarMonth.setMonth(miniCalendarMonth.getMonth()-1);renderMiniCalendar();};
@@ -252,7 +252,7 @@ function renderCreativeWorkspace(botId){
   : [['Brief','Clarify the screen or product moment'],['Key decision','Choose the clearest hierarchy'],['Critique','Review spacing, contrast, and emphasis'],['Output','Design notes and visual prompts appear in chat']];
  for(const [label,value] of rows){const row=document.createElement('div');row.className='widget-specialist-row';const key=document.createElement('span');key.textContent=label;const text=document.createElement('strong');text.textContent=value;row.append(key,text);content.append(row);}
 }
-$('widget-creative-toggle').onclick=()=>{renderCreativeWorkspace(config?.conversation?.persona);const panel=$('widget-creative-workspace');const open=panel.hidden;panel.hidden=!open;document.body.classList.toggle('widget-creative-open',open);if(!open)document.body.classList.remove('widget-creative-context-open');else document.body.classList.add('widget-creative-context-open');};
+$('widget-creative-toggle').onclick=()=>{const panel=$('widget-creative-workspace'),opening=panel.hidden;renderCreativeWorkspace(config?.conversation?.persona);panel.hidden=!opening;document.body.classList.toggle('widget-creative-open',opening);};
 $('widget-creative-close').onclick=()=>{$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open','widget-creative-context-open');};
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
@@ -407,6 +407,7 @@ function interactWithAvatar(){
  const botIconFolderById = {robot:'rivet',nova:'nova',butler:'butler',pixel:'pixel',luma:'luma'};
 
 function syncBotUI(){
+ closeWidgetUtilities();
  const id=config.conversation.persona,name=config.bots?.[id]?.name||'Companion';
  const planningBot=id==='butler'?'STERLING':'NOVA';
  $('widget-calendar-eyebrow').textContent=planningBot;$('calendar-eyebrow').textContent=`${planningBot}’S WORKSPACE`;
@@ -488,10 +489,6 @@ $('widget-specialist-toggle').onclick=()=>{if(activeSpecialist==='calendar')$('w
 
 function setWidgetChat(open,focus=true){
  const shouldOpen=Boolean(open)&&document.body.classList.contains('widget');
- if(shouldOpen){
-  if(document.body.classList.contains('widget-calendar-open')){$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');window.desktop?.widgetCalendar?.({open:false});}
-  if(document.body.classList.contains('widget-panels-open'))$('widget-coding-tools').click();
- }
  document.body.classList.toggle('widget-chat-open',shouldOpen);
  if(!shouldOpen)document.body.classList.remove('widget-coding-chat-open');
  $('widget-chat-toggle').setAttribute('aria-expanded',String(shouldOpen));
@@ -500,6 +497,12 @@ function setWidgetChat(open,focus=true){
  if(shouldOpen){widgetUnread=0;syncWidgetUnread();}
  window.desktop?.widgetChat(shouldOpen);
  if(focus){if(shouldOpen)$('widget-text').focus();else $('widget-chat-toggle').focus();}
+}
+function closeWidgetUtilities(keep=''){
+ if(keep!=='chat')setWidgetChat(false,false);
+ if(keep!=='calendar'){$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');window.desktop?.widgetCalendar?.({open:false});}
+ if(keep!=='creative'){$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open');}
+ if(keep!=='coding')window.closeCodingWorkspace?.();
 }
 $('widget-chat-toggle').onclick=()=>setWidgetChat(!document.body.classList.contains('widget-chat-open'));
 $('widget-chat-close').onclick=()=>setWidgetChat(false);

@@ -401,24 +401,6 @@ export function mountWidgetPanels(doc, desktop) {
   // Core panel controls.
   on($('widget-coding-tools'), 'click', () => {
     closeMenus();
-    // Rivet starts in conversation mode. The detailed workbench is optional.
-    if (!state.open && !doc.body.classList.contains('widget-chat-open')) {
-      doc.body.classList.add('widget-coding-chat-open');
-      $('widget-chat-toggle').click();
-      $('widget-text').focus();
-      return;
-    }
-    if (doc.body.classList.contains('widget-chat-open') && !doc.body.classList.contains('widget-coding-chat-open')) {
-      doc.body.classList.add('widget-coding-chat-open');
-      $('widget-text').focus();
-      return;
-    }
-    if (!state.open && doc.body.classList.contains('widget-chat-open') && doc.body.classList.contains('widget-coding-chat-open')) {
-      dispatch({type: 'toggle-tools'});
-      return;
-    }
-    if (doc.body.classList.contains('widget-chat-open')) $('widget-chat-toggle').click();
-    if (doc.body.classList.contains('widget-calendar-open')) $('widget-calendar-toggle').click();
     dispatch({type: 'toggle-tools'});
     if (state.open) $('widget-panels-title').focus({preventScroll: true});
   });
@@ -692,5 +674,6 @@ export function mountWidgetPanels(doc, desktop) {
   void syncProjectState();
   win.openAttachedWorkspace = id => dispatch({type: 'open-wide', id});
   win.closeAttachedWorkspace = () => dispatch({type: 'close-wide'});
+  win.closeCodingWorkspace = () => dispatch({type: 'close-tools'});
   return {dispose() { abort.abort(); observer.disconnect(); unsubscribe?.(); }};
 }
