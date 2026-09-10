@@ -68,6 +68,15 @@ test('widget polish does not own fixed shell or toolbar positioning',()=>{
   assert.ok(!/\.widget-toolbar\s*\{[^}]*\bposition\s*:\s*(?:fixed|absolute)/s.test(css));
   assert.ok(!/\.widget-toolbar button[^\{]*\{[^}]*\bposition\s*:\s*absolute/s.test(css));
 });
+test('legacy base CSS does not own fixed companion shell geometry',()=>{
+  const css=readFileSync(new URL('../../src/styles/base.css',import.meta.url),'utf8');
+  const mainBlock=css.match(/body\.widget main\s*\{([^}]*)\}/s)?.[1] || '';
+  assert.ok(!/\b(?:width|height|margin|padding|top|left|right|bottom)\s*:/.test(mainBlock));
+  assert.ok(!/body\.widget #widget-chat\s*\{/.test(css));
+  assert.ok(!/body\.widget #widget-menu\s*,\s*body\.widget #bot-library/.test(css));
+  const toolbarButton=css.match(/\.widget-toolbar button\s*\{([^}]*)\}/s)?.[1] || '';
+  assert.ok(!/\b(?:width|height|position|top|left|right|bottom)\s*:/.test(toolbarButton));
+});
 test('widget stack remains the canonical fixed shell owner',()=>{
   const css=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
   for (const token of ['--widget-shell-column-width','--widget-shell-specialist-width','--widget-shell-platform-top','--widget-shell-tools-top']) {
