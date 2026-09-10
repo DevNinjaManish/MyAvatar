@@ -10,11 +10,11 @@ function card(doc,className){
   return node;
 }
 
-function appendToChats(doc,node){
+function appendToChats(doc,factory){
   const targets=[doc.getElementById('messages'),doc.getElementById('widget-messages')].filter(Boolean);
   for(const target of targets){
-    const clone=node.cloneNode(true);
-    target.append(clone);
+    const node=factory();
+    target.append(node);
     if(target.id==='widget-messages')target.scrollTop=target.scrollHeight;
   }
 }
@@ -32,9 +32,12 @@ function makePatchCard(win,doc,event){
   const approve=doc.createElement('button');approve.type='button';approve.textContent='Apply change';
   const reject=doc.createElement('button');reject.type='button';reject.textContent='Reject';
   const decide=decision=>{
-    try{send(win,{type:'coding_edit_decision',transactionId:tx.id,decision,turn:event.turn});
+    try{
+      send(win,{type:'coding_edit_decision',transactionId:tx.id,decision,turn:event.turn});
       approve.disabled=true;reject.disabled=true;
-    }catch(error){node.append(doc.createTextNode(String(error.message||error)));}
+    }catch(error){
+      const failure=doc.createElement('span');failure.className='coding-edit-error';failure.textContent=String(error.message||error);node.append(failure);
+    }
   };
   approve.onclick=()=>decide('approve');reject.onclick=()=>decide('reject');
   actions.append(approve,reject);node.append(title,meta,pre,actions);
@@ -42,12 +45,15 @@ function makePatchCard(win,doc,event){
 }
 
 function makeResultCard(win,doc,event){
-  const node=card(doc,'coding-result-card');
+  const node=card(doc,event.error?'coding-result-card coding-result-error':'coding-result-card');
   const title=doc.createElement('strong');title.textContent=event.message||'Coding edit updated.';
   node.append(title);
   if(event.result?.rollbackAvailable){
     const rollback=doc.createElement('button');rollback.type='button';rollback.textContent='Rollback';
-    rollback.onclick=()=>{rollback.disabled=true;send(win,{type:'coding_rollback',transactionId:event.result.id,turn:event.turn});};
+    rollback.onclick=()=>{
+      try{rollback.disabled=true;send(win,{type:'coding_rollback',transactionId:event.result.id,turn:event.turn});}
+      catch(error){rollback.disabled=false;const failure=doc.createElement('span');failure.className='coding-edit-error';failure.textContent=String(error.message||error);node.append(failure);}
+    };
     node.append(rollback);
   }
   return node;
@@ -61,7 +67,11 @@ function mountWorkspaceControl(win,doc){
   const input=doc.createElement('input');input.type='text';input.placeholder='Local project folder path';input.autocomplete='off';
   const button=doc.createElement('button');button.type='button';button.textContent='Set workspace';
   const status=doc.createElement('span');status.className='coding-workspace-status';status.textContent='Using MyAvatar';
-  button.onclick=()=>{const path=input.value.trim();if(path)send(win,{type:'coding_workspace',path});};
+  button.onclick=()=>{
+    const path=input.value.trim();if(!path)return;
+    try{send(win,{type:'coding_workspace',path});button.disabled=true;setTimeout(()=>{button.disabled=false;},400);}
+    catch(error){button.disabled=false;status.textContent=String(error.message||error);}
+  };
   node.append(label,input,button,status);host.prepend(node);
 }
 
@@ -71,8 +81,8 @@ export function mountCodingEdits(win=window,doc=document){
   if(!socket)return;
   socket.addEventListener('message',raw=>{
     let event;try{event=JSON.parse(raw.data);}catch{return;}
-    if(event.type==='coding_patch')appendToChats(doc,makePatchCard(win,doc,event));
-    if(event.type==='coding_edit_result')appendToChats(doc,makeResultCard(win,doc,event));
+    if(event.type==='coding_patch')appendToChats(doc,()=>makePatchCard(win,doc,event));
+    if(event.type==='coding_edit_result')appendToChats(doc,()=>makeResultCard(win,doc,event));
     if(event.type==='coding_workspace'){
       const status=doc.querySelector('.coding-workspace-status');
       if(status)status.textContent=`Using ${event.workspace?.name||event.workspace?.path||'workspace'}`;
