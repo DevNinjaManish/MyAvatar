@@ -7,26 +7,69 @@ const PROFILES={
 };
 
 const ACTIVITY={idle:'Ready',listening:'Listening',thinking:'Thinking',writing:'Preparing reply',speaking:'Speaking',complete:'Ready',interrupted:'Ready',failed:'Needs attention'};
+const EMPTY_RIVET={project:'No project selected',files:[],task:'No active change',verification:'Not running',transactionId:null,pending:false,repairAvailable:false,repairUsed:false,rollbackAvailable:false,repairRound:0,diffSummary:''};
 
 export function workspaceProfile(botId){return PROFILES[botId]||PROFILES.nova;}
 export function workspaceActivity(phase){return ACTIVITY[String(phase||'idle').toLowerCase()]||'Ready';}
 
-export function rivetWorkspaceState(event,current={project:'No project selected',task:'No active change',verification:'Not running'}){
+export function rivetPatchSummary(transaction={}){
+  const files=Array.isArray(transaction.files)?transaction.files:[];
+  if(!files.length)return 'Change ready for review';
+  const additions=files.reduce((sum,file)=>sum+(Number(file?.additions)||0),0);
+  const deletions=files.reduce((sum,file)=>sum+(Number(file?.deletions)||0),0);
+  return `${files.length} file${files.length===1?'':'s'} · +${additions}/-${deletions}`;
+}
+
+export function rivetWorkspaceState(event,current=EMPTY_RIVET){
   if(!event||typeof event!=='object')return current;
-  const next={...current};
-  if(event.type==='coding_workspace')next.project=event.workspace?.name||event.workspace?.path||'Local project';
-  if(event.type==='coding_context')next.task='Inspecting project context';
-  if(event.type==='coding_patch')next.task='Change ready for review';
+  const next={...EMPTY_RIVET,...current,files:[...(current.files||[])]};
+  if(event.type==='coding_workspace'){
+    next.project=event.workspace?.name||event.workspace?.path||'Local project';
+    next.files=[];next.task='Ready for a coding task';next.verification='Not running';next.transactionId=null;next.pending=false;next.repairAvailable=false;next.repairUsed=false;next.rollbackAvailable=false;next.repairRound=0;next.diffSummary='';
+  }
+  if(event.type==='coding_context'){
+    next.files=Array.isArray(event.paths)?event.paths.slice(0,8):[];
+    next.task=next.files.length?`Inspecting ${next.files.length} project file${next.files.length===1?'':'s'}`:'Inspecting project context';
+  }
+  if(event.type==='coding_patch'){
+    const tx=event.transaction||{};
+    next.transactionId=tx.id||null;next.pending=Boolean(next.transactionId);next.repairRound=Number(tx.repairRound)||0;next.repairUsed=next.repairRound>=1;next.repairAvailable=false;next.rollbackAvailable=false;
+    next.files=Array.isArray(tx.files)?tx.files.map(file=>file.path).filter(Boolean).slice(0,8):next.files;
+    next.diffSummary=rivetPatchSummary(tx);next.task=next.repairRound===1?'Repair ready for review':'Change ready for review';next.verification='Waiting for approval';
+  }
   if(event.type==='coding_verification'){
     const status=String(event.status||'').toLowerCase();
     next.verification=status==='running'?'Verification running':status==='cancelled'?'Verification cancelled':'Verification updated';
+    if(status==='running'){next.pending=false;next.repairAvailable=false;}
   }
   if(event.type==='coding_edit_result'){
-    if(event.verification?.status==='passed')next.verification='Verification passed';
-    else if(event.verification?.status==='failed')next.verification='Verification needs attention';
-    if(event.result)next.task='Latest change applied';
+    const result=event.result||{};const verification=event.verification||{};const status=String(verification.status||'').toLowerCase();
+    if(result.id)next.transactionId=result.id;
+    next.pending=false;next.rollbackAvailable=Boolean(result.rollbackAvailable);
+    if(event.repairRound!=null)next.repairRound=Number(event.repairRound)||0;
+    if(result.repairRound!=null)next.repairRound=Number(result.repairRound)||0;
+    next.repairUsed=next.repairRound>=1;
+    if(status==='passed'){next.verification='Verification passed';next.repairAvailable=false;next.task='Latest change applied';}
+    else if(status==='failed'){next.verification='Verification needs attention';next.repairAvailable=!next.repairUsed&&Boolean(next.transactionId);next.task=next.repairUsed?'Repair attempt used · review manually':'Change needs repair';}
+    else if(event.error){next.verification='Coding action failed';next.repairAvailable=false;next.task='Needs attention';}
+    else if(result){next.task='Latest change applied';}
   }
   return next;
+}
+
+export function rivetActionAvailability(state={}){
+  return {
+    approve:Boolean(state.pending&&state.transactionId),
+    reject:Boolean(state.pending&&state.transactionId),
+    repair:Boolean(state.repairAvailable&&state.transactionId),
+    rollback:Boolean(state.rollbackAvailable&&state.transactionId),
+  };
+}
+
+function sendCoding(win,payload){
+  const socket=win.__myAvatarSocket;
+  if(!socket||socket.readyState!==win.WebSocket?.OPEN)throw new Error('Local service is disconnected.');
+  socket.send(JSON.stringify(payload));
 }
 
 export function mountUnifiedWorkspace(win=window,doc=document){
@@ -34,10 +77,11 @@ export function mountUnifiedWorkspace(win=window,doc=document){
   const main=doc.querySelector('main'),stage=doc.getElementById('stage');
   if(!main||!stage)return null;
   const shell=doc.createElement('section');shell.id='unified-workspace-shell';shell.setAttribute('aria-label','Companion workspace');
-  shell.innerHTML='<div class="uws-head"><div><span class="uws-eyebrow"></span><h2></h2><p class="uws-description"></p></div><span class="uws-activity" role="status">Ready</span></div><div class="uws-focus"><span>Current focus</span><strong>No active focus yet</strong></div><div class="uws-context" hidden><div><span>Project</span><strong data-uws-project>No project selected</strong></div><div><span>Change</span><strong data-uws-task>No active change</strong></div><div><span>Checks</span><strong data-uws-verification>Not running</strong></div></div><div class="uws-actions"><button type="button" data-uws-open></button><button type="button" data-uws-chat>Conversation</button></div>';
+  shell.innerHTML='<div class="uws-head"><div><span class="uws-eyebrow"></span><h2></h2><p class="uws-description"></p></div><span class="uws-activity" role="status">Ready</span></div><div class="uws-focus"><span>Current focus</span><strong>No active focus yet</strong></div><div class="uws-context" hidden><div><span>Project</span><strong data-uws-project>No project selected</strong></div><div><span>Files</span><strong data-uws-files>No files inspected</strong></div><div><span>Change</span><strong data-uws-task>No active change</strong></div><div><span>Checks</span><strong data-uws-verification>Not running</strong></div></div><div class="uws-diff" hidden><span>Current patch</span><strong data-uws-diff></strong></div><div class="uws-rivet-actions" hidden><button type="button" data-uws-approve>Apply change</button><button type="button" data-uws-reject>Reject</button><button type="button" data-uws-repair>Propose one repair</button><button type="button" data-uws-rollback>Rollback</button><small data-uws-action-status role="status"></small></div><div class="uws-actions"><button type="button" data-uws-open></button><button type="button" data-uws-chat>Conversation</button></div>';
   stage.insertAdjacentElement('afterend',shell);
-  let botId='nova',phase='idle',rivet={project:'No project selected',task:'No active change',verification:'Not running'};
+  let botId='nova',phase='idle',rivet={...EMPTY_RIVET,files:[]};
   const focusText=()=>win.__myavatarChatStore?.focus?.()||'No active focus yet';
+  const actionStatus=shell.querySelector('[data-uws-action-status]');
   const render=()=>{
     const profile=workspaceProfile(botId);shell.dataset.bot=botId;
     shell.querySelector('.uws-eyebrow').textContent=profile.eyebrow;
@@ -47,11 +91,33 @@ export function mountUnifiedWorkspace(win=window,doc=document){
     shell.querySelector('.uws-focus strong').textContent=focusText();
     const context=shell.querySelector('.uws-context');context.hidden=botId!=='robot';
     shell.querySelector('[data-uws-project]').textContent=rivet.project;
+    shell.querySelector('[data-uws-files]').textContent=rivet.files.length?rivet.files.join(' · '):'No files inspected';
     shell.querySelector('[data-uws-task]').textContent=rivet.task;
     shell.querySelector('[data-uws-verification]').textContent=rivet.verification;
+    const diff=shell.querySelector('.uws-diff');diff.hidden=botId!=='robot'||!rivet.diffSummary;shell.querySelector('[data-uws-diff]').textContent=rivet.diffSummary;
+    const actions=shell.querySelector('.uws-rivet-actions');actions.hidden=botId!=='robot';
+    const available=rivetActionAvailability(rivet);
+    for(const [name,enabled] of Object.entries(available)){const button=shell.querySelector(`[data-uws-${name}]`);if(button){button.hidden=!enabled;button.disabled=!enabled;}}
     shell.querySelector('[data-uws-open]').textContent=profile.action;
     shell.querySelector('[data-uws-open]').dataset.mode=profile.mode;
   };
+  const act=(type)=>{
+    if(!rivet.transactionId)return;
+    try{
+      actionStatus.textContent='';
+      if(type==='approve'||type==='reject')sendCoding(win,{type:'coding_edit_decision',transactionId:rivet.transactionId,decision:type,turn:null});
+      else if(type==='repair')sendCoding(win,{type:'coding_repair',transactionId:rivet.transactionId,turn:null});
+      else if(type==='rollback')sendCoding(win,{type:'coding_rollback',transactionId:rivet.transactionId,turn:null});
+      if(type==='approve'||type==='reject')rivet={...rivet,pending:false};
+      if(type==='repair')rivet={...rivet,repairAvailable:false};
+      if(type==='rollback')rivet={...rivet,rollbackAvailable:false};
+      render();
+    }catch(error){actionStatus.textContent=String(error?.message||error);}
+  };
+  shell.querySelector('[data-uws-approve]').onclick=()=>act('approve');
+  shell.querySelector('[data-uws-reject]').onclick=()=>act('reject');
+  shell.querySelector('[data-uws-repair]').onclick=()=>act('repair');
+  shell.querySelector('[data-uws-rollback]').onclick=()=>act('rollback');
   const onRuntime=event=>{
     const payload=event.detail||{};
     if(payload.type==='config'&&typeof payload.config?.conversation?.persona==='string')botId=payload.config.conversation.persona;
@@ -60,7 +126,7 @@ export function mountUnifiedWorkspace(win=window,doc=document){
     else if(payload.type==='audio')phase='speaking';
     else if(payload.type==='done')phase='complete';
     else if(payload.type==='error')phase='failed';
-    rivet=rivetWorkspaceState(payload,rivet);render();
+    rivet=rivetWorkspaceState(payload,rivet);if(payload.type.startsWith?.('coding_'))actionStatus.textContent='';render();
   };
   const onClient=event=>{if(event.detail?.type==='turn')phase='thinking';else if(event.detail?.type==='stop')phase='interrupted';render();};
   const onStore=()=>render();
@@ -69,6 +135,6 @@ export function mountUnifiedWorkspace(win=window,doc=document){
   shell.querySelector('[data-uws-open]').onclick=()=>{const mode=shell.querySelector('[data-uws-open]').dataset.mode;doc.querySelector(`[data-workspace-mode="${mode}"]`)?.click?.();};
   shell.querySelector('[data-uws-chat]').onclick=()=>{const transcript=doc.getElementById('transcript');if(transcript){transcript.hidden=false;doc.getElementById('text')?.focus?.();}};
   render();
-  const api={snapshot:()=>({botId,phase,focus:focusText(),rivet:{...rivet}}),dispose(){win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.__myavatarChatStore?.removeEventListener?.('change',onStore);shell.remove();delete win.__myavatarUnifiedWorkspace;}};
+  const api={snapshot:()=>({botId,phase,focus:focusText(),rivet:{...rivet,files:[...rivet.files]}}),dispose(){win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.__myavatarChatStore?.removeEventListener?.('change',onStore);shell.remove();delete win.__myavatarUnifiedWorkspace;}};
   win.__myavatarUnifiedWorkspace=api;return api;
 }
