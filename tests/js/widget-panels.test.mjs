@@ -58,13 +58,13 @@ test('only disclosure preferences are persisted, never task or project content',
   let saved;savePanelPreferences({setItem:(_key,value)=>saved=JSON.parse(value)},{...initialPanelState(),brief:'secret',project:'/private'});
   assert.deepEqual(saved,{expanded:['task']});
 });
-test('compact dimensions are unchanged',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1170,y:64,width:260,height:370}));
+test('compact dimensions are unchanged',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1170,y:24,width:260,height:370}));
 test('chat uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,UTILITY_HEIGHT));
 test('coding uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,UTILITY_HEIGHT));
 test('calendar leaves room for month controls and event entries',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,CALENDAR_HEIGHT));
 test('chat+tools size is clamped to the work area',()=>{
   const result=widgetLayout({x:1170,y:100},{chat:true,tools:true},area);
-  assert.equal(result.bounds.height,UTILITY_HEIGHT);assert.equal(result.bounds.y,64);
+  assert.equal(result.bounds.height,UTILITY_HEIGHT);assert.equal(result.bounds.y,24);
 });
 test('right edge opens the wide panel on the left without moving the compact column',()=>{
   const result=widgetLayout({x:1170,y:100},{tools:true,wide:true},area);
@@ -76,7 +76,7 @@ test('left edge opens the wide panel on the right',()=>{
   assert.equal(result.side,'right');assert.equal(result.bounds.x,12);assert.equal(result.offset,0);
 });
 test('closing a large stack restores the original anchor',()=>{
-  const anchor={x:1170,y:64};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
+  const anchor={x:1170,y:24};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
   assert.deepEqual(widgetLayout(anchor,{},area).bounds,{...anchor,width:260,height:370});
 });
 test('negative display coordinates are supported',()=>{
@@ -111,7 +111,7 @@ test('widget utility geometry is bottom-safe and border-box sized',()=>{
   assert.match(css,/top:420px;\s*bottom:10px;\s*height:auto;\s*max-height:none;\s*min-height:0;\s*margin:0;/);
   assert.match(css,/body\.widget \.widget-toolbar button svg \{ width:20px; height:20px; \}/);
   assert.match(css,/body\.widget \.cockpit-heading,[\s\S]*body\.widget #widget-stop \{\s*box-sizing:border-box;/);
-  assert.match(css,/body\.widget\.widget-panels-open #widget-specialist-toggle \{\s*color:#b9c5c8;\s*border-color:transparent;\s*background:transparent;\s*box-shadow:none;/);
+  assert.match(css,/body\.widget\.widget-panels-open #widget-specialist-toggle \{\s*color:var\(--accent\);\s*border-color:color-mix/);
 });
 test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
