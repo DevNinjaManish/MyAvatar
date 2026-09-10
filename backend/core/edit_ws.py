@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from backend.core.coding_verify import verify_edit
 from backend.core.edit_session import EditSession
 from backend.core.patch_proposal import parse_patch_proposal
 
@@ -41,6 +42,12 @@ class CodingEditController:
                 raise ValueError('No pending edit is available to reject.')
             return {'result': result, 'message': 'Code change rejected. No files were modified.'}
         raise ValueError('Unknown coding edit decision.')
+
+    def verify_last(self, transaction_id: str) -> dict[str, Any]:
+        tx = self.session.last_applied
+        if tx is None or tx.id != transaction_id:
+            raise ValueError('No matching applied edit is available to verify.')
+        return verify_edit(tx.files, root=self.root)
 
     def rollback(self, transaction_id: str) -> dict[str, Any]:
         result = self.session.rollback(transaction_id)
