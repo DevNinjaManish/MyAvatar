@@ -29,7 +29,7 @@ test('performance profiles reference usable local models',()=>{
 test('Fast and Balanced are the only supported performance modes',()=>{
   assert.deepEqual(Object.keys(config.performanceProfiles),['low','medium']);
   assert.match(config.performanceProfiles.medium.name,/Recommended/);
-  assert.equal(config.performanceProfile,'medium');
+  assert.equal(config.performanceProfile,'low');
 });
 
 test('all performance controls expose only Fast and Balanced',()=>{
