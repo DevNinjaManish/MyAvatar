@@ -2,12 +2,14 @@
 
 This module applies already validated unified diffs without invoking a shell.
 Every transaction snapshots original file contents and hashes, refuses stale
-workspaces, applies atomically per file, verifies results, and supports rollback.
+workspaces, requires explicit approval, applies atomically per file, verifies
+results, and supports rollback.
 """
 from __future__ import annotations
 
 import hashlib
 import os
+import re
 import secrets
 import tempfile
 from dataclasses import dataclass, field
@@ -55,17 +57,17 @@ def _parse_file_patches(diff: str) -> list[tuple[str, str, list[str]]]:
     result: list[tuple[str, str, list[str]]] = []
     i = 0
     while i < len(lines):
-        if not lines[i].startswith('--- '):
+        if not lines[i].startswith('--- ') or i + 1 >= len(lines) or not lines[i + 1].startswith('+++ '):
             raise ValueError('Malformed unified diff.')
-        if i + 1 >= len(lines) or not lines[i + 1].startswith('+++ '):
-            raise ValueError('Malformed unified diff header.')
-        old_raw, new_raw = lines[i][4:].split('\t', 1)[0], lines[i + 1][4:].split('\t', 1)[0]
+        old_raw = lines[i][4:].split('\t', 1)[0]
+        new_raw = lines[i + 1][4:].split('\t', 1)[0]
         old = old_raw[2:] if old_raw.startswith('a/') else old_raw
         new = new_raw[2:] if new_raw.startswith('b/') else new_raw
         i += 2
         body: list[str] = []
         while i < len(lines) and not lines[i].startswith('--- '):
-            body.append(lines[i]); i += 1
+            body.append(lines[i])
+            i += 1
         result.append((old, new, body))
     return result
 
@@ -76,36 +78,34 @@ def _apply_hunks(original: str, body: list[str]) -> str:
     cursor = 0
     i = 0
     while i < len(body):
-        header = body[i]
-        if not header.startswith('@@ '):
-            raise ValueError('Patch contains content outside a hunk.')
-        import re
-        match = re.match(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', header)
+        match = re.match(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', body[i])
         if not match:
             raise ValueError('Patch hunk header is invalid.')
-        old_start = int(match.group(1))
-        target_index = max(0, old_start - 1)
+        target_index = max(0, int(match.group(1)) - 1)
         if target_index < cursor or target_index > len(source):
             raise ValueError('Patch hunk location is invalid or overlapping.')
-        output.extend(source[cursor:target_index]); cursor = target_index; i += 1
+        output.extend(source[cursor:target_index])
+        cursor = target_index
+        i += 1
         while i < len(body) and not body[i].startswith('@@ '):
             line = body[i]
             if line == '\\ No newline at end of file':
-                i += 1; continue
+                i += 1
+                continue
             if not line:
                 raise ValueError('Malformed empty patch line.')
             marker, text = line[0], line[1:]
-            expected = text + '\n'
             if marker == ' ':
                 if cursor >= len(source) or source[cursor].rstrip('\n') != text:
                     raise ValueError('Patch is stale: context no longer matches.')
-                output.append(source[cursor]); cursor += 1
+                output.append(source[cursor])
+                cursor += 1
             elif marker == '-':
                 if cursor >= len(source) or source[cursor].rstrip('\n') != text:
                     raise ValueError('Patch is stale: removed text no longer matches.')
                 cursor += 1
             elif marker == '+':
-                output.append(expected)
+                output.append(text + '\n')
             else:
                 raise ValueError('Patch contains an unsupported line type.')
             i += 1
@@ -152,12 +152,18 @@ def create_transaction(proposal_text: str, *, root: Path | str = '.') -> EditTra
         originals[relative] = data
         before_hashes[relative] = _digest(data)
     return EditTransaction(
-        id=secrets.token_hex(12), workspace=str(repo_root), diff=str(proposal['diff']),
-        files=files, originals=originals, before_hashes=before_hashes,
+        id=secrets.token_hex(12),
+        workspace=str(repo_root),
+        diff=str(proposal['diff']),
+        files=files,
+        originals=originals,
+        before_hashes=before_hashes,
     )
 
 
-def apply_transaction(tx: EditTransaction) -> dict[str, Any]:
+def apply_transaction(tx: EditTransaction, *, approved: bool = False) -> dict[str, Any]:
+    if approved is not True:
+        raise PermissionError('Explicit approval is required before applying a coding edit.')
     if tx.status != 'pending':
         raise ValueError('Only a pending edit transaction can be applied.')
     root = Path(tx.workspace).resolve()
@@ -174,13 +180,12 @@ def apply_transaction(tx: EditTransaction) -> dict[str, Any]:
         else:
             if current is None:
                 raise ValueError('Patch target disappeared after preview.')
-            try: original_text = current.decode('utf-8')
-            except UnicodeDecodeError as exc: raise ValueError('Patch target is no longer UTF-8 text.') from exc
-        if new == '/dev/null':
-            changes.append((target, None))
-        else:
-            updated = _apply_hunks(original_text, body).encode('utf-8')
-            changes.append((target, updated))
+            try:
+                original_text = current.decode('utf-8')
+            except UnicodeDecodeError as exc:
+                raise ValueError('Patch target is no longer UTF-8 text.') from exc
+        updated = None if new == '/dev/null' else _apply_hunks(original_text, body).encode('utf-8')
+        changes.append((target, updated))
     written: list[Path] = []
     try:
         for target, data in changes:
@@ -200,7 +205,8 @@ def apply_transaction(tx: EditTransaction) -> dict[str, Any]:
         raise
     tx.after_hashes = {}
     for item in tx.files:
-        relative = str(item['path']); target = _safe_target(root, relative)
+        relative = str(item['path'])
+        target = _safe_target(root, relative)
         data = target.read_bytes() if target.exists() else None
         tx.after_hashes[relative] = _digest(data)
     tx.status = 'applied'
