@@ -122,10 +122,16 @@ test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const toolbar=html.match(/<div class="widget-toolbar">([\s\S]*?)<\/div>/)[1];
   assert.deepEqual([...toolbar.matchAll(/<button id="([^"]+)"/g)].map(match=>match[1]),['widget-mic','widget-chat-toggle','widget-specialist-toggle','widget-more']);
   assert.ok(html.includes('id="widget-coding-tools"')&&html.includes('id="widget-calendar-toggle"')&&html.includes('id="widget-creative-toggle"'));
+  assert.ok(html.includes('id="widget-creative-workspace"')&&html.includes('id="widget-creative-content"'));
   assert.ok(!toolbar.includes('widget-stop'));assert.ok(ids.includes('widget-stop'));
   assert.equal((html.match(/id="stage"/g)||[]).length,1);
 });
 test('every panel disclosure references an existing element',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
   for(const match of html.matchAll(/aria-controls="([^"]+)"/g))assert.ok(html.includes(`id="${match[1]}"`),match[1]);
+});
+test('all specialist views share the widget coexistence layout',()=>{
+  const css=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
+  assert.match(css,/widget-chat-open\.widget-calendar-open[\s\S]*widget-chat-open\.widget-panels-open[\s\S]*widget-chat-open\.widget-creative-open/);
+  assert.match(css,/widget-creative-open #widget-specialist-toggle/);
 });

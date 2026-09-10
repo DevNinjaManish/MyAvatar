@@ -150,7 +150,8 @@ body.widget .widget-toolbar button[aria-expanded=true] {
   box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);
 }
 body.widget.widget-calendar-open #widget-specialist-toggle,
-body.widget.widget-panels-open #widget-specialist-toggle {
+body.widget.widget-panels-open #widget-specialist-toggle,
+body.widget.widget-creative-open #widget-specialist-toggle {
   color:var(--accent);
   border-color:color-mix(in srgb,var(--accent) 70%,transparent);
   background:color-mix(in srgb,var(--accent) 14%,#10181c);
@@ -170,6 +171,12 @@ body.widget #widget-stop[hidden] { display:block; visibility:hidden; pointer-eve
 body.widget #widget-chat-toggle[data-unread]::after { right:2px; top:1px; box-shadow:0 0 0 1px #192124; pointer-events:none; }
 /* Calendar is a compact utility popover; only coding/diff use the large wing. */
 body.widget #widget-mini-calendar { position:absolute; z-index:8; top:8px; left:10px; right:10px; height:430px; display:flex; flex-direction:column; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:hidden; }
+body.widget #widget-creative-workspace { position:fixed; z-index:8; top:420px; left:11px; bottom:10px; width:238px; padding:13px; border:1px solid var(--widget-hairline); border-radius:16px; background:#141c20f7; box-shadow:0 12px 28px #0008,inset 0 1px #ffffff08; overflow:auto; box-sizing:border-box; }
+body.widget #widget-creative-workspace[hidden] { display:none; }
+body.widget .widget-specialist-summary { display:grid; gap:7px; margin-top:12px; }
+body.widget .widget-specialist-row { display:grid; gap:4px; padding:9px; border:1px solid #ffffff14; border-radius:9px; background:#ffffff05; }
+body.widget .widget-specialist-row span { color:var(--widget-text-soft); font-size:9px; text-transform:uppercase; letter-spacing:.08em; }
+body.widget .widget-specialist-row strong { font-size:11px; line-height:1.35; }
 body.widget #widget-mini-calendar[hidden] { display:none; }
 body.widget.widget-calendar-open { overflow:hidden; }
 body.widget.widget-calendar-open #widget-mini-calendar {
@@ -431,13 +438,15 @@ body.widget #widget-tools::after { top:6px; }
 /* Final coexistence override: the compact column is split only when the
  * user explicitly keeps chat and a specialist context open together. */
 body.widget.widget-chat-open.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-chat-open.widget-panels-open #widget-coding-panels {
+body.widget.widget-chat-open.widget-panels-open #widget-coding-panels,
+body.widget.widget-chat-open.widget-creative-open #widget-creative-workspace {
   top:420px;
   bottom:auto;
   height:155px;
 }
 body.widget.widget-chat-open.widget-calendar-open #widget-chat,
-body.widget.widget-chat-open.widget-panels-open #widget-chat {
+body.widget.widget-chat-open.widget-panels-open #widget-chat,
+body.widget.widget-chat-open.widget-creative-open #widget-chat {
   top:585px;
   bottom:10px;
   height:auto;
