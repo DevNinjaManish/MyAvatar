@@ -2,6 +2,14 @@ body:not(.widget) #system-workspace{min-width:0;flex:1;min-height:0;padding:28px
 body:not(.widget) #system-workspace[hidden]{display:none}
 body:not(.widget)[data-workspace=system] #unified-workspace-shell{display:none}
 body:not(.widget)[data-workspace=system] #stage{flex:0 1 30%;}
+body:not(.widget)[data-workspace=calendar] #unified-workspace-shell{display:none}
+.widget-system-heading{display:flex;justify-content:space-between;gap:8px;color:var(--accent);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.widget-system-heading span:last-child{color:var(--muted);font-weight:500;letter-spacing:.04em}
+.widget-system-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:9px}
+.widget-system-grid>div{display:grid;gap:3px;padding:7px 8px;border:1px solid #ffffff14;border-radius:8px;background:#ffffff05}
+.widget-system-grid span{color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.widget-system-grid strong{min-width:0;color:var(--ink);font-size:11px;line-height:1.2;overflow-wrap:anywhere}
+#widget-system-hud-status{margin:9px 0 0;color:var(--muted);font-size:9px;line-height:1.35}
 .system-refresh{color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
 .system-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding-top:18px}
 .system-grid article{display:flex;flex-direction:column;gap:5px;padding:14px 16px;border:1px solid #ffffff15;border-radius:12px;background:#ffffff05}

@@ -301,6 +301,11 @@ body.widget .mini-calendar-grid span.today { background:var(--accent); color:#16
 body.widget .mini-calendar-grid span.has-event::after { content:''; position:absolute; bottom:2px; width:3px; height:3px; border-radius:50%; background:#f09ab9; }
 /* Keep More below the portrait/platform so it never obscures the companion. */
 body.widget #widget-menu { top:250px; left:10px; right:auto; width:238px; max-height:430px; overflow:auto; box-sizing:border-box; }
+body.widget #widget-system-hud-toggle { color:var(--accent); }
+body.widget #widget-system-hud { margin:4px 0 8px; padding:10px; border:1px solid var(--widget-hairline); border-radius:11px; background:var(--widget-inset); }
+body.widget #widget-system-hud[hidden] { display:none; }
+body.widget .widget-system-grid strong { white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+body.widget .workspace-heading-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
 /* Final geometry contract: the platform never participates in document flow. */
 body.widget main {
   position:absolute;
