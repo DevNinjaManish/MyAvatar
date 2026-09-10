@@ -326,15 +326,20 @@ body.widget #widget-system-rail { min-height:31px; height:31px; }
 body.widget.widget-chat-open #widget-chat,
 body.widget.widget-calendar-open #widget-mini-calendar,
 body.widget.widget-panels-open #widget-coding-panels { z-index:8; }
+/* Attached utilities are viewport overlays, never flex siblings. This keeps
+ * mounting a panel from reflowing the avatar or its platform by a pixel. */
+body.widget.widget-chat-open #widget-chat,
+body.widget.widget-calendar-open #widget-mini-calendar,
+body.widget.widget-panels-open #widget-coding-panels { position:fixed; }
 /* Final geometry contract: the platform never participates in document flow. */
 body.widget main {
-  position:absolute;
+  position:fixed;
   top:40px;
   left:18px;
   margin:0 !important;
 }
 body.widget #widget-tools {
-  position:absolute;
+  position:fixed;
   top:268px;
   left:11px;
   margin:0 !important;
