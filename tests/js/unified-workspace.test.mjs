@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {workspaceProfile,workspaceActivity,rivetWorkspaceState,rivetPatchSummary,rivetActionAvailability} from '../../src/workspace/unified-workspace.js';
+import {workspaceProfile,workspaceActivity,companionWorkspaceState,rivetWorkspaceState,rivetPatchSummary,rivetActionAvailability} from '../../src/workspace/unified-workspace.js';
 
 test('all five companions map to one shared workspace profile model',()=>{
   const ids=['robot','nova','butler','pixel','luma'];
@@ -17,6 +17,25 @@ test('workspace activity uses authored observable phases only',()=>{
   assert.equal(workspaceActivity('writing'),'Preparing reply');
   assert.equal(workspaceActivity('speaking'),'Speaking');
   assert.equal(workspaceActivity('SECRET_REASONING'),'Ready');
+});
+
+test('Nova workspace uses only session focus, conversation output, and available calendar context',()=>{
+  const state=companionWorkspaceState('nova',{focus:'Plan tomorrow morning',draft:'Message to Sam',messages:[{role:'assistant',type:'message',text:'Start with the appointment.',status:'complete'}],calendar:{available:true,label:'2 upcoming events',events:[{title:'Appointment'}]}});
+  assert.equal(state.focusLabel,'Current goal');
+  assert.equal(state.focus,'Plan tomorrow morning');
+  assert.deepEqual(state.modules.map(([label])=>label),['Practical next action','Active plan','Useful output','Planning context']);
+  assert.match(state.modules[2][1],/Draft in progress/);
+  assert.equal(state.calendar.events.length,1);
+});
+
+test('Sterling workspace isolates priorities and does not invent decisions or schedule data',()=>{
+  const state=companionWorkspaceState('butler',{focus:'Finish the launch brief',messages:[],calendar:{available:false}});
+  assert.equal(state.focusLabel,'Current priority');
+  assert.equal(state.modules[0][1],'Captured from this session');
+  assert.equal(state.modules[1][1],'No active decision captured');
+  assert.match(state.modules[3][1],/unavailable/);
+  const other=companionWorkspaceState('nova',{focus:'Plan a trip'});
+  assert.notEqual(state.focus,other.focus);
 });
 
 test('Rivet patch summaries are compact and metadata-only',()=>{

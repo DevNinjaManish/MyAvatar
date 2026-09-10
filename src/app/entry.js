@@ -14,6 +14,7 @@ import '../conversation/chat-actions.css';
 import '../conversation/coding-edits.css';
 import '../avatar/presence-orchestrator.css';
 import '../workspace/unified-workspace.css';
+import '../workspace/companion-workspace.css';
 import {mountWidgetPanels} from '../widget/panels.js';
 import {mountReadinessUI} from '../conversation/readiness-ui.js';
 import {installCaptureLifecycleGuards} from '../audio/lifecycle.js';

@@ -8,9 +8,21 @@ const PROFILES={
 
 const ACTIVITY={idle:'Ready',listening:'Listening',thinking:'Thinking',writing:'Preparing reply',speaking:'Speaking',complete:'Ready',interrupted:'Ready',failed:'Needs attention'};
 const EMPTY_RIVET={project:'No project selected',files:[],task:'No active change',verification:'Not running',transactionId:null,pending:false,repairAvailable:false,repairUsed:false,rollbackAvailable:false,repairRound:0,diffSummary:''};
+const EMPTY_CALENDAR={available:false,label:'Calendar context unavailable in this session.',events:[]};
 
 export function workspaceProfile(botId){return PROFILES[botId]||PROFILES.nova;}
 export function workspaceActivity(phase){return ACTIVITY[String(phase||'idle').toLowerCase()]||'Ready';}
+
+function compact(value,limit=120){const text=String(value??'').replace(/\s+/g,' ').trim();if(!text)return '';return text.length<=limit?text:text.slice(0,limit-1).trimEnd()+'…';}
+function latestMessage(messages,role){return [...(Array.isArray(messages)?messages:[])].reverse().find(item=>item?.role===role&&item?.type==='message'&&String(item.text||'').trim());}
+
+export function companionWorkspaceState(botId,{focus='',messages=[],draft='',calendar=EMPTY_CALENDAR}={}){
+  const goal=compact(focus);const latestAssistant=latestMessage(messages,'assistant');const hasReply=Boolean(latestAssistant&&['complete','streaming'].includes(latestAssistant.status));
+  const draftText=compact(draft);const calendarState={...EMPTY_CALENDAR,...(calendar||{}),events:Array.isArray(calendar?.events)?calendar.events.slice(0,3):[]};
+  if(botId==='butler')return {botId,kind:'sterling',focusLabel:'Current priority',focus:goal||'No priority captured yet',modules:[['Unfinished commitment',goal?'Captured from this session':'Nothing captured yet'],['Active decision',goal&&/\b(decide|decision|choose|choice|should|whether)\b/i.test(goal)?goal:'No active decision captured'],['Recommended next step',goal?'Choose the smallest action that moves this priority forward.':'State the commitment or decision to prioritise.'],['Planning context',calendarState.available?(calendarState.label||'Calendar context available'):calendarState.label]],draft:draftText?`Draft in progress · ${draftText}`:hasReply?'Latest reply is available in conversation':'No draft yet',calendar:calendarState};
+  if(botId==='nova')return {botId,kind:'nova',focusLabel:'Current goal',focus:goal||'No active goal captured yet',modules:[['Practical next action',goal?'Choose one concrete next step for this goal.':'State the goal you want to move forward.'],['Active plan',hasReply?'Plan is captured in the conversation.':'Plan will appear here as the conversation develops.'],['Useful output',draftText?`Draft in progress · ${draftText}`:hasReply?'Latest reply is available in conversation':'No draft yet'],['Planning context',calendarState.available?(calendarState.label||'Calendar context available'):calendarState.label]],draft:draftText,calendar:calendarState};
+  return {botId,kind:'shared',focusLabel:'Current focus',focus:goal||'No active focus yet',modules:[],draft:draftText,calendar:calendarState};
+}
 
 export function rivetPatchSummary(transaction={}){
   const files=Array.isArray(transaction.files)?transaction.files:[];
@@ -79,7 +91,9 @@ export function mountUnifiedWorkspace(win=window,doc=document){
   const shell=doc.createElement('section');shell.id='unified-workspace-shell';shell.setAttribute('aria-label','Companion workspace');
   shell.innerHTML='<div class="uws-head"><div><span class="uws-eyebrow"></span><h2></h2><p class="uws-description"></p></div><span class="uws-activity" role="status">Ready</span></div><div class="uws-focus"><span>Current focus</span><strong>No active focus yet</strong></div><div class="uws-context" hidden><div><span>Project</span><strong data-uws-project>No project selected</strong></div><div><span>Files</span><strong data-uws-files>No files inspected</strong></div><div><span>Change</span><strong data-uws-task>No active change</strong></div><div><span>Checks</span><strong data-uws-verification>Not running</strong></div></div><div class="uws-diff" hidden><span>Current patch</span><strong data-uws-diff></strong></div><div class="uws-rivet-actions" hidden><button type="button" data-uws-approve>Apply change</button><button type="button" data-uws-reject>Reject</button><button type="button" data-uws-repair>Propose one repair</button><button type="button" data-uws-rollback>Rollback</button><small data-uws-action-status role="status"></small></div><div class="uws-actions"><button type="button" data-uws-open></button><button type="button" data-uws-chat>Conversation</button></div>';
   stage.insertAdjacentElement('afterend',shell);
-  let botId='nova',phase='idle',rivet={...EMPTY_RIVET,files:[]};
+  const focusLabel=shell.querySelector('.uws-focus span');
+  const modules=doc.createElement('div');modules.className='uws-modules';modules.hidden=true;shell.querySelector('.uws-focus').insertAdjacentElement('afterend',modules);
+  let botId='nova',phase='idle',rivet={...EMPTY_RIVET,files:[]},calendar={...EMPTY_CALENDAR,...(win.__myavatarCalendarContext||{})};
   const focusText=()=>win.__myavatarChatStore?.focus?.()||'No active focus yet';
   const actionStatus=shell.querySelector('[data-uws-action-status]');
   const render=()=>{
@@ -88,7 +102,9 @@ export function mountUnifiedWorkspace(win=window,doc=document){
     shell.querySelector('h2').textContent=profile.title;
     shell.querySelector('.uws-description').textContent=profile.description;
     shell.querySelector('.uws-activity').textContent=workspaceActivity(phase);
-    shell.querySelector('.uws-focus strong').textContent=focusText();
+    const companion=companionWorkspaceState(botId,{focus:focusText(),messages:win.__myavatarChatStore?.snapshot?.(botId)||[],draft:win.__myavatarChatStore?.draft?.(botId)||'',calendar});
+    focusLabel.textContent=companion.focusLabel;shell.querySelector('.uws-focus strong').textContent=companion.focus;
+    modules.hidden=!companion.modules.length;modules.replaceChildren();for(const [label,value] of companion.modules){const item=doc.createElement('div');const heading=doc.createElement('span');heading.textContent=label;const detail=doc.createElement('strong');detail.textContent=value;item.append(heading,detail);modules.append(item);}
     const context=shell.querySelector('.uws-context');context.hidden=botId!=='robot';
     shell.querySelector('[data-uws-project]').textContent=rivet.project;
     shell.querySelector('[data-uws-files]').textContent=rivet.files.length?rivet.files.join(' · '):'No files inspected';
@@ -121,6 +137,7 @@ export function mountUnifiedWorkspace(win=window,doc=document){
   const onRuntime=event=>{
     const payload=event.detail||{};
     if(payload.type==='config'&&typeof payload.config?.conversation?.persona==='string')botId=payload.config.conversation.persona;
+    if(payload.type==='calendar_context')calendar={...EMPTY_CALENDAR,...payload};
     if(payload.type==='state')phase=String(payload.state||phase).toLowerCase();
     else if(payload.type==='token'||payload.type==='first_token')phase='writing';
     else if(payload.type==='audio')phase='speaking';
@@ -129,12 +146,13 @@ export function mountUnifiedWorkspace(win=window,doc=document){
     rivet=rivetWorkspaceState(payload,rivet);if(payload.type.startsWith?.('coding_'))actionStatus.textContent='';render();
   };
   const onClient=event=>{if(event.detail?.type==='turn')phase='thinking';else if(event.detail?.type==='stop')phase='interrupted';render();};
+  const onCalendar=event=>{calendar={...EMPTY_CALENDAR,...(event.detail||{})};render();};
   const onStore=()=>render();
-  win.addEventListener('myavatar:runtime-event',onRuntime);win.addEventListener('myavatar:client-message',onClient);
+  win.addEventListener('myavatar:runtime-event',onRuntime);win.addEventListener('myavatar:client-message',onClient);win.addEventListener('myavatar:calendar-context',onCalendar);
   win.__myavatarChatStore?.addEventListener?.('change',onStore);
   shell.querySelector('[data-uws-open]').onclick=()=>{const mode=shell.querySelector('[data-uws-open]').dataset.mode;doc.querySelector(`[data-workspace-mode="${mode}"]`)?.click?.();};
   shell.querySelector('[data-uws-chat]').onclick=()=>{const transcript=doc.getElementById('transcript');if(transcript){transcript.hidden=false;doc.getElementById('text')?.focus?.();}};
   render();
-  const api={snapshot:()=>({botId,phase,focus:focusText(),rivet:{...rivet,files:[...rivet.files]}}),dispose(){win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.__myavatarChatStore?.removeEventListener?.('change',onStore);shell.remove();delete win.__myavatarUnifiedWorkspace;}};
+  const api={snapshot:()=>({botId,phase,focus:focusText(),companion:companionWorkspaceState(botId,{focus:focusText(),messages:win.__myavatarChatStore?.snapshot?.(botId)||[],draft:win.__myavatarChatStore?.draft?.(botId)||'',calendar}),rivet:{...rivet,files:[...rivet.files]}}),dispose(){win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.removeEventListener('myavatar:calendar-context',onCalendar);win.__myavatarChatStore?.removeEventListener?.('change',onStore);shell.remove();delete win.__myavatarUnifiedWorkspace;}};
   win.__myavatarUnifiedWorkspace=api;return api;
 }
