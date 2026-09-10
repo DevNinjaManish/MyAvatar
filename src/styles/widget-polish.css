@@ -156,6 +156,14 @@ body.widget.widget-panels-open #widget-specialist-toggle {
   background:color-mix(in srgb,var(--accent) 14%,#10181c);
   box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);
 }
+/* The attached panel header already communicates the open state. Keep the
+ * compact platform pixel-stable when Coding is toggled. */
+body.widget.widget-panels-open #widget-specialist-toggle {
+  color:#b9c5c8;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
+}
 body.widget #widget-stop-slot { flex:none; display:grid; place-items:center; width:28px; height:28px; }
 body.widget #widget-stop { margin:0; }
 body.widget #widget-stop[hidden] { display:block; visibility:hidden; pointer-events:none; }
