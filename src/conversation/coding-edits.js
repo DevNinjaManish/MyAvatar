@@ -4,6 +4,9 @@ function send(win,payload){
   socket.send(JSON.stringify(payload));
 }
 
+const repairTransactions=new Set();
+let repairRequestPending=false;
+
 function card(doc,className){
   const node=doc.createElement('div');
   node.className=`coding-edit-card ${className||''}`.trim();
@@ -21,15 +24,17 @@ function appendToChats(doc,factory){
 
 function makePatchCard(win,doc,event){
   const tx=event.transaction;
-  const node=card(doc,'coding-patch-card');
+  if(repairRequestPending){repairTransactions.add(tx.id);repairRequestPending=false;}
+  const repair=repairTransactions.has(tx.id)||tx.repairRound===1;
+  const node=card(doc,repair?'coding-patch-card coding-repair-card':'coding-patch-card');
   node.dataset.transactionId=tx.id;
-  const title=doc.createElement('strong');title.textContent='Rivet prepared a code change';
+  const title=doc.createElement('strong');title.textContent=repair?'Rivet prepared one repair attempt':'Rivet prepared a code change';
   const meta=doc.createElement('div');meta.className='coding-edit-meta';
   const changed=tx.files.map(file=>`${file.path} (+${file.additions}/-${file.deletions})`).join(' · ');
   meta.textContent=`${changed} · expires in ${Math.round((tx.expiresInSeconds||600)/60)} min`;
   const pre=doc.createElement('pre');pre.textContent=event.diff||'';
   const actions=doc.createElement('div');actions.className='coding-edit-actions';
-  const approve=doc.createElement('button');approve.type='button';approve.textContent='Apply change';
+  const approve=doc.createElement('button');approve.type='button';approve.textContent=repair?'Apply repair':'Apply change';
   const reject=doc.createElement('button');reject.type='button';reject.textContent='Reject';
   const decide=decision=>{
     try{
@@ -58,11 +63,41 @@ function appendVerification(doc,node,verification){
   node.append(section);
 }
 
+function repairRequest(event){
+  const files=(event.result?.files||[]).map(item=>item.path).filter(Boolean).slice(0,8);
+  const failures=(event.verification?.checks||[]).filter(check=>check.ok===false).map(check=>{
+    const output=String(check.output||'').slice(-5000);
+    return `${check.label||check.id||'Verification'}:\n${output}`;
+  }).join('\n\n').slice(-8000);
+  if(!files.length||!failures)return '';
+  return `Repair only the verification failure from the code change you just applied. Limit the repair to these changed files: ${files.join(', ')}. Do not broaden the scope or refactor unrelated code. This is the only automatic repair attempt; produce a minimal patch and stop after it. Failed verification output:\n${failures}`;
+}
+
 function makeResultCard(win,doc,event){
   const node=card(doc,event.error?'coding-result-card coding-result-error':'coding-result-card');
   const title=doc.createElement('strong');title.textContent=event.message||'Coding edit updated.';
   node.append(title);
   appendVerification(doc,node,event.verification);
+  const txId=event.result?.id;
+  const isRepair=Boolean(txId&&repairTransactions.has(txId))||event.repairRound===1||event.result?.repairRound===1;
+  if(event.verification?.status==='failed'&&!isRepair){
+    const prompt=repairRequest(event);
+    if(prompt){
+      const repair=doc.createElement('button');repair.type='button';repair.textContent='Propose one repair';
+      repair.onclick=()=>{
+        try{
+          repair.disabled=true;repairRequestPending=true;
+          send(win,{type:'turn',turn:event.turn,text:prompt});
+        }catch(error){
+          repairRequestPending=false;repair.disabled=false;
+          const failure=doc.createElement('span');failure.className='coding-edit-error';failure.textContent=String(error.message||error);node.append(failure);
+        }
+      };
+      node.append(repair);
+    }
+  }else if(event.verification?.status==='failed'&&isRepair){
+    const stop=doc.createElement('div');stop.className='coding-repair-limit';stop.textContent='Repair attempt used. Rivet stopped after one verification retry.';node.append(stop);
+  }
   if(event.result?.rollbackAvailable){
     const rollback=doc.createElement('button');rollback.type='button';rollback.textContent='Rollback';
     rollback.onclick=()=>{
@@ -99,6 +134,7 @@ export function mountCodingEdits(win=window,doc=document){
     if(event.type==='coding_patch')appendToChats(doc,()=>makePatchCard(win,doc,event));
     if(event.type==='coding_edit_result')appendToChats(doc,()=>makeResultCard(win,doc,event));
     if(event.type==='coding_workspace'){
+      repairRequestPending=false;repairTransactions.clear();
       const status=doc.querySelector('.coding-workspace-status');
       if(status)status.textContent=`Using ${event.workspace?.name||event.workspace?.path||'workspace'}`;
     }
