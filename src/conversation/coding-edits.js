@@ -44,10 +44,25 @@ function makePatchCard(win,doc,event){
   return node;
 }
 
+function appendVerification(doc,node,verification){
+  if(!verification)return;
+  const section=doc.createElement('div');
+  section.className=`coding-verification coding-verification-${verification.status||'unknown'}`;
+  const heading=doc.createElement('strong');heading.textContent=verification.message||'Verification finished.';section.append(heading);
+  for(const check of verification.checks||[]){
+    const row=doc.createElement('div');row.className='coding-verification-check';
+    const label=doc.createElement('span');label.textContent=`${check.ok?'Pass':'Fail'} · ${check.label||check.id}`;row.append(label);
+    if(check.output){const pre=doc.createElement('pre');pre.textContent=check.output;row.append(pre);}
+    section.append(row);
+  }
+  node.append(section);
+}
+
 function makeResultCard(win,doc,event){
   const node=card(doc,event.error?'coding-result-card coding-result-error':'coding-result-card');
   const title=doc.createElement('strong');title.textContent=event.message||'Coding edit updated.';
   node.append(title);
+  appendVerification(doc,node,event.verification);
   if(event.result?.rollbackAvailable){
     const rollback=doc.createElement('button');rollback.type='button';rollback.textContent='Rollback';
     rollback.onclick=()=>{
