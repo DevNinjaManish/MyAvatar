@@ -5,6 +5,7 @@ import path from 'node:path';
 import {readFileSync} from 'node:fs';
 import {EventEmitter} from 'node:events';
 import layoutAPI from '../../electron/widget-layout.cjs';
+const {WIDTH}=layoutAPI;
 
 async function boot({lock=true}={}) {
   const ipcMain=new EventEmitter(),handlers=new Map();ipcMain.handle=(name,handler)=>handlers.set(name,handler);
@@ -32,4 +33,4 @@ test('general folder chooser returns a display name, not the private full path',
 test('Rivet picker scopes the path to its dedicated trusted call',async()=>{const {handlers,trusted}=await boot();const result=await handlers.get('rivet-choose-workspace')(trusted);assert.equal(result.ok,true);assert.equal(result.project.name,'MyAvatar');assert.equal(result.workspacePath,'/private/MyAvatar');assert.equal((await handlers.get('rivet-choose-workspace')({sender:{}})).ok,false);});
 test('cancelled folder selection is not a failure',async()=>{const {handlers,trusted,setSelection}=await boot();setSelection({canceled:true,filePaths:[]});const result=await handlers.get('widget-choose-project')(trusted);assert.equal(result.canceled,true);assert.equal(result.ok,true);});
 test('foreign windows cannot open the folder picker',async()=>{const {handlers,getDialogCalls}=await boot();assert.equal((await handlers.get('widget-choose-project')({sender:{}})).ok,false);assert.equal(getDialogCalls(),0);});
-test('full conversation remains optional and returns to compact widget',async()=>{const {handlers,trusted,window}=await boot();await handlers.get('widget-panels')(trusted,{open:true,wide:true});assert.equal(await handlers.get('window-mode')(trusted,'full'),'full');assert.equal(window.bounds.width,1120);assert.equal(await handlers.get('window-mode')(trusted,'widget'),'widget');assert.equal(window.bounds.width,260);assert.equal(window.bounds.height,820);});
+test('full conversation remains optional and returns to compact widget',async()=>{const {handlers,trusted,window}=await boot();await handlers.get('widget-panels')(trusted,{open:true,wide:true});assert.equal(await handlers.get('window-mode')(trusted,'full'),'full');assert.equal(window.bounds.width,1120);assert.equal(await handlers.get('window-mode')(trusted,'widget'),'widget');assert.equal(window.bounds.width,WIDTH);assert.equal(window.bounds.height,820);});

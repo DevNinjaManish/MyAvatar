@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {initialPanelState, reducePanelState, readPanelPreferences, savePanelPreferences, PANEL_IDS} from '../../src/widget/panel-model.js';
 import {agentPlanSteps,agentStepObservation,agentStepVerification} from '../../src/widget/panels.js';
 import layoutAPI from '../../electron/widget-layout.cjs';
-const {widgetLayout,validPanelsRequest,UTILITY_HEIGHT,CALENDAR_HEIGHT}=layoutAPI;
+const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_HEIGHT,UTILITY_HEIGHT,CALENDAR_HEIGHT}=layoutAPI;
 const area={x:0,y:24,width:1440,height:820};
 
 test('panels start closed with only Task expanded',()=>assert.deepEqual(initialPanelState(),{open:false,expanded:['task'],wide:null}));
@@ -58,7 +58,7 @@ test('only disclosure preferences are persisted, never task or project content',
   let saved;savePanelPreferences({setItem:(_key,value)=>saved=JSON.parse(value)},{...initialPanelState(),brief:'secret',project:'/private'});
   assert.deepEqual(saved,{expanded:['task']});
 });
-test('compact dimensions are unchanged',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1170,y:24,width:260,height:370}));
+test('compact dimensions use the larger stable widget frame',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1120,y:24,width:WIDTH,height:COMPACT_HEIGHT}));
 test('chat uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,UTILITY_HEIGHT));
 test('coding uses the shared utility height',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,UTILITY_HEIGHT));
 test('calendar leaves room for month controls and event entries',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,CALENDAR_HEIGHT));
@@ -68,7 +68,7 @@ test('chat+tools size is clamped to the work area',()=>{
 });
 test('right edge opens the wide panel on the left without moving the compact column',()=>{
   const result=widgetLayout({x:1170,y:100},{tools:true,wide:true},area);
-  assert.equal(result.side,'left');assert.equal(result.bounds.x+result.offset,1170);
+  assert.equal(result.side,'left');assert.equal(result.bounds.x+result.offset,1120);
   assert.equal(result.wingWidth,440);
 });
 test('left edge opens the wide panel on the right',()=>{
@@ -76,8 +76,8 @@ test('left edge opens the wide panel on the right',()=>{
   assert.equal(result.side,'right');assert.equal(result.bounds.x,12);assert.equal(result.offset,0);
 });
 test('closing a large stack restores the original anchor',()=>{
-  const anchor={x:1170,y:24};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
-  assert.deepEqual(widgetLayout(anchor,{},area).bounds,{...anchor,width:260,height:370});
+  const anchor={x:1100,y:24};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
+  assert.deepEqual(widgetLayout(anchor,{},area).bounds,{...anchor,width:WIDTH,height:COMPACT_HEIGHT});
 });
 test('negative display coordinates are supported',()=>{
   const monitor={x:-1920,y:-100,width:1920,height:1080};
@@ -87,7 +87,7 @@ test('negative display coordinates are supported',()=>{
 });
 test('narrow monitors use an inline wide view instead of offscreen windows',()=>{
   const result=widgetLayout({x:20,y:20},{tools:true,wide:true},{x:0,y:0,width:500,height:600});
-  assert.equal(result.side,'inline');assert.equal(result.bounds.width,260);
+  assert.equal(result.side,'inline');assert.equal(result.bounds.width,WIDTH);
 });
 test('all tested layouts stay within work area bounds',()=>{
   for(const width of [260,400,600,800,1440])for(const height of [370,480,600,900]){
@@ -109,6 +109,7 @@ test('accept only the small boolean panel IPC contract',()=>{
 test('widget utility geometry is bottom-safe and border-box sized',()=>{
   const css=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
   assert.match(css,/top:420px;\s*bottom:10px;\s*height:auto;\s*max-height:none;\s*min-height:0;\s*margin:0;/);
+  assert.match(css,/Large widget geometry[\s\S]*width:298px/);
   assert.match(css,/body\.widget \.widget-toolbar button svg \{ width:20px; height:20px; \}/);
   assert.match(css,/body\.widget \.cockpit-heading,[\s\S]*body\.widget #widget-stop \{\s*box-sizing:border-box;/);
   assert.match(css,/body\.widget\.widget-panels-open #widget-specialist-toggle \{\s*color:var\(--accent\);\s*border-color:color-mix/);

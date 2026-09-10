@@ -1,5 +1,5 @@
 'use strict';
-const WIDTH = 260, COMPACT_HEIGHT = 370, UTILITY_HEIGHT = 820;
+const WIDTH = 320, COMPACT_HEIGHT = 430, UTILITY_HEIGHT = 820;
 const CHAT_HEIGHT = UTILITY_HEIGHT, TOOLS_HEIGHT = UTILITY_HEIGHT;
 const COMBINED_HEIGHT = UTILITY_HEIGHT, CALENDAR_HEIGHT = UTILITY_HEIGHT, WING_WIDTH = 440, GAP = 10;
 const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, max)));

@@ -1,5 +1,5 @@
 /* Presentation-only refinement of the attached widget. No avatar/audio effects.
- * Keep the original 260px native column and all four primary controls stable.
+ * Keep the 320px native column and all primary controls stable.
  */
 body.widget {
   --widget-surface: #172024;
@@ -451,3 +451,23 @@ body.widget.widget-chat-open.widget-creative-open #widget-chat {
   bottom:10px;
   height:auto;
 }
+/* Large widget geometry. All surfaces use the same 320px native column and
+ * 298px content rail, leaving a predictable 11px inset on both sides. */
+body.widget main { --widget-avatar-size:270px; width:270px; height:272px; }
+body.widget #widget-tools { top:315px !important; width:298px !important; }
+body.widget #widget-chat,
+body.widget #widget-coding-panels,
+body.widget #widget-mini-calendar,
+body.widget #widget-creative-workspace,
+body.widget #widget-menu { width:298px; }
+body.widget.widget-chat-open #widget-chat,
+body.widget.widget-calendar-open #widget-mini-calendar,
+body.widget.widget-panels-open #widget-coding-panels,
+body.widget.widget-creative-open #widget-creative-workspace { top:455px; }
+body.widget.widget-chat-open.widget-calendar-open #widget-mini-calendar,
+body.widget.widget-chat-open.widget-panels-open #widget-coding-panels,
+body.widget.widget-chat-open.widget-creative-open #widget-creative-workspace { top:455px; }
+body.widget.widget-chat-open.widget-calendar-open #widget-chat,
+body.widget.widget-chat-open.widget-panels-open #widget-chat,
+body.widget.widget-chat-open.widget-creative-open #widget-chat { top:620px; }
+body.widget[data-panel-side=right] #widget-code-wing { left:330px; }
