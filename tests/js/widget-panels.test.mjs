@@ -106,6 +106,12 @@ test('accept only the small boolean panel IPC contract',()=>{
   assert.equal(validPanelsRequest({open:true,wide:true}),true);
   assert.equal(validPanelsRequest({open:false,wide:false}),true);
 });
+test('widget utility geometry is bottom-safe and border-box sized',()=>{
+  const css=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
+  assert.match(css,/top:420px;\s*bottom:10px;\s*height:auto;\s*max-height:none;\s*min-height:0;\s*margin:0;/);
+  assert.match(css,/body\.widget \.widget-toolbar button svg \{ width:20px; height:20px; \}/);
+  assert.match(css,/body\.widget \.cockpit-heading,[\s\S]*body\.widget #widget-stop \{\s*box-sizing:border-box;/);
+});
 test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
