@@ -1,4 +1,5 @@
 import {turnPlayback} from '../audio/turn-playback.js';
+import {suspendActiveLiveCapture} from '../audio/engine.js';
 
 export const RUNTIME_EVENT_VERSION=1;
 const BOT_TRANSITION_TYPES=new Set(['config']);
@@ -24,12 +25,17 @@ export class RuntimeEventGate{
   }
 }
 
-function noteClientMessage(data,win){
+export function noteClientMessage(data,win){
   if(typeof data!=='string')return;
   try{
     const message=JSON.parse(data);
-    if(message?.type==='turn')turnPlayback.beginTurn(message.turn);
-    else if(message?.type==='stop')turnPlayback.cancelTurn();
+    if(message?.type==='turn'){
+      // Voice capture stays allocated in live mode, but its gate must close for
+      // every outgoing turn, including typed turns. This prevents background
+      // audio from starting a second turn while the first is still processing.
+      suspendActiveLiveCapture();
+      turnPlayback.beginTurn(message.turn);
+    }else if(message?.type==='stop')turnPlayback.cancelTurn();
     win.dispatchEvent(new CustomEvent('myavatar:client-message',{detail:message}));
   }catch{}
 }

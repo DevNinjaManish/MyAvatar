@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {RuntimeEventGate,validApprovalDecision} from '../../src/conversation/runtime-events.js';
+import {RuntimeEventGate,validApprovalDecision,noteClientMessage} from '../../src/conversation/runtime-events.js';
+import {AudioEngine,getActiveCaptureSnapshot} from '../../src/audio/engine.js';
+import {turnPlayback} from '../../src/audio/turn-playback.js';
 
 const event=(type,sequence,{sessionId='s1',botId='robot',...rest}={})=>({
   type,runtimeVersion:1,sessionId,sequence,botId,turn:null,...rest
@@ -45,6 +47,14 @@ test('invalid typed envelopes are rejected',()=>{
   assert.equal(gate.accept({...event('config',1),runtimeVersion:2}),false);
   assert.equal(gate.accept({...event('config',1),sequence:0}),false);
   assert.equal(gate.accept({...event('config',1),botId:''}),false);
+});
+
+test('outgoing turns suspend an existing live listening gate before processing',()=>{
+  const engine=new AudioEngine(()=>{});engine._claimCapture('live');engine.captureActive=true;engine.detector={reset(){}};
+  engine.setListening(true);assert.equal(getActiveCaptureSnapshot().muted,false);
+  const win=new EventTarget();noteClientMessage(JSON.stringify({type:'turn',turn:77,text:'typed while live'}),win);
+  assert.equal(engine.liveGate,false);assert.equal(engine.captureActive,true);assert.equal(turnPlayback.activeTurn,77);
+  turnPlayback.cancelTurn();engine.endCapture();
 });
 
 test('approval decisions accept only the narrow allow-once or deny contract',()=>{

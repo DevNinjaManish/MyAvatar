@@ -11,6 +11,10 @@ export function resample(input, rate, target=16000){
 export function toBase64(bytes){let s='';for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(s);}
 export function getActiveCaptureSnapshot(){return activeCaptureOwner?.captureSnapshot()||{active:false,mode:null,muted:false,generation:0};}
 export function endActiveCapture(){return activeCaptureOwner?.endCapture()||new Float32Array();}
+export function suspendActiveLiveCapture(){
+  if(!activeCaptureOwner||activeCaptureOwner.captureMode!=='live'||!activeCaptureOwner.captureActive)return false;
+  activeCaptureOwner.setListening(false);return true;
+}
 export function resumeActiveLiveCapture(){
   if(!activeCaptureOwner||activeCaptureOwner.captureMode!=='live'||!activeCaptureOwner.captureActive)return false;
   activeCaptureOwner.setListening(true);return activeCaptureOwner.liveGate;
@@ -20,8 +24,34 @@ export class AudioEngine{
   constructor(onAmplitude){
     this.onAmplitude=onAmplitude;this.queue=[];this.playing=false;this.generation=0;this.captureGeneration=0;
     this.captureMode=null;this.captureActive=false;this.liveGate=false;this.chunks=[];this.sourceTurnToken=null;
+    this.readyPromise=null;this.workletPromise=null;this.workletLoaded=false;
   }
-  async ready(){this.ctx??=new AudioContext();await this.ctx.resume();}
+  async ready(){
+    if(this.ctx?.state==='closed'){
+      this.ctx=null;this.workletLoaded=false;this.workletPromise=null;
+    }
+    this.ctx??=new AudioContext();
+    if(this.ctx.state==='running')return;
+    if(!this.readyPromise){
+      const ctx=this.ctx;
+      this.readyPromise=Promise.resolve(ctx.resume()).finally(()=>{if(this.readyPromise)this.readyPromise=null;});
+    }
+    await this.readyPromise;
+    if(this.ctx?.state==='closed'){
+      this.ctx=null;this.workletLoaded=false;this.workletPromise=null;
+      return this.ready();
+    }
+  }
+  async _ensureWorklet(){
+    if(this.workletLoaded)return;
+    if(!this.workletPromise){
+      const ctx=this.ctx;
+      this.workletPromise=Promise.resolve(ctx.audioWorklet.addModule('/capture-worklet.js'))
+        .then(()=>{if(this.ctx===ctx)this.workletLoaded=true;})
+        .finally(()=>{this.workletPromise=null;});
+    }
+    await this.workletPromise;
+  }
   captureSnapshot(){return {active:this.captureActive||activeCaptureOwner===this,mode:this.captureMode,muted:this.captureMode==='live'&&!this.liveGate,generation:this.captureGeneration};}
   _claimCapture(mode){
     if(activeCaptureOwner&&activeCaptureOwner!==this)activeCaptureOwner.endCapture();
@@ -38,6 +68,13 @@ export class AudioEngine{
     this._stopStream(stream);
     this.recorder=null;this.highpass=null;this.input=null;this.silent=null;this.stream=null;
   }
+  _abandonCapture(stream,generation){
+    this._releaseCaptureNodes(stream);
+    if(this._isCaptureCurrent(generation)){
+      this.captureActive=false;this.captureMode=null;this.liveGate=false;this.chunks=[];
+      if(activeCaptureOwner===this)activeCaptureOwner=null;
+    }
+  }
   async record(onTimeout,onFrame,{mode='manual'}={}){
     const captureGeneration=this._claimCapture(mode);
     await this.ready();if(!this._isCaptureCurrent(captureGeneration))return false;
@@ -49,19 +86,23 @@ export class AudioEngine{
       stream=await Promise.race([request,new Promise((_,reject)=>{timeout=setTimeout(()=>{timedOut=true;reject(Error('Microphone permission is pending. Allow microphone access for Electron in macOS System Settings → Privacy & Security → Microphone, then try again.'));},15000);})]);
     }finally{clearTimeout(timeout);}
     if(!this._isCaptureCurrent(captureGeneration)){this._stopStream(stream);return false;}
-    this.stream=stream;this.input=this.ctx.createMediaStreamSource(stream);
-    this.highpass=this.ctx.createBiquadFilter();this.highpass.type='highpass';this.highpass.frequency.value=95;this.highpass.Q.value=.7;
-    if(!this.workletLoaded){await this.ctx.audioWorklet.addModule('/capture-worklet.js');this.workletLoaded=true;}
-    if(!this._isCaptureCurrent(captureGeneration)){this._releaseCaptureNodes(stream);return false;}
-    this.recorder=new AudioWorkletNode(this.ctx,'capture');
-    this.recorder.port.onmessage=e=>{
-      if(!this._isCaptureCurrent(captureGeneration)||!this.captureActive)return;
-      if(onFrame)onFrame(e.data);else this.chunks.push(e.data);
-    };
-    this.silent=this.ctx.createGain();this.silent.gain.value=0;this.input.connect(this.highpass).connect(this.recorder).connect(this.silent).connect(this.ctx.destination);
-    this.captureActive=true;
-    if(onTimeout)this.timer=setTimeout(()=>{if(this._isCaptureCurrent(captureGeneration)&&this.captureActive)onTimeout();},59000);
-    return true;
+    try{
+      this.stream=stream;this.input=this.ctx.createMediaStreamSource(stream);
+      this.highpass=this.ctx.createBiquadFilter();this.highpass.type='highpass';this.highpass.frequency.value=95;this.highpass.Q.value=.7;
+      await this._ensureWorklet();
+      if(!this._isCaptureCurrent(captureGeneration)){this._abandonCapture(stream,captureGeneration);return false;}
+      this.recorder=new AudioWorkletNode(this.ctx,'capture');
+      this.recorder.port.onmessage=e=>{
+        if(!this._isCaptureCurrent(captureGeneration)||!this.captureActive)return;
+        if(onFrame)onFrame(e.data);else this.chunks.push(e.data);
+      };
+      this.silent=this.ctx.createGain();this.silent.gain.value=0;this.input.connect(this.highpass).connect(this.recorder).connect(this.silent).connect(this.ctx.destination);
+      this.captureActive=true;
+      if(onTimeout)this.timer=setTimeout(()=>{if(this._isCaptureCurrent(captureGeneration)&&this.captureActive)onTimeout();},59000);
+      return true;
+    }catch(error){
+      this._abandonCapture(stream,captureGeneration);throw error;
+    }
   }
   async startLive(onUtterance,settings={}){
     await this.ready();this.detector=new TurnDetector(this.ctx.sampleRate,settings);
@@ -81,10 +122,10 @@ export class AudioEngine{
     return true;
   }
   setListening(enabled){
-    this.detector?.reset();
     const allowed=!enabled||turnPlayback.canResumeListening();
-    this.liveGate=Boolean(enabled)&&allowed&&this.captureMode==='live'&&this.captureActive&&activeCaptureOwner===this;
-    return this.liveGate;
+    const next=Boolean(enabled)&&allowed&&this.captureMode==='live'&&this.captureActive&&activeCaptureOwner===this;
+    if(next===this.liveGate)return this.liveGate;
+    this.liveGate=next;this.detector?.reset();return this.liveGate;
   }
   endCapture({collect=false}={}){
     const sampleRate=this.ctx?.sampleRate||16000;
