@@ -57,9 +57,15 @@ class AgentFoundationTests(unittest.TestCase):
 
     def test_recovery_outcome_is_distinct_from_success(self):
         task = AgentTask.create('robot', 'Repair the failed check')
-        task.needs_approval('One bounded repair is available.')
+        task.needs_approval('One bounded repair is available.').offer_recovery('One bounded repair attempt is available for approval.')
         self.assertEqual(task.status, AgentOutcome.NEEDS_APPROVAL.value)
         self.assertEqual(task.phase, AgentPhase.NEEDS_APPROVAL)
+        self.assertEqual(task.public()['recovery'], {'available': True, 'label': 'One bounded repair attempt is available for approval.'})
+        task.begin_action()
+        self.assertEqual(task.phase, AgentPhase.WORKING)
+        self.assertEqual(task.status, 'active')
+        task.complete('Verification passed.')
+        self.assertIsNone(task.public()['recovery'])
 
 
 if __name__ == '__main__':

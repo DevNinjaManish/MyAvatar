@@ -142,19 +142,30 @@ async def ws(socket:WebSocket):
         await send('coding_verification',turn,status='running',transactionId=transaction_id,message='Rivet is running safe verification…')
         try:verification=await asyncio.to_thread(edits.verify_last,transaction_id)
         except asyncio.CancelledError:
-            edits.cancel_verification();await send('coding_verification',turn,status='cancelled',transactionId=transaction_id,message='Verification stopped.');raise
+            edits.cancel_verification();
+            if agent_task:
+                agent_task.cancel().record_observation('Verification was cancelled.')
+                await agent_update(agent_task,AgentPhase.CANCELLED,turn)
+            await send('coding_verification',turn,status='cancelled',transactionId=transaction_id,message='Verification stopped.');raise
         message='Verification passed.' if verification['status']=='passed' else ('Verification found issues.' if verification['status']=='failed' else verification.get('message','Verification finished.'))
         if agent_task:
             agent_task.record_observation(message)
             agent_task.record_verification(VerificationSummary.from_result(verification).public())
             if verification.get('status')=='passed':agent_task.complete('Verification passed.');await agent_update(agent_task,AgentPhase.COMPLETE,turn)
-            elif verification.get('status')=='failed':agent_task.needs_approval('Verification failed; one bounded repair may be available.');await agent_update(agent_task,AgentPhase.NEEDS_APPROVAL,turn)
+            elif verification.get('status')=='failed':agent_task.needs_approval('Verification failed; one bounded repair may be available.').offer_recovery('One bounded repair attempt is available for approval.');await agent_update(agent_task,AgentPhase.NEEDS_APPROVAL,turn)
             else:agent_task.complete(message);await agent_update(agent_task,AgentPhase.COMPLETE,turn)
         await send('coding_edit_result',turn,result=result,verification=verification,repairRound=repair_round,message=message)
 
     async def apply_pending(turn,transaction_id):
         nonlocal verification_task
+        agent_task=agent_ref.get('task')
+        if agent_task:
+            agent_task.begin_action().update_step('act','active')
+            await agent_update(agent_task,AgentPhase.WORKING,turn)
         outcome=edits.decide(transaction_id,'approve',verify=False);await send('coding_edit_result',turn,**outcome)
+        if agent_task:
+            agent_task.update_step('act','complete').record_observation('Approved change applied; verification is starting.')
+            await agent_update(agent_task,AgentPhase.WORKING,turn)
         if verification_task and not verification_task.done():edits.cancel_verification();verification_task.cancel()
         verification_task=asyncio.create_task(verify_applied(turn,transaction_id,outcome['result'],outcome.get('repairRound',0)))
         return outcome
@@ -169,6 +180,10 @@ async def ws(socket:WebSocket):
         messages=build_repair_prompt(verification,files);await send('state',turn,state='THINKING');answer=await inspect_code(messages,coding_config);await send('token',turn,text=answer)
         preview=edits.preview(answer,repair_round=1)
         if preview is None:raise ValueError('Rivet could not produce a safe repair patch from the failed verification.')
+        agent_task=agent_ref.get('task')
+        if agent_task:
+            agent_task.needs_approval('Repair proposal is ready for approval.').record_observation('Preparing one bounded repair proposal.').offer_recovery('Repair proposal ready for approval.')
+            await agent_update(agent_task,AgentPhase.NEEDS_APPROVAL,turn)
         await send('coding_patch',turn,**preview);await speak_coding_answer(turn,'I prepared one repair attempt for your approval.',config['tts']);await send('done',turn)
 
     async def handle_coding_control(turn,intent):
@@ -180,12 +195,20 @@ async def ws(socket:WebSocket):
         elif intent=='reject':
             tx_id=edits.pending_id()
             if not tx_id:raise ValueError('There is no pending Rivet change to reject.')
-            outcome=edits.decide(tx_id,'reject',verify=False);await send('coding_edit_result',turn,**outcome);text='Rejected. No files were changed.'
+            outcome=edits.decide(tx_id,'reject',verify=False);await send('coding_edit_result',turn,**outcome)
+            agent_task=agent_ref.get('task')
+            if agent_task:
+                agent_task.cancel();agent_task.result='Change rejected; no files were changed.';await agent_update(agent_task,AgentPhase.CANCELLED,turn)
+            text='Rejected. No files were changed.'
         elif intent=='rollback':
             if verification_task and not verification_task.done():edits.cancel_verification();verification_task.cancel()
             tx_id=edits.last_applied_id()
             if not tx_id:raise ValueError('There is no applied Rivet change to roll back.')
-            outcome=edits.rollback(tx_id);await send('coding_edit_result',turn,**outcome);text='Rolled back the last Rivet change.'
+            outcome=edits.rollback(tx_id);await send('coding_edit_result',turn,**outcome)
+            agent_task=agent_ref.get('task')
+            if agent_task:
+                agent_task.complete('Rolled back the last Rivet change.');await agent_update(agent_task,AgentPhase.COMPLETE,turn)
+            text='Rolled back the last Rivet change.'
         elif intent=='repair':
             await propose_repair(turn);return True
         elif intent=='switch_workspace':
@@ -348,7 +371,10 @@ async def ws(socket:WebSocket):
                 try:
                     tx_id=str(msg.get('transactionId',''));decision=str(msg.get('decision',''))
                     if decision=='approve':await apply_pending(msg.get('turn'),tx_id)
-                    else:await send('coding_edit_result',msg.get('turn'),**edits.decide(tx_id,decision,verify=False))
+                    else:
+                        outcome=edits.decide(tx_id,decision,verify=False);await send('coding_edit_result',msg.get('turn'),**outcome)
+                        if decision=='reject' and agent_ref.get('task'):
+                            agent_task=agent_ref['task'];agent_task.cancel().record_observation('Change rejected; no files were changed.');await agent_update(agent_task,AgentPhase.CANCELLED,msg.get('turn'))
                 except (ValueError,PermissionError) as exc:await send('coding_edit_result',msg.get('turn'),message=str(exc),error=True)
             elif kind=='coding_repair':
                 try:await propose_repair(msg.get('turn'))
@@ -356,7 +382,9 @@ async def ws(socket:WebSocket):
             elif kind=='coding_rollback':
                 try:
                     if verification_task and not verification_task.done():edits.cancel_verification();verification_task.cancel()
-                    await send('coding_edit_result',msg.get('turn'),**edits.rollback(str(msg.get('transactionId',''))))
+                    outcome=edits.rollback(str(msg.get('transactionId','')));await send('coding_edit_result',msg.get('turn'),**outcome)
+                    if agent_ref.get('task'):
+                        agent_task=agent_ref['task'];agent_task.complete('Rolled back the last Rivet change.');await agent_update(agent_task,AgentPhase.COMPLETE,msg.get('turn'))
                 except ValueError as exc:await send('coding_edit_result',msg.get('turn'),message=str(exc),error=True)
             elif kind=='coding_workspace':
                 try:

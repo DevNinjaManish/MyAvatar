@@ -61,6 +61,7 @@ class AgentTask:
     tool_summary: str = ''
     observation: str = ''
     verification: dict[str, Any] | None = None
+    recovery: dict[str, Any] | None = None
     blocker: str = ''
     result: str = ''
 
@@ -103,6 +104,21 @@ class AgentTask:
         self.updated_at = time.time()
         return self
 
+    def begin_action(self) -> 'AgentTask':
+        self.status = 'active'
+        self.blocker = ''
+        return self.set_phase(AgentPhase.WORKING)
+
+    def offer_recovery(self, label: str) -> 'AgentTask':
+        self.recovery = {'available': True, 'label': str(label).strip()[:160]}
+        self.updated_at = time.time()
+        return self
+
+    def clear_recovery(self) -> 'AgentTask':
+        self.recovery = None
+        self.updated_at = time.time()
+        return self
+
     def block(self, message: str) -> 'AgentTask':
         self.blocker = str(message).strip()[:500]
         self.status = AgentOutcome.BLOCKED.value
@@ -115,11 +131,15 @@ class AgentTask:
 
     def cancel(self) -> 'AgentTask':
         self.status = AgentOutcome.CANCELLED.value
+        for step in self.steps:
+            if step.status in {'pending', 'active'}:
+                step.status = 'cancelled'
         return self.set_phase(AgentPhase.CANCELLED)
 
     def complete(self, result: str = '') -> 'AgentTask':
         self.status = AgentOutcome.SUCCESS.value
         self.result = str(result).strip()[:500]
+        self.clear_recovery()
         for step in self.steps:
             if step.status in {'pending', 'active'}:
                 step.status = 'complete'
@@ -139,5 +159,6 @@ class AgentTask:
             'steps': [step.public() for step in self.steps],
             'contextRefs': self.context_refs[:8], 'toolSummary': self.tool_summary,
             'observation': self.observation,
-            'verification': self.verification, 'blocker': self.blocker, 'result': self.result,
+            'verification': self.verification, 'recovery': self.recovery,
+            'blocker': self.blocker, 'result': self.result,
         }
