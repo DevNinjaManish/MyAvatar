@@ -52,6 +52,16 @@ export function agentPlanSteps(plan = []) {
   const labels = {build: 'Build project', test: 'Run JavaScript tests', testJs: 'Run JavaScript tests', testPy: 'Run Python tests', gitStatus: 'Read Git status', gitDiff: 'Read Git diff', gitCommit: 'Commit approved changes'};
   return plan.map((step, index) => ({id: `step-${index + 1}`, label: labels[step.kind] || 'Local step', status: 'pending'}));
 }
+const verificationKinds = new Set(['build','test','testJs','testPy']);
+export function agentStepVerification(step, output) {
+  if (!verificationKinds.has(step?.kind)) return null;
+  const ok = output?.ok === true;
+  return {status: ok ? 'passed' : 'failed', ok, checks: [{id: step.kind, ok}], message: ok ? `${step.kind} completed.` : `${step.kind} reported a failure.`};
+}
+export function agentStepObservation(step, output) {
+  const label = step?.kind === 'gitDiff' ? 'Read-only diff' : (step?.kind || 'Local step');
+  return output?.ok === false ? `${label} failed.` : `${label} completed.`;
+}
 const toCommandLine = id => {
   const request = KNOWN_COMMANDS[id];
   return request ? request.kind : null;
@@ -310,6 +320,7 @@ export function mountWidgetPanels(doc, desktop) {
       id: activeTaskId, botId: 'robot', goal: brief, phase, status, steps: taskSteps.map(step => ({...step})), ...extra
     }}));
     publishTask('UNDERSTANDING');
+    publishTask('CONTEXT', 'active', {observation: 'Using the selected local project context.'});
     publishTask('PLANNING');
     for (const [index, step] of plan.entries()) {
       if (!agentRunning || taskCancelled) break;
@@ -338,15 +349,17 @@ export function mountWidgetPanels(doc, desktop) {
       const output = step.kind === 'gitStatus'
         ? await runAgentQuery({...step, taskId: activeTaskId})
         : await runCommandNow({...step, taskId: activeTaskId});
+      const verification = agentStepVerification(step, output);
+      if (verification) publishTask('VERIFYING', 'active', {verification});
       if (output && (output.ok === false)) {
         taskSteps[index].status = 'blocked';
-        publishTask('BLOCKED', 'blocked', {blocker: output.error || output.stderr || 'Local step failed.'});
+        publishTask('BLOCKED', 'blocked', {blocker: output.error || output.stderr || 'Local step failed.', verification, recovery: {available: true, label: 'Retry the bounded plan'}});
         taskFailed = true;
         report(`Step ${step.kind} failed: ${output.error || output.stderr || 'unknown error'}`, 'error');
         if (step.kind === 'test' || step.kind === 'testPy' || step.kind === 'build') break;
       } else {
         taskSteps[index].status = 'complete';
-        publishTask('WORKING', 'active', {observation: `${requestLabel} completed.`});
+        publishTask(verification ? 'VERIFYING' : 'WORKING', 'active', {observation: agentStepObservation(step, output), verification});
         updateWingFooter(`Local agent step: ${requestLabel} complete`);
       }
       if (step.kind === 'test' || step.kind === 'testJs' || step.kind === 'testPy') {
@@ -369,7 +382,7 @@ export function mountWidgetPanels(doc, desktop) {
       $('widget-brief-status').textContent = 'Task cancelled';
       report('Task cancelled safely.', 'warning');
     } else if (taskFailed) {
-      publishTask('BLOCKED', 'blocked', {result: 'Task needs attention.'});
+      publishTask('BLOCKED', 'blocked', {result: 'Task needs attention.', recovery: {available: true, label: 'Retry the bounded plan'}});
       if (taskState) taskState.textContent = 'Failed';
       $('widget-brief-status').textContent = 'Task needs attention';
       report('Task failed. Review the details, then try again.', 'error');

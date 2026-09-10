@@ -20,6 +20,9 @@ persist task history.
 The shared loop vocabulary is Understand → Context → Plan → Act → Observe →
 Verify → Recover → Complete. The task object exposes the small state
 transitions needed to grow that loop without introducing a workflow engine.
+Rivet’s bounded cockpit runner publishes context, working, verification, and
+blocked/recovery milestones with compact step observations and verification
+summaries. Retry remains a user-invoked bounded rerun, not background autonomy.
 
 ## Capabilities and safety
 

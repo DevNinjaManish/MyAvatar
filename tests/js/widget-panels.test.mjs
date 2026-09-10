@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initialPanelState, reducePanelState, readPanelPreferences, savePanelPreferences, PANEL_IDS} from '../../src/widget/panel-model.js';
-import {agentPlanSteps} from '../../src/widget/panels.js';
+import {agentPlanSteps,agentStepObservation,agentStepVerification} from '../../src/widget/panels.js';
 import layoutAPI from '../../electron/widget-layout.cjs';
 const {widgetLayout,validPanelsRequest,UTILITY_HEIGHT,CALENDAR_HEIGHT}=layoutAPI;
 const area={x:0,y:24,width:1440,height:820};
@@ -13,6 +13,12 @@ test('local agent plans expose bounded ordered steps without commands',()=>{
   const steps=agentPlanSteps([{kind:'gitStatus'},{kind:'test'}]);
   assert.deepEqual(steps,[{id:'step-1',label:'Read Git status',status:'pending'},{id:'step-2',label:'Run JavaScript tests',status:'pending'}]);
   assert.equal(Object.hasOwn(steps[0],'command'),false);
+});
+test('bounded agent steps expose authored observations and verification summaries',()=>{
+  assert.equal(agentStepObservation({kind:'test'},{ok:true}),'test completed.');
+  assert.deepEqual(agentStepVerification({kind:'testJs'},{ok:true}),{status:'passed',ok:true,checks:[{id:'testJs',ok:true}],message:'testJs completed.'});
+  assert.deepEqual(agentStepVerification({kind:'build'},{ok:false}),{status:'failed',ok:false,checks:[{id:'build',ok:false}],message:'build reported a failure.'});
+  assert.equal(agentStepVerification({kind:'gitDiff'},{ok:true}),null);
 });
 test('at most two panels are expanded; oldest collapses first',()=>{
   let state=initialPanelState();
