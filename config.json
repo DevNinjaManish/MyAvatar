@@ -67,9 +67,17 @@
       "onsetGraceMs": 30,
       "noiseMultiplier": 2.2,
       "noiseMargin": 0.0015,
-      "maxThreshold": 0.035
+      "maxThreshold": 0.035,
+      "bargeIn": {
+        "guardMs": 500,
+        "threshold": 0.014,
+        "onsetMs": 180,
+        "minSpeechMs": 320,
+        "silenceMs": 300,
+        "preRollMs": 160
+      }
     },
-    "resumeDelayMs": 250
+    "resumeDelayMs": 180
   },
   "memory": {"enabled": false},
   "bots": {
