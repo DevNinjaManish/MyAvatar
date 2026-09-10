@@ -1,8 +1,10 @@
 // Install socket capture and runtime guards before widget-runtime.js creates the WebSocket.
 import {installSocketBridge} from '../conversation/socket-bridge.js';
 import {installRuntimeEventGuard} from '../conversation/runtime-events.js';
+import {installDualSpeakerEqualizers} from '../avatar/dual-speaker-patch.js';
 installSocketBridge(window);
 installRuntimeEventGuard(window);
+installDualSpeakerEqualizers();
 await import('./widget-runtime.js');
 import '../styles/widget-cockpit.css';
 import '../styles/widget-panels.css';
