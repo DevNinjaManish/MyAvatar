@@ -5,6 +5,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from backend.providers.stt import transcribe
 from backend.providers.tts import Speech
 from backend.providers.llm import stream
+from backend.providers.coding import check_ready as coding_check_ready, inspect as inspect_code
 from backend.conversation.chunks import split_ready
 from backend.conversation.speech import prepare_spoken_text
 from backend.core.memory import load_history, save_history, clear_history
@@ -13,6 +14,7 @@ from backend.core.approvals import request_approval, resolve_approval
 from backend.core.runtime import RuntimeSession
 from backend.core.greetings import GreetingCoordinator
 from backend.core.readiness import EngineReadiness
+from backend.core.repo_context import read_files, build_prompt
 
 app=FastAPI()
 Path('logs').mkdir(exist_ok=True)
@@ -88,6 +90,13 @@ async def warm_models():
             response.raise_for_status()
     except Exception as exc:log.warning('LLM warm-up unavailable (%s).',type(exc).__name__);engine_readiness.set('llm','unavailable',reason='llm_warmup_failed')
     else:engine_readiness.set('llm','ready')
+    coding_config=config.get('specialists',{}).get('coding',{})
+    if coding_config.get('enabled'):
+        warm_stage='Warming Rivet coding model…';engine_readiness.set('coding','preparing')
+        try:await coding_check_ready(coding_config)
+        except Exception as exc:log.warning('Coding specialist warm-up unavailable (%s).',type(exc).__name__);engine_readiness.set('coding','unavailable',reason='coding_warmup_failed')
+        else:engine_readiness.set('coding','ready')
+    else:engine_readiness.set('coding','deferred',reason='disabled')
     snapshot=engine_readiness.snapshot();warm_stage='Local engines are ready.' if snapshot['overall']=='ready' else 'Local engines started with limited availability.'
 
 @app.on_event('startup')
@@ -108,6 +117,40 @@ async def ws(socket:WebSocket):
     history=load_history(bot_id) if memory_enabled else [];log.info(f'Loaded history for {bot_id}: {len(history)} turns');bot_histories={bot_id:history};task=None;approvals={};runtime=RuntimeSession(bot_id)
     async def send(kind,turn=None,operation_id=None,**data):await socket.send_json(runtime.event(kind,turn=turn,operation_id=operation_id,**data))
     greetings=GreetingCoordinator(generate=speech.generate,executor=tts_pool,send=send,save_preferences=save_preferences,enabled=client_token!='development')
+
+    async def inspect_repository(msg):
+        turn=msg.get('turn')
+        try:
+            if config['conversation']['persona']!='robot':
+                await send('error',turn,message='Switch to Rivet to use repository inspection.');return
+            coding_config=config.get('specialists',{}).get('coding',{})
+            if not coding_config.get('enabled'):
+                await send('error',turn,message='The local coding specialist is disabled.');return
+            if not engine_readiness.capability('code'):
+                current=engine_readiness.snapshot()['engines']['coding']['state']
+                if current=='deferred':
+                    engine_readiness.set('coding','preparing')
+                    await send('coding_preparing',turn,readiness=engine_readiness.snapshot())
+                    try:await coding_check_ready(coding_config)
+                    except Exception as exc:
+                        log.warning('Coding specialist unavailable (%s).',type(exc).__name__)
+                        engine_readiness.set('coding','unavailable',reason='coding_model_unavailable')
+                    else:engine_readiness.set('coding','ready')
+                if not engine_readiness.capability('code'):
+                    await send('error',turn,message='Rivet coding model is unavailable. Install or start the configured local model and try again.',readiness=engine_readiness.snapshot());return
+            files=read_files(msg.get('paths') or [],root=Path('.'))
+            messages=build_prompt(msg.get('text',''),files)
+            await send('state',turn,state='THINKING')
+            await send('coding_context',turn,paths=[item['path'] for item in files])
+            answer=await inspect_code(messages,coding_config)
+            await send('token',turn,text=answer)
+            await send('done',turn)
+        except asyncio.CancelledError:raise
+        except ValueError as exc:await send('error',turn,message=str(exc))
+        except Exception as exc:
+            log.exception('Coding inspection failed')
+            engine_readiness.set('coding','unavailable',reason='coding_runtime_failed')
+            await send('error',turn,message='Rivet could not inspect the selected files. Check the local coding model and try again.',readiness=engine_readiness.snapshot())
 
     async def respond(msg):
         turn_config=copy.deepcopy(config);turn=msg['turn'];start=time.perf_counter();metrics={};loop=asyncio.get_running_loop();current_bot=turn_config['conversation']['persona'];history=bot_histories.setdefault(current_bot,[])
@@ -221,13 +264,14 @@ async def ws(socket:WebSocket):
         if engine_readiness.capability('speak') and config.get('_greetingIndexes',{}).get(bot_id,0)>0:greetings.request(config,reason='startup')
         while True:
             msg=await socket.receive_json();kind=msg.get('type')
-            if kind in ('stop','turn','settings','clear','bot','onboarding'):greetings.cancel()
-            if kind in ('stop','turn','settings','clear','bot') and task:
+            if kind in ('stop','turn','code_inspect','settings','clear','bot','onboarding'):greetings.cancel()
+            if kind in ('stop','turn','code_inspect','settings','clear','bot') and task:
                 task.cancel()
                 try:await task
                 except asyncio.CancelledError:pass
                 task=None
             if kind=='turn':task=asyncio.create_task(respond(msg))
+            elif kind=='code_inspect':task=asyncio.create_task(inspect_repository(msg))
             elif kind=='clear':history.clear();clear_history(config['conversation']['persona']) if memory_enabled else None
             elif kind=='bot':
                 bot_id=msg.get('bot');profile=config.get('bots',{}).get(bot_id)
