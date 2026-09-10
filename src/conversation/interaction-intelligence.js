@@ -28,10 +28,24 @@ const BOT_QUICK_ACTIONS={
 
 const SAFE_PHASES=new Set(['idle','listening','thinking','writing','speaking','complete','interrupted','failed']);
 const LONG_WORK_MS=4500;
+const MAX_FOCUS_PROMPT_CHARS=120;
 
-export function quickActionsForBot(botId){
+function compactFocus(value){
+  const text=String(value||'').replace(/\s+/g,' ').trim();
+  if(!text)return '';
+  return text.length<=MAX_FOCUS_PROMPT_CHARS?text:text.slice(0,MAX_FOCUS_PROMPT_CHARS-1).trimEnd()+'…';
+}
+
+export function quickActionsForBot(botId,{focus='',excludeLabels=[]}={}){
   const actions=BOT_QUICK_ACTIONS[botId]||BOT_QUICK_ACTIONS.nova;
-  return actions.map(([label,prompt])=>({label,prompt}));
+  const excluded=new Set(Array.isArray(excludeLabels)?excludeLabels:[]);
+  const context=compactFocus(focus);
+  const available=actions.filter(([label])=>!excluded.has(label));
+  const selected=(available.length?available:actions).slice(0,3);
+  return selected.map(([label,prompt])=>({
+    label,
+    prompt:context?`${prompt} Current focus: ${context}`:prompt,
+  }));
 }
 
 export function conversationPhaseFromEvent(event,current='idle'){
