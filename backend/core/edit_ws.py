@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from backend.core.coding_verify import verify_edit
 from backend.core.edit_session import EditSession
 from backend.core.patch_proposal import parse_patch_proposal
 
@@ -34,13 +35,27 @@ class CodingEditController:
     def decide(self, transaction_id: str, decision: str) -> dict[str, Any]:
         if decision == 'approve':
             result = self.session.apply(transaction_id)
-            return {'result': result, 'message': 'Rivet applied the approved code change.'}
+            verification = self.verify_last(transaction_id)
+            message = 'Rivet applied the approved code change.'
+            if verification['status'] == 'passed':
+                message += ' Verification passed.'
+            elif verification['status'] == 'failed':
+                message += ' Verification found issues; the edit remains applied and can be rolled back.'
+            else:
+                message += ' No safe automatic verification is configured for these files.'
+            return {'result': result, 'verification': verification, 'message': message}
         if decision == 'reject':
             result = self.session.reject_pending(tx_id=transaction_id)
             if result is None:
                 raise ValueError('No pending edit is available to reject.')
             return {'result': result, 'message': 'Code change rejected. No files were modified.'}
         raise ValueError('Unknown coding edit decision.')
+
+    def verify_last(self, transaction_id: str) -> dict[str, Any]:
+        tx = self.session.last_applied
+        if tx is None or tx.id != transaction_id:
+            raise ValueError('No matching applied edit is available to verify.')
+        return verify_edit(tx.files, root=self.root)
 
     def rollback(self, transaction_id: str) -> dict[str, Any]:
         result = self.session.rollback(transaction_id)
