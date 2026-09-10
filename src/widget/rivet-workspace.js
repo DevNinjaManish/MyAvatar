@@ -28,6 +28,38 @@ export function mountRivetWorkspace(win, doc) {
 
   root.classList.add('rivet-agent-workspace');
 
+  const heading = root.querySelector('.widget-panels-heading');
+  const title = $('widget-panels-title');
+  if (heading && title && !heading.querySelector('.rivet-heading-copy')) {
+    const copy = doc.createElement('div');
+    copy.className = 'rivet-heading-copy';
+    const eyebrow = doc.createElement('span');
+    eyebrow.className = 'rivet-eyebrow';
+    eyebrow.textContent = 'LOCAL CODING AGENT';
+    title.parentElement?.insertBefore(copy, title);
+    copy.append(eyebrow, title);
+  }
+
+  const projectRow = root.querySelector('.widget-project-row');
+  const projectName = $('widget-project-name');
+  const projectSelect = $('widget-project-select');
+  if (projectRow && projectName && !projectRow.querySelector('.rivet-project-main')) {
+    const main = doc.createElement('div');
+    main.className = 'rivet-project-main';
+    const dot = doc.createElement('span');
+    dot.className = 'rivet-project-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    const copy = doc.createElement('div');
+    copy.className = 'rivet-project-copy';
+    const label = doc.createElement('span');
+    label.className = 'rivet-project-label';
+    label.textContent = 'Project';
+    projectName.parentElement?.insertBefore(main, projectName);
+    copy.append(label, projectName);
+    main.append(dot, copy);
+    if (projectSelect) projectSelect.textContent = projectName.textContent === 'No folder selected' ? 'Open project' : 'Change';
+  }
+
   let timeline = $('widget-rivet-timeline');
   if (!timeline) {
     timeline = doc.createElement('section');
@@ -77,6 +109,8 @@ export function mountRivetWorkspace(win, doc) {
     const model = rivetWorkspaceModel(detail);
     if (!model.steps.length) {
       timeline.innerHTML = '<div class="rivet-timeline-empty">Ready when you are.</div>';
+      timeline.dataset.phase = model.phase;
+      timeline.dataset.status = model.status;
       return;
     }
     timeline.replaceChildren(...model.steps.map(step => {
