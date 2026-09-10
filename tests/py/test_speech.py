@@ -1,6 +1,7 @@
 import unittest
 from backend.conversation.speech import prepare_spoken_text
 from backend.conversation.chunks import split_ready
+from backend.providers.tts import speech_speed_for_voice
 
 
 class SpokenText(unittest.TestCase):
@@ -20,6 +21,19 @@ class SpokenText(unittest.TestCase):
         self.assertIn('Code is shown in the chat.',spoken)
         self.assertIn('A P I',spoken)
 
+    def test_unclosed_code_fence_is_never_read_verbatim(self):
+        spoken=prepare_spoken_text('Here is the patch.\n```js\nconst secret = 42;\nreturn secret;')
+        self.assertNotIn('const secret',spoken)
+        self.assertNotIn('return secret',spoken)
+        self.assertIn('Code is shown in the chat.',spoken)
+
+    def test_diff_heavy_answer_becomes_short_spoken_summary(self):
+        source='Here is the safe fix.\n--- a/app.js\n+++ b/app.js\n@@ -1 +1 @@\n-old();\n+newCall();\n+return value;'
+        spoken=prepare_spoken_text(source)
+        self.assertIn('Here is the safe fix.',spoken)
+        self.assertIn('technical details are shown in chat',spoken)
+        self.assertNotIn('newCall',spoken)
+
     def test_spoken_text_is_bounded_without_changing_display_source(self):
         source='word '*300
         spoken=prepare_spoken_text(source,max_chars=120)
@@ -29,6 +43,22 @@ class SpokenText(unittest.TestCase):
 
     def test_symbol_only_content_becomes_empty(self):
         self.assertEqual(prepare_spoken_text('✨'), '')
+
+
+class VoiceCadence(unittest.TestCase):
+    def test_authored_voice_cadence_is_subtle_and_bounded(self):
+        base={'speed':1.06}
+        rivet=speech_speed_for_voice({**base,'voice':'am_michael'})
+        sterling=speech_speed_for_voice({**base,'voice':'bm_george'})
+        pixel=speech_speed_for_voice({**base,'voice':'af_sarah'})
+        nova=speech_speed_for_voice({**base,'voice':'af_heart'})
+        self.assertLess(sterling,rivet)
+        self.assertLess(rivet,nova)
+        self.assertGreater(pixel,nova)
+        for speed in (rivet,sterling,pixel,nova):self.assertGreaterEqual(speed,.82);self.assertLessEqual(speed,1.22)
+
+    def test_unknown_voice_keeps_requested_speed(self):
+        self.assertEqual(speech_speed_for_voice({'voice':'custom','speed':1.03}),1.03)
 
 
 class SpeechChunking(unittest.TestCase):
