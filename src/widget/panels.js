@@ -49,7 +49,8 @@ const planFromBrief = brief => {
   return shouldCommit ? [...steps,{kind:'gitCommit',label:'Commit',resultKey:'gitCommit',autoMessage:brief}] : steps;
 };
 export function agentPlanSteps(plan = []) {
-  return plan.map((step, index) => ({id: `step-${index + 1}`, label: step.kind, status: 'pending'}));
+  const labels = {build: 'Build project', test: 'Run JavaScript tests', testJs: 'Run JavaScript tests', testPy: 'Run Python tests', gitStatus: 'Read Git status', gitDiff: 'Read Git diff', gitCommit: 'Commit approved changes'};
+  return plan.map((step, index) => ({id: `step-${index + 1}`, label: labels[step.kind] || 'Local step', status: 'pending'}));
 }
 const toCommandLine = id => {
   const request = KNOWN_COMMANDS[id];

@@ -11,7 +11,7 @@ test('panels start closed with only Task expanded',()=>assert.deepEqual(initialP
 test('all five agreed panels exist in the agreed order',()=>assert.deepEqual(PANEL_IDS,['task','changes','terminal','tests','diff']));
 test('local agent plans expose bounded ordered steps without commands',()=>{
   const steps=agentPlanSteps([{kind:'gitStatus'},{kind:'test'}]);
-  assert.deepEqual(steps,[{id:'step-1',label:'gitStatus',status:'pending'},{id:'step-2',label:'test',status:'pending'}]);
+  assert.deepEqual(steps,[{id:'step-1',label:'Read Git status',status:'pending'},{id:'step-2',label:'Run JavaScript tests',status:'pending'}]);
   assert.equal(Object.hasOwn(steps[0],'command'),false);
 });
 test('at most two panels are expanded; oldest collapses first',()=>{

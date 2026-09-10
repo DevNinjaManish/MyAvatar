@@ -145,6 +145,7 @@ async def ws(socket:WebSocket):
             edits.cancel_verification();await send('coding_verification',turn,status='cancelled',transactionId=transaction_id,message='Verification stopped.');raise
         message='Verification passed.' if verification['status']=='passed' else ('Verification found issues.' if verification['status']=='failed' else verification.get('message','Verification finished.'))
         if agent_task:
+            agent_task.record_observation(message)
             agent_task.record_verification(VerificationSummary.from_result(verification).public())
             if verification.get('status')=='passed':agent_task.complete('Verification passed.');await agent_update(agent_task,AgentPhase.COMPLETE,turn)
             elif verification.get('status')=='failed':agent_task.needs_approval('Verification failed; one bounded repair may be available.');await agent_update(agent_task,AgentPhase.NEEDS_APPROVAL,turn)

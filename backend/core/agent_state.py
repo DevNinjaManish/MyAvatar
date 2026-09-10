@@ -59,6 +59,7 @@ class AgentTask:
     steps: list[TaskStep] = field(default_factory=list)
     context_refs: list[str] = field(default_factory=list)
     tool_summary: str = ''
+    observation: str = ''
     verification: dict[str, Any] | None = None
     blocker: str = ''
     result: str = ''
@@ -97,6 +98,11 @@ class AgentTask:
         self.updated_at = time.time()
         return self
 
+    def record_observation(self, message: str) -> 'AgentTask':
+        self.observation = str(message).strip()[:500]
+        self.updated_at = time.time()
+        return self
+
     def block(self, message: str) -> 'AgentTask':
         self.blocker = str(message).strip()[:500]
         self.status = AgentOutcome.BLOCKED.value
@@ -132,5 +138,6 @@ class AgentTask:
             'createdAt': self.created_at, 'updatedAt': self.updated_at,
             'steps': [step.public() for step in self.steps],
             'contextRefs': self.context_refs[:8], 'toolSummary': self.tool_summary,
+            'observation': self.observation,
             'verification': self.verification, 'blocker': self.blocker, 'result': self.result,
         }

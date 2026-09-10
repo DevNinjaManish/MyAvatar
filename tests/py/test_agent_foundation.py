@@ -16,6 +16,8 @@ class AgentFoundationTests(unittest.TestCase):
         self.assertEqual(public['phase'], 'BLOCKED')
         self.assertEqual(public['status'], AgentOutcome.BLOCKED.value)
         self.assertNotIn('transcript', public)
+        task.record_observation('Context was gathered.')
+        self.assertEqual(task.public()['observation'], 'Context was gathered.')
         self.assertLessEqual(len(public['contextRefs']), 8)
 
     def test_cancel_and_complete_update_steps(self):
@@ -38,6 +40,12 @@ class AgentFoundationTests(unittest.TestCase):
     def test_verification_contract_preserves_specialist_checks(self):
         summary = VerificationSummary.from_result({'status': 'failed', 'ok': False, 'checks': [{'id': 'tests', 'ok': False}], 'message': 'Issues found.'})
         self.assertEqual(summary.public(), {'status': 'failed', 'ok': False, 'checks': [{'id': 'tests', 'ok': False}], 'message': 'Issues found.'})
+
+    def test_recovery_outcome_is_distinct_from_success(self):
+        task = AgentTask.create('robot', 'Repair the failed check')
+        task.needs_approval('One bounded repair is available.')
+        self.assertEqual(task.status, AgentOutcome.NEEDS_APPROVAL.value)
+        self.assertEqual(task.phase, AgentPhase.NEEDS_APPROVAL)
 
 
 if __name__ == '__main__':
