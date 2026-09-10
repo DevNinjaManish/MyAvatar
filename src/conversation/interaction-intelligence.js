@@ -93,15 +93,17 @@ export function mountInteractionIntelligence(win=window,doc=document){
     render();
   };
   const onRuntime=event=>setPhase(conversationPhaseFromEvent(event.detail||{},phase));
+  const onAgentTask=event=>setPhase(conversationPhaseFromEvent({type:'agent_state',agentState:event.detail||{}},phase));
   const onClient=event=>{
     if(event.detail?.type==='turn')setPhase('thinking');
     else if(event.detail?.type==='stop')setPhase('interrupted');
   };
   const onClose=()=>setPhase('idle');
   win.addEventListener('myavatar:runtime-event',onRuntime);
+  win.addEventListener('myavatar:agent-task',onAgentTask);
   win.addEventListener('myavatar:client-message',onClient);
   win.addEventListener('myavatar:socket-close',onClose);
   render();
-  const api={snapshot:()=>({phase:safeConversationPhase(phase),longRunning}),dispose(){clearTimeout(longTimer);win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.removeEventListener('myavatar:socket-close',onClose);delete win.__myavatarInteractionIntelligence;}};
+  const api={snapshot:()=>({phase:safeConversationPhase(phase),longRunning}),dispose(){clearTimeout(longTimer);win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:agent-task',onAgentTask);win.removeEventListener('myavatar:client-message',onClient);win.removeEventListener('myavatar:socket-close',onClose);delete win.__myavatarInteractionIntelligence;}};
   win.__myavatarInteractionIntelligence=api;return api;
 }

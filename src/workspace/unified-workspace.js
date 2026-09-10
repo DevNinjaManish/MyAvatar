@@ -150,12 +150,13 @@ export function mountUnifiedWorkspace(win=window,doc=document){
   };
   const onClient=event=>{if(event.detail?.type==='turn')phase='thinking';else if(event.detail?.type==='stop')phase='interrupted';render();};
   const onCalendar=event=>{calendar={...EMPTY_CALENDAR,...(event.detail||{})};render();};
+  const onAgentTask=event=>{if(event.detail?.botId==='robot'&&event.detail?.id){agentState={...event.detail};phase=String(event.detail.phase||phase).toLowerCase();render();}};
   const onStore=()=>render();
-  win.addEventListener('myavatar:runtime-event',onRuntime);win.addEventListener('myavatar:client-message',onClient);win.addEventListener('myavatar:calendar-context',onCalendar);
+  win.addEventListener('myavatar:runtime-event',onRuntime);win.addEventListener('myavatar:client-message',onClient);win.addEventListener('myavatar:calendar-context',onCalendar);win.addEventListener('myavatar:agent-task',onAgentTask);
   win.__myavatarChatStore?.addEventListener?.('change',onStore);
   shell.querySelector('[data-uws-open]').onclick=()=>{const mode=shell.querySelector('[data-uws-open]').dataset.mode;doc.querySelector(`[data-workspace-mode="${mode}"]`)?.click?.();};
   shell.querySelector('[data-uws-chat]').onclick=()=>{const transcript=doc.getElementById('transcript');if(transcript){transcript.hidden=false;doc.getElementById('text')?.focus?.();}};
   render();
-  const api={snapshot:()=>({botId,phase,focus:focusText(),agentState,companion:companionWorkspaceState(botId,{focus:focusText(),messages:win.__myavatarChatStore?.snapshot?.(botId)||[],draft:win.__myavatarChatStore?.draft?.(botId)||'',calendar}),rivet:{...rivet,files:[...rivet.files]}}),dispose(){win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.removeEventListener('myavatar:calendar-context',onCalendar);win.__myavatarChatStore?.removeEventListener?.('change',onStore);shell.remove();delete win.__myavatarUnifiedWorkspace;}};
+  const api={snapshot:()=>({botId,phase,focus:focusText(),agentState,companion:companionWorkspaceState(botId,{focus:focusText(),messages:win.__myavatarChatStore?.snapshot?.(botId)||[],draft:win.__myavatarChatStore?.draft?.(botId)||'',calendar}),rivet:{...rivet,files:[...rivet.files]}}),dispose(){win.removeEventListener('myavatar:runtime-event',onRuntime);win.removeEventListener('myavatar:client-message',onClient);win.removeEventListener('myavatar:calendar-context',onCalendar);win.removeEventListener('myavatar:agent-task',onAgentTask);win.__myavatarChatStore?.removeEventListener?.('change',onStore);shell.remove();delete win.__myavatarUnifiedWorkspace;}};
   win.__myavatarUnifiedWorkspace=api;return api;
 }

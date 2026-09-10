@@ -2,12 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initialPanelState, reducePanelState, readPanelPreferences, savePanelPreferences, PANEL_IDS} from '../../src/widget/panel-model.js';
+import {agentPlanSteps} from '../../src/widget/panels.js';
 import layoutAPI from '../../electron/widget-layout.cjs';
 const {widgetLayout,validPanelsRequest,UTILITY_HEIGHT,CALENDAR_HEIGHT}=layoutAPI;
 const area={x:0,y:24,width:1440,height:820};
 
 test('panels start closed with only Task expanded',()=>assert.deepEqual(initialPanelState(),{open:false,expanded:['task'],wide:null}));
 test('all five agreed panels exist in the agreed order',()=>assert.deepEqual(PANEL_IDS,['task','changes','terminal','tests','diff']));
+test('local agent plans expose bounded ordered steps without commands',()=>{
+  const steps=agentPlanSteps([{kind:'gitStatus'},{kind:'test'}]);
+  assert.deepEqual(steps,[{id:'step-1',label:'gitStatus',status:'pending'},{id:'step-2',label:'test',status:'pending'}]);
+  assert.equal(Object.hasOwn(steps[0],'command'),false);
+});
 test('at most two panels are expanded; oldest collapses first',()=>{
   let state=initialPanelState();
   for(const id of PANEL_IDS.slice(1))state=reducePanelState(state,{type:'toggle-panel',id});

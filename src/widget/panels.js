@@ -48,6 +48,9 @@ const planFromBrief = brief => {
   const shouldCommit = include('commit') || include('checkpoint');
   return shouldCommit ? [...steps,{kind:'gitCommit',label:'Commit',resultKey:'gitCommit',autoMessage:brief}] : steps;
 };
+export function agentPlanSteps(plan = []) {
+  return plan.map((step, index) => ({id: `step-${index + 1}`, label: step.kind, status: 'pending'}));
+}
 const toCommandLine = id => {
   const request = KNOWN_COMMANDS[id];
   return request ? request.kind : null;
@@ -301,15 +304,24 @@ export function mountWidgetPanels(doc, desktop) {
       report('No local action plan could be built from this brief.', 'warning');
       return;
     }
-    report(`Running local agent plan (${plan.length} step${plan.length>1?'s':''}).`, 'info');
-    for (const step of plan) {
+    const taskSteps = agentPlanSteps(plan);
+    const publishTask = (phase, status = 'active', extra = {}) => win.dispatchEvent(new win.CustomEvent('myavatar:agent-task', {detail: {
+      id: activeTaskId, botId: 'robot', goal: brief, phase, status, steps: taskSteps.map(step => ({...step})), ...extra
+    }}));
+    publishTask('UNDERSTANDING');
+    publishTask('PLANNING');
+    for (const [index, step] of plan.entries()) {
       if (!agentRunning || taskCancelled) break;
+      taskSteps[index].status = 'active';
+      publishTask('WORKING');
       const requestLabel = step.kind === 'gitStatus' || step.kind === 'gitDiff'
         ? KNOWN_QUERIES[step.kind]?.kind || step.kind
         : step.kind;
       if (step.kind === 'gitDiff') {
         const result = await runAgentQuery({...step, taskId: activeTaskId});
         if (!result?.ok) {
+          taskSteps[index].status = 'blocked';
+          publishTask('BLOCKED', 'blocked', {blocker: result?.error || 'Read-only observation failed.'});
           taskFailed = true;
           report(`Step ${step.kind} failed: ${result?.error || 'unknown'}`, 'error');
           break;
@@ -318,16 +330,22 @@ export function mountWidgetPanels(doc, desktop) {
         if (wing) { const pre=doc.createElement('pre');pre.textContent = result.stdout || '(No diff output.)';wing.innerHTML='';wing.append(pre); }
         updateWingFooter(`Local agent step: ${requestLabel} loaded`);
         doc.querySelector('[data-widget-panel="diff"] .panel-state').textContent = result?.ok ? 'Pass' : 'Fail';
+        taskSteps[index].status = 'complete';
+        publishTask('WORKING', 'active', {observation: 'Read-only diff loaded.'});
         continue;
       }
       const output = step.kind === 'gitStatus'
         ? await runAgentQuery({...step, taskId: activeTaskId})
         : await runCommandNow({...step, taskId: activeTaskId});
       if (output && (output.ok === false)) {
+        taskSteps[index].status = 'blocked';
+        publishTask('BLOCKED', 'blocked', {blocker: output.error || output.stderr || 'Local step failed.'});
         taskFailed = true;
         report(`Step ${step.kind} failed: ${output.error || output.stderr || 'unknown error'}`, 'error');
         if (step.kind === 'test' || step.kind === 'testPy' || step.kind === 'build') break;
       } else {
+        taskSteps[index].status = 'complete';
+        publishTask('WORKING', 'active', {observation: `${requestLabel} completed.`});
         updateWingFooter(`Local agent step: ${requestLabel} complete`);
       }
       if (step.kind === 'test' || step.kind === 'testJs' || step.kind === 'testPy') {
@@ -345,14 +363,17 @@ export function mountWidgetPanels(doc, desktop) {
     $('widget-agent-run').disabled = !$('widget-brief').value.trim();
     const taskState = doc.querySelector('[data-widget-panel="task"] .panel-state');
     if (taskCancelled) {
+      publishTask('CANCELLED', 'cancelled', {result: 'Task cancelled safely.'});
       if (taskState) taskState.textContent = 'Cancelled';
       $('widget-brief-status').textContent = 'Task cancelled';
       report('Task cancelled safely.', 'warning');
     } else if (taskFailed) {
+      publishTask('BLOCKED', 'blocked', {result: 'Task needs attention.'});
       if (taskState) taskState.textContent = 'Failed';
       $('widget-brief-status').textContent = 'Task needs attention';
       report('Task failed. Review the details, then try again.', 'error');
     } else {
+      publishTask('COMPLETE', 'success', {result: 'Task completed.'});
       if (taskState) taskState.textContent = 'Pass';
       $('widget-brief-status').textContent = 'Task completed (local agent)';
       $('widget-brief-status').dataset.tone = 'success';
