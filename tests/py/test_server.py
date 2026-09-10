@@ -5,6 +5,15 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 from backend.core.app import app
 
+
+def receive_startup(ws, *, warm=False):
+    first=ws.receive_json();assert first['type']=='config'
+    workspace=ws.receive_json();assert workspace['type']=='coding_workspace'
+    next_event=ws.receive_json()
+    assert next_event['type']==('preparing' if warm else 'ready')
+    return first,workspace,next_event
+
+
 class Pipeline(unittest.TestCase):
     def test_rejects_wrong_token(self):
         with TestClient(app) as client:
@@ -18,7 +27,7 @@ class Pipeline(unittest.TestCase):
                 await asyncio.sleep(.002)
         with tempfile.TemporaryDirectory() as directory,patch('backend.core.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.core.app.stream',fake_stream),patch('backend.core.app.speech.generate',return_value=b'RIFFtest'):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                self.assertEqual(ws.receive_json()['type'],'config');self.assertEqual(ws.receive_json()['type'],'ready')
+                receive_startup(ws)
                 ws.send_json({'type':'turn','turn':1,'text':'Hello'})
                 events=[]
                 for _ in range(30):
@@ -38,7 +47,7 @@ class Pipeline(unittest.TestCase):
             for _ in range(5):yield 'Sentence. '
         with patch('backend.core.app.stream',fake_stream),patch('backend.core.app.speech.generate',side_effect=ValueError('bad voice')):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                ws.receive_json();ws.receive_json();ws.send_json({'type':'turn','turn':2,'text':'Hi'})
+                receive_startup(ws);ws.send_json({'type':'turn','turn':2,'text':'Hi'})
                 events=[]
                 for _ in range(50):
                     e=ws.receive_json();events.append(e)
@@ -54,7 +63,7 @@ class Pipeline(unittest.TestCase):
             yield '✨'
         with patch('backend.core.app.stream',fake_stream),patch('backend.core.app.speech.generate') as generate:
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                ws.receive_json();ws.receive_json();ws.send_json({'type':'turn','turn':3,'text':'Hi'})
+                receive_startup(ws);ws.send_json({'type':'turn','turn':3,'text':'Hi'})
                 events=[]
                 for _ in range(20):
                     event=ws.receive_json();events.append(event)
@@ -69,7 +78,7 @@ class Pipeline(unittest.TestCase):
             yield '[curious] You appear to be reviewing a design.'
         with tempfile.TemporaryDirectory() as directory,patch('backend.core.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.core.app.SCREEN_EVENTS_PATH',Path(directory)/'events.jsonl'),patch('backend.core.app.stream',fake_stream),patch('backend.core.app.speech.generate',return_value=b'RIFFtest'):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                ws.receive_json();ws.receive_json()
+                receive_startup(ws)
                 frame=base64.b64encode(b'PNG test frame').decode()
                 ws.send_json({'type':'turn','turn':7,'text':'Screen awareness','image':frame,'screenObservation':True,'screenSource':'Main display'})
                 while ws.receive_json()['type']!='done':pass
@@ -86,7 +95,7 @@ class Pipeline(unittest.TestCase):
             yield 'You have a code review open.'
         with tempfile.TemporaryDirectory() as directory,patch('backend.core.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.core.app.SCREEN_EVENTS_PATH',Path(directory)/'events.jsonl'),patch('backend.core.app.stream',fake_stream),patch('backend.core.app.speech.generate',return_value=b'RIFFtest'):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                ws.receive_json();ws.receive_json()
+                receive_startup(ws)
                 frame=base64.b64encode(b'current screen').decode()
                 ws.send_json({'type':'turn','turn':8,'text':'What is on my screen?','image':frame,'screenSource':'Main display'})
                 while ws.receive_json()['type']!='done':pass
@@ -117,7 +126,7 @@ class Cancellation(unittest.TestCase):
             else:yield 'New answer.'
         with tempfile.TemporaryDirectory() as directory,patch('backend.core.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.core.app.stream',fake_stream),patch('backend.core.app.speech.generate',return_value=b'RIFFtest'):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                ws.receive_json();ws.receive_json()
+                receive_startup(ws)
                 ws.send_json({'type':'turn','turn':1,'text':'old'})
                 while ws.receive_json()['type']!='token':pass
                 ws.send_json({'type':'stop'})
@@ -134,7 +143,7 @@ class BotSwitching(unittest.TestCase):
         async def fake_stream(messages,config):yield 'Hello there.'
         with tempfile.TemporaryDirectory() as directory,patch('backend.core.app.PREFERENCES_PATH',Path(directory)/'settings.json'),patch('backend.core.app.stream',fake_stream),patch('backend.core.app.speech.generate',return_value=b'RIFFtest'):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                ws.receive_json();ws.receive_json()
+                receive_startup(ws)
                 ws.send_json({'type':'bot','bot':'nova'})
                 self.assertEqual(ws.receive_json()['config']['tts']['voice'],'af_heart')
                 self.assertEqual(ws.receive_json()['history'],[])
@@ -153,7 +162,7 @@ class BotSwitching(unittest.TestCase):
     def test_onboarding_saves_companion_profile_and_interaction(self):
         with tempfile.TemporaryDirectory() as directory,patch('backend.core.app.PREFERENCES_PATH',Path(directory)/'settings.json'):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                ws.receive_json();ws.receive_json()
+                receive_startup(ws)
                 ws.send_json({'type':'onboarding','bot':'luma','performanceProfile':'high','interaction':'manual'})
                 config=ws.receive_json()['config']
                 self.assertIn('Luma',config['conversation']['system'])
@@ -168,7 +177,7 @@ class Recovery(unittest.TestCase):
             if False:yield ''
         with patch('backend.core.app.stream',empty):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                ws.receive_json();ws.receive_json();ws.send_json({'type':'turn','turn':1,'text':'Hi'})
+                receive_startup(ws);ws.send_json({'type':'turn','turn':1,'text':'Hi'})
                 for _ in range(10):
                     event=ws.receive_json()
                     if event['type']=='error':
@@ -180,8 +189,7 @@ class Recovery(unittest.TestCase):
         async def fail():raise RuntimeError('model missing')
         with patch('backend.core.app.warm_task',None),patch('backend.core.app.warm_models',fail),patch.dict(os.environ,{'MYAVATAR_WARMUP':'1'}):
             with TestClient(app) as client,client.websocket_connect('/ws?token=development') as ws:
-                self.assertEqual(ws.receive_json()['type'],'config')
-                self.assertEqual(ws.receive_json()['type'],'preparing')
+                receive_startup(ws,warm=True)
                 event=ws.receive_json()
                 self.assertEqual(event['type'],'setup_error')
                 self.assertEqual(event['message'],'model missing')
