@@ -1,6 +1,7 @@
 import {ChatStore,shouldFollowScroll} from './chat-store.js';
+import {quickActionsForBot} from './interaction-intelligence.js';
 
-const STATUS_LABEL={streaming:'Writing…',interrupted:'Interrupted',failed:'Failed'};
+const STATUS_LABEL={streaming:'Replying…',interrupted:'Stopped · ready for your next thought',failed:'Reply failed'};
 const APPROVAL_LABEL={approved:'Approved · action completed',denied:'Denied',failed:'Action failed'};
 
 function button(doc,label,action){const node=doc.createElement('button');node.type='button';node.className='message-action';node.textContent=label;node.dataset.action=action;return node;}
@@ -13,6 +14,7 @@ function renderMessage(doc,item,botName,store,win){
   label.textContent=item.role==='user'?'You':item.role==='assistant'?botName:'System';
   const body=doc.createElement('div');body.className='message-body';body.textContent=item.text;
   wrapper.append(label,body);
+  if(item.status==='streaming'&&item.role==='assistant')wrapper.classList.add('message-streaming');
   const status=STATUS_LABEL[item.status];
   if(status){const note=doc.createElement('small');note.className='message-status';note.textContent=status;wrapper.append(note);}
   if(item.meta?.voiceWarning){const warning=doc.createElement('small');warning.className='message-voice-warning';warning.textContent='Voice unavailable · text response preserved';warning.title=item.meta.voiceWarning;wrapper.append(warning);}
@@ -61,6 +63,16 @@ function renderMessage(doc,item,botName,store,win){
   return wrapper;
 }
 
+function renderQuickActions(doc,store){
+  const row=doc.createElement('div');row.className='bot-quick-actions';row.setAttribute('aria-label',`${store.botName} quick actions`);
+  for(const action of quickActionsForBot(store.botId)){
+    const control=button(doc,action.label,'quick-prompt');control.classList.add('quick-prompt');
+    control.onclick=()=>{if(store.draft().trim())return;store.setDraft(action.prompt);const input=doc.body.classList.contains('widget')?doc.getElementById('widget-text'):doc.getElementById('text');input?.focus?.();};
+    row.append(control);
+  }
+  return row;
+}
+
 function renderContainer(doc,container,store,win,{compact=false}={}){
   if(!container)return;
   const follow=shouldFollowScroll(container);
@@ -76,6 +88,8 @@ function renderContainer(doc,container,store,win,{compact=false}={}){
   }
   if(compact&&!messages.length){const hint=doc.createElement('p');hint.className='hint';hint.textContent='Talk naturally or type a message.';fragment.append(hint);}
   for(const item of messages)fragment.append(renderMessage(doc,item,store.botName,store,win));
+  const latestAssistant=[...messages].reverse().find(item=>item.role==='assistant'&&item.type==='message');
+  if(!latestAssistant||latestAssistant.status==='complete'||latestAssistant.status==='interrupted'||latestAssistant.status==='failed')fragment.append(renderQuickActions(doc,store));
   container.replaceChildren(fragment);
   if(follow){container.scrollTop=container.scrollHeight;container.dataset.newMessages='false';}
   else{container.scrollTop=Math.max(0,oldTop+(container.scrollHeight-oldHeight));container.dataset.newMessages='true';}

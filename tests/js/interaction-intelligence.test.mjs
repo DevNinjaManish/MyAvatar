@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {conversationPhaseFromEvent,quickActionsForBot,safeConversationPhase} from '../../src/conversation/interaction-intelligence.js';
+
+test('conversation phase follows only authored runtime milestones',()=>{
+  let phase='idle';
+  phase=conversationPhaseFromEvent({type:'state',state:'THINKING'},phase);assert.equal(phase,'thinking');
+  phase=conversationPhaseFromEvent({type:'token',text:'secret raw text must not become a phase'},phase);assert.equal(phase,'writing');
+  phase=conversationPhaseFromEvent({type:'audio'},phase);assert.equal(phase,'speaking');
+  phase=conversationPhaseFromEvent({type:'state',state:'SECRET_REASONING'},phase);assert.equal(phase,'speaking');
+  phase=conversationPhaseFromEvent({type:'error',message:'private log'},phase);assert.equal(phase,'failed');
+});
+
+test('safe conversation phase rejects arbitrary strings',()=>{
+  assert.equal(safeConversationPhase('thinking'),'thinking');
+  assert.equal(safeConversationPhase('speaking'),'speaking');
+  assert.equal(safeConversationPhase('chain-of-thought'),'idle');
+  assert.equal(safeConversationPhase('../secret'),'idle');
+});
+
+test('all five bots have three concise non-authoritative quick prompts',()=>{
+  for(const bot of ['robot','nova','butler','pixel','luma']){
+    const actions=quickActionsForBot(bot);
+    assert.equal(actions.length,3);
+    assert.ok(actions.every(action=>action.label.length>0&&action.label.length<24));
+    assert.ok(actions.every(action=>action.prompt.length>0&&action.prompt.length<180));
+  }
+  assert.notDeepEqual(quickActionsForBot('robot'),quickActionsForBot('pixel'));
+});
+
+test('unknown bot falls back to safe Nova prompts',()=>{
+  assert.deepEqual(quickActionsForBot('unknown'),quickActionsForBot('nova'));
+});
