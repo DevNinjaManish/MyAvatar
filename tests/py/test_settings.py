@@ -28,10 +28,12 @@ class Settings(unittest.TestCase):
 
     def test_first_launch_applies_declared_profile_not_unprofiled_model(self):
         result = self.load()
-        self.assertEqual(result['performanceProfile'], 'medium')
-        self.assertEqual(result['llm']['model'], self.defaults['performanceProfiles']['medium']['llm']['model'])
-        self.assertEqual(result['llm']['context'], 4096)
-        self.assertEqual(result['tts']['speed'], 1.04)
+        profile_name = self.defaults['performanceProfile']
+        profile = self.defaults['performanceProfiles'][profile_name]
+        self.assertEqual(result['performanceProfile'], profile_name)
+        self.assertEqual(result['llm']['model'], profile['llm']['model'])
+        self.assertEqual(result['llm']['context'], profile['llm']['context'])
+        self.assertEqual(result['tts']['speed'], profile.get('tts', {}).get('speed', self.defaults['tts']['speed']))
         self.assertFalse(self.path.parent.exists())
 
     def test_valid_preferences_restore_all_bot_and_profile_combinations(self):
@@ -54,7 +56,7 @@ class Settings(unittest.TestCase):
                 self.path.write_text(raw)
                 with self.assertLogs('avatar.settings', 'WARNING'):
                     result = self.load()
-                self.assertEqual(result['performanceProfile'], 'medium')
+                self.assertEqual(result['performanceProfile'], self.defaults['performanceProfile'])
                 self.assertEqual(result['audio']['mode'], 'manual')
                 self.assertFalse(result['memory']['enabled'])
                 self.assertEqual(self.path.read_text(), raw)
@@ -63,7 +65,7 @@ class Settings(unittest.TestCase):
         self.path.parent.mkdir(parents=True)
         self.path.write_bytes(b'private-secret\xff')
         with self.assertLogs('avatar.settings', 'WARNING') as logs:
-            self.assertEqual(self.load()['performanceProfile'], 'medium')
+            self.assertEqual(self.load()['performanceProfile'], self.defaults['performanceProfile'])
         self.assertNotIn('private-secret', '\n'.join(logs.output))
         self.assertEqual(self.path.read_bytes(), b'private-secret\xff')
 
@@ -107,7 +109,7 @@ class Settings(unittest.TestCase):
                 with self.assertLogs('avatar.settings', 'WARNING'):
                     config = self.load()
                 self.assertEqual(config['conversation']['persona'], 'nova')
-                self.assertEqual(config['performanceProfile'], 'medium')
+                self.assertEqual(config['performanceProfile'], self.defaults['performanceProfile'])
 
     def test_memory_preference_is_never_truthiness_coerced(self):
         for value in ('false', 'true', 1, 0, [], {}):
@@ -156,7 +158,7 @@ class Settings(unittest.TestCase):
     def test_repeated_switches_are_idempotent_and_do_not_mutate_defaults(self):
         original = copy.deepcopy(self.defaults)
         config = self.load()
-        for name in ('high', 'medium', 'low', 'medium', 'medium'):
+        for name in ('high', 'medium', 'low', 'medium', self.defaults['performanceProfile']):
             settings.apply_profile(config, name, self.defaults)
         self.assertEqual(config, self.load())
         self.assertEqual(self.defaults, original)
