@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {PortraitFace} from './PortraitFace.js';
+import {stateTransitionDuration,motionScaleForState} from './state-presence.js';
 
 /** Shared renderer and animation state for the built-in robot portraits. */
 export class Avatar {
@@ -56,9 +57,11 @@ export class Avatar {
     this.attention.y=THREE.MathUtils.lerp(this.attention.y,this.attention.targetY,attentionEase);
     this.container.style.setProperty('--avatar-light-x',`${50+this.attention.x*12}%`);
     this.container.style.setProperty('--avatar-light-y',`${44+this.attention.y*9}%`);
-    const transition=Math.min(1,(this.time-this.stateStarted)/(this.reducedMotion ? .01 : .32));
+    const duration=stateTransitionDuration(this.state,{reducedMotion:this.reducedMotion});
+    const transition=Math.min(1,(this.time-this.stateStarted)/duration);
     const emotionTransition=Math.min(1,(this.time-this.emotionStarted)/(this.reducedMotion ? .01 : .22));
-    this.robot.update(this.time,blink,this.mouth,this.state,this.previousState,transition,this.emotion,this.previousEmotion,emotionTransition,this.reducedMotion?0:1,this.attention,dt);
+    const motion=this.reducedMotion?0:motionScaleForState(this.state);
+    this.robot.update(this.time,blink,this.mouth,this.state,this.previousState,transition,this.emotion,this.previousEmotion,emotionTransition,motion,this.attention,dt);
     this.renderer.render(this.scene,this.camera);this.frames++;this.frameTime+=elapsed;
     if(this.frameTime>1){this.fps=Math.round(this.frames/this.frameTime);this.frames=0;this.frameTime=0;}
   }
