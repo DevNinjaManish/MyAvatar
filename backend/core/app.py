@@ -17,6 +17,7 @@ from backend.core.readiness import EngineReadiness
 from backend.core.repo_context import read_files, build_prompt
 from backend.core.workspace import choose_context, build_change_plan_prompt
 from backend.core.coding_router import looks_like_coding_request
+from backend.core.edit_ws import CodingEditController
 
 app=FastAPI()
 Path('logs').mkdir(exist_ok=True)
@@ -112,7 +113,7 @@ async def ws(socket:WebSocket):
     if client_token != os.environ.get('MYAVATAR_TOKEN','development'):await socket.close(code=1008);return
     if socket.headers.get('origin') not in ('http://127.0.0.1:5173','http://localhost:5173',None):await socket.close(code=1008);return
     await socket.accept();config=load_config();bot_id=config['conversation']['persona'];memory_enabled=config.get('memory',{}).get('enabled',False)
-    history=load_history(bot_id) if memory_enabled else [];log.info(f'Loaded history for {bot_id}: {len(history)} turns');bot_histories={bot_id:history};task=None;approvals={};runtime=RuntimeSession(bot_id)
+    history=load_history(bot_id) if memory_enabled else [];log.info(f'Loaded history for {bot_id}: {len(history)} turns');bot_histories={bot_id:history};task=None;approvals={};runtime=RuntimeSession(bot_id);edits=CodingEditController(Path('.'))
     async def send(kind,turn=None,operation_id=None,**data):await socket.send_json(runtime.event(kind,turn=turn,operation_id=operation_id,**data))
     greetings=GreetingCoordinator(generate=speech.generate,executor=tts_pool,send=send,save_preferences=save_preferences,enabled=client_token!='development')
 
@@ -153,11 +154,13 @@ async def ws(socket:WebSocket):
         if coding_config is None:return False
         try:
             await send('state',turn,state='THINKING')
-            files=choose_context(text,root=Path('.'))
-            await send('coding_context',turn,paths=[item['path'] for item in files],automatic=True)
+            files=choose_context(text,root=edits.root)
+            await send('coding_context',turn,paths=[item['path'] for item in files],automatic=True,workspace=edits.workspace())
             messages=build_change_plan_prompt(text,files)
             answer=await inspect_code(messages,coding_config)
             await send('token',turn,text=answer)
+            preview=edits.preview(answer)
+            if preview is not None:await send('coding_patch',turn,**preview)
             await speak_coding_answer(turn,answer,tts_config)
             await send('done',turn)
             return True
@@ -175,10 +178,10 @@ async def ws(socket:WebSocket):
                 await send('error',turn,message='Switch to Rivet to use repository inspection.');return
             coding_config=await ensure_coding_ready(turn)
             if coding_config is None:return
-            files=read_files(msg.get('paths') or [],root=Path('.'))
+            files=read_files(msg.get('paths') or [],root=edits.root)
             messages=build_prompt(msg.get('text',''),files)
             await send('state',turn,state='THINKING')
-            await send('coding_context',turn,paths=[item['path'] for item in files],automatic=False)
+            await send('coding_context',turn,paths=[item['path'] for item in files],automatic=False,workspace=edits.workspace())
             answer=await inspect_code(messages,coding_config)
             await send('token',turn,text=answer)
             await speak_coding_answer(turn,answer,config['tts'])
@@ -293,6 +296,7 @@ async def ws(socket:WebSocket):
 
     try:
         await send('config',config=config)
+        await send('coding_workspace',workspace=edits.workspace())
         if warm_task is not None:
             last_stage=warm_stage
             await send('preparing',stage=last_stage,readiness=engine_readiness.snapshot())
@@ -313,10 +317,26 @@ async def ws(socket:WebSocket):
                 task=None
             if kind=='turn':task=asyncio.create_task(respond(msg))
             elif kind=='code_inspect':task=asyncio.create_task(inspect_repository(msg))
+            elif kind=='coding_edit_decision':
+                try:
+                    outcome=edits.decide(str(msg.get('transactionId','')),str(msg.get('decision','')))
+                    await send('coding_edit_result',msg.get('turn'),**outcome)
+                except (ValueError,PermissionError) as exc:await send('coding_edit_result',msg.get('turn'),message=str(exc),error=True)
+            elif kind=='coding_rollback':
+                try:
+                    outcome=edits.rollback(str(msg.get('transactionId','')))
+                    await send('coding_edit_result',msg.get('turn'),**outcome)
+                except ValueError as exc:await send('coding_edit_result',msg.get('turn'),message=str(exc),error=True)
+            elif kind=='coding_workspace':
+                try:
+                    workspace=edits.set_workspace(str(msg.get('path','')))
+                    await send('coding_workspace',msg.get('turn'),workspace=workspace)
+                except ValueError as exc:await send('coding_edit_result',msg.get('turn'),message=str(exc),error=True)
             elif kind=='clear':history.clear();clear_history(config['conversation']['persona']) if memory_enabled else None
             elif kind=='bot':
                 bot_id=msg.get('bot');profile=config.get('bots',{}).get(bot_id)
                 if not profile:continue
+                if bot_id!='robot':edits.session.reject_pending(reason='bot_changed')
                 history=bot_histories.get(bot_id)
                 if history is None:history=load_history(bot_id) if memory_enabled else [];bot_histories[bot_id]=history
                 config['conversation'].update(persona=bot_id,system=profile['system']);config['tts']['voice']=profile['voice'];config['avatar']['type']='robot';runtime.switch_bot(bot_id);save_preferences(config)
@@ -338,6 +358,6 @@ async def ws(socket:WebSocket):
             elif kind=='metrics':timing.info(json.dumps(msg))
     except WebSocketDisconnect:pass
     finally:
-        greetings.cancel()
+        greetings.cancel();edits.session.reject_pending(reason='disconnected')
         if task:task.cancel()
         await greetings.close()
