@@ -20,10 +20,10 @@ log = logging.getLogger('avatar.greetings')
 
 GREETING_LINES = {
     'nova': {
-        'morning': ['Good morning. I am here. What shall we tackle?', 'Morning. What would make today easier?'],
-        'afternoon': ['Good afternoon. What needs your attention?', 'I am here. What shall we work through?'],
-        'evening': ['Good evening. What shall we finish or plan?', 'Evening. What is on your mind?'],
-        'night': ['Still up? I am here if you need me.', 'Late night. What shall we work through?'],
+        'morning': ['Good morning. What should we tackle?', 'Morning. What would make today easier?'],
+        'afternoon': ['Good afternoon. What needs your attention?', 'I am here. What should we work through?'],
+        'evening': ['Good evening. What should we finish or plan?', 'Evening. What is on your mind?'],
+        'night': ['Still up? I am here if you need me.', 'Late night. What should we work through?'],
     },
     'robot': {
         'morning': ['Rivet here. What needs fixing?', 'Morning. Hand me the tricky part.'],
@@ -32,10 +32,10 @@ GREETING_LINES = {
         'night': ['Rivet, night shift. What are we debugging?', 'Rivet awake. What needs fixing?'],
     },
     'butler': {
-        'morning': ['Good morning. What deserves our attention?', 'Good morning. Where shall we begin?'],
-        'afternoon': ['Good afternoon. What deserves our focus?', 'At your service. What shall we organise?'],
-        'evening': ['Good evening. What shall we put in order?', 'Good evening. How may I be useful?'],
-        'night': ['A quiet hour. What shall we organise?', 'At your service. What needs attention?'],
+        'morning': ['Good morning. What deserves our attention?', 'Good morning. Where should we begin?'],
+        'afternoon': ['Good afternoon. What deserves our focus?', 'At your service. What should we organise?'],
+        'evening': ['Good evening. What should we put in order?', 'Good evening. How may I be useful?'],
+        'night': ['A quiet hour. What should we organise?', 'At your service. What needs attention?'],
     },
     'pixel': {
         'morning': ['Morning. Give me the brief. Let us find the angle.', 'Morning. What are we making sharper?'],
@@ -51,6 +51,30 @@ GREETING_LINES = {
     },
 }
 
+BOT_SWITCH_LINES = {
+    'nova': ['Nova here. What are we working on?', 'I am with you. What do you need?'],
+    'robot': ['Rivet here. What needs fixing?', 'Rivet ready. Show me the problem.'],
+    'butler': ['Sterling here. What needs attention?', 'At your service. Where shall we begin?'],
+    'pixel': ['Pixel here. What are we sharpening?', 'Pixel ready. Give me the brief.'],
+    'luma': ['Luma here. What are we designing?', 'Luma ready. What should we refine?'],
+}
+
+ONBOARDING_LINES = {
+    'nova': ['Hi, I am Nova. Tell me what you would like help with.'],
+    'robot': ['Hi, I am Rivet. Give me something to inspect, fix, or build.'],
+    'butler': ['Hello, I am Sterling. Tell me what needs organising.'],
+    'pixel': ['Hi, I am Pixel. Give me a campaign, idea, or draft to sharpen.'],
+    'luma': ['Hi, I am Luma. Tell me what you are designing or deciding.'],
+}
+
+IDLE_RETURN_LINES = {
+    'nova': ['I am here. What should we pick up?'],
+    'robot': ['Rivet is here. What are we picking back up?'],
+    'butler': ['I am here. Shall we continue?'],
+    'pixel': ['Back to it. What are we sharpening?'],
+    'luma': ['I am here. What should we continue refining?'],
+}
+
 
 def time_category(hour: int) -> str:
     if 5 <= hour < 12:
@@ -62,9 +86,19 @@ def time_category(hour: int) -> str:
     return 'night'
 
 
-def choose_greeting(config: dict, *, hour: int) -> tuple[str, int]:
+def _lines_for(bot: str, *, reason: str, hour: int) -> list[str]:
+    if reason == 'bot_switch':
+        return BOT_SWITCH_LINES.get(bot, BOT_SWITCH_LINES['nova'])
+    if reason == 'onboarding':
+        return ONBOARDING_LINES.get(bot, ONBOARDING_LINES['nova'])
+    if reason == 'idle_return':
+        return IDLE_RETURN_LINES.get(bot, IDLE_RETURN_LINES['nova'])
+    return GREETING_LINES.get(bot, GREETING_LINES['nova'])[time_category(hour)]
+
+
+def choose_greeting(config: dict, *, hour: int, reason: str = 'startup') -> tuple[str, int]:
     bot = config.get('conversation', {}).get('persona', 'nova')
-    lines = GREETING_LINES.get(bot, GREETING_LINES['nova'])[time_category(hour)]
+    lines = _lines_for(bot, reason=reason, hour=hour)
     indexes = config.setdefault('_greetingIndexes', {})
     index = indexes.get(bot, 0)
     if type(index) is not int or index < 0:
@@ -114,7 +148,7 @@ class GreetingCoordinator:
             task.cancel()
 
     def request(self, config: dict, *, reason: str, hour: int | None = None) -> str | None:
-        if not self.enabled or reason not in {'startup', 'bot_switch', 'onboarding'}:
+        if not self.enabled or reason not in {'startup', 'bot_switch', 'onboarding', 'idle_return'}:
             return None
         bot_id = config.get('conversation', {}).get('persona')
         if not isinstance(bot_id, str) or bot_id not in config.get('bots', {}):
@@ -128,18 +162,23 @@ class GreetingCoordinator:
         generation = self._generation
         operation_id = secrets.token_hex(12)
         selected_hour = time.localtime().tm_hour if hour is None else hour
-        text, rotation_index = choose_greeting(config, hour=selected_hour)
+        text, rotation_index = choose_greeting(config, hour=selected_hour, reason=reason)
         tts_config = copy.deepcopy(config['tts'])
+
+        def still_current() -> bool:
+            return generation == self._generation and config.get('conversation', {}).get('persona') == bot_id
 
         async def run() -> None:
             try:
+                if not still_current():
+                    return
                 loop = asyncio.get_running_loop()
                 wav = await loop.run_in_executor(self.executor, self.generate, text, tts_config)
-                if generation != self._generation:
+                if not still_current():
                     return
                 await self.send('greeting', operation_id=operation_id, text=text,
                                 audio=base64.b64encode(wav).decode())
-                if generation != self._generation:
+                if not still_current():
                     return
                 indexes = config.setdefault('_greetingIndexes', {})
                 indexes[bot_id] = rotation_index + 1
@@ -147,7 +186,6 @@ class GreetingCoordinator:
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                # Do not include user text, paths or model content in the warning.
                 log.warning('Greeting unavailable (%s); continuing without automatic speech.', type(exc).__name__)
             finally:
                 current = asyncio.current_task()
