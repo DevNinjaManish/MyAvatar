@@ -1,10 +1,20 @@
 import {ChatStore,shouldFollowScroll} from './chat-store.js';
 import {quickActionsForBot} from './interaction-intelligence.js';
+import {toolCardTitle,toolResultPresentation} from './tool-card.js';
 
 const STATUS_LABEL={streaming:'Replying…',interrupted:'Stopped · ready for your next thought',failed:'Reply failed'};
 const APPROVAL_LABEL={approved:'Approved · action completed',denied:'Denied',failed:'Action failed'};
 
 function button(doc,label,action){const node=doc.createElement('button');node.type='button';node.className='message-action';node.textContent=label;node.dataset.action=action;return node;}
+
+function addToolCardHeader(doc,wrapper,item){
+  const presentation=toolResultPresentation(item);if(!presentation)return;
+  wrapper.classList.add('tool-card');wrapper.dataset.tone=presentation.tone;
+  const header=doc.createElement('div');header.className='tool-card-header';
+  const title=doc.createElement('span');title.className='tool-card-title';title.textContent=toolCardTitle(item);
+  const badge=doc.createElement('span');badge.className='tool-card-badge';badge.textContent=presentation.label;
+  header.append(title,badge);wrapper.prepend(header);
+}
 
 function renderMessage(doc,item,botName,store,win){
   const wrapper=doc.createElement('div');
@@ -34,12 +44,11 @@ function renderMessage(doc,item,botName,store,win){
     }else{
       const result=doc.createElement('small');result.className='message-status approval-result';result.textContent=APPROVAL_LABEL[state]||state;wrapper.append(result);
     }
-    return wrapper;
+    addToolCardHeader(doc,wrapper,item);return wrapper;
   }
 
   if(item.type==='tool-result'){
-    wrapper.classList.add('tool-result');
-    return wrapper;
+    wrapper.classList.add('tool-result');addToolCardHeader(doc,wrapper,item);return wrapper;
   }
 
   if(item.type==='message'&&item.text){
