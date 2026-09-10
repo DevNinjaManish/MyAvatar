@@ -1,17 +1,22 @@
-// Install runtime event validation before widget-runtime.js creates the WebSocket.
+// Install runtime guards before widget-runtime.js creates the WebSocket.
 import {installRuntimeEventGuard} from '../conversation/runtime-events.js';
+import {installSocketBridge} from '../conversation/socket-bridge.js';
 installRuntimeEventGuard(window);
+installSocketBridge(window);
 await import('./widget-runtime.js');
 import '../styles/widget-cockpit.css';
 import '../styles/widget-panels.css';
 import '../styles/widget-polish.css';
 import '../styles/full-polish.css';
 import '../conversation/chat-actions.css';
+import '../conversation/coding-edits.css';
 import {mountWidgetPanels} from '../widget/panels.js';
 import {mountReadinessUI} from '../conversation/readiness-ui.js';
 import {installCaptureLifecycleGuards} from '../audio/lifecycle.js';
 import {mountCanonicalChat} from '../conversation/chat-ui.js';
+import {mountCodingEdits} from '../conversation/coding-edits.js';
 mountWidgetPanels(document, window.desktop);
 mountReadinessUI(window,document);
 installCaptureLifecycleGuards(window,document);
 mountCanonicalChat(window,document);
+mountCodingEdits(window,document);
