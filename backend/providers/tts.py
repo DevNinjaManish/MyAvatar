@@ -3,6 +3,20 @@ import soundfile as sf
 from pathlib import Path
 import numpy as np
 
+VOICE_SPEED_MULTIPLIER={
+    'am_michael':0.98,
+    'bm_george':0.95,
+    'af_sarah':1.04,
+    'af_heart':1.0,
+}
+
+
+def speech_speed_for_voice(config):
+    base=float(config.get('speed',1.0))
+    multiplier=VOICE_SPEED_MULTIPLIER.get(config.get('voice'),1.0)
+    return max(0.82,min(1.22,base*multiplier))
+
+
 class Speech:
     def __init__(self):
         self.engine = None
@@ -32,7 +46,7 @@ class Speech:
             session=ort.InferenceSession(paths[0],sess_options=options,providers=['CPUExecutionProvider'])
             self.engine = CompatibleKokoro.from_session(session,paths[1])
             self.paths = paths
-        audio, rate = self.engine.create(text, voice=config['voice'], speed=config['speed'], lang='en-us')
+        audio, rate = self.engine.create(text, voice=config['voice'], speed=speech_speed_for_voice(config), lang='en-us')
         output = io.BytesIO()
         sf.write(output, audio, rate, format='WAV', subtype='PCM_16')
         return output.getvalue()
