@@ -61,3 +61,19 @@ test('polish CSS is widget-scoped and does not add an audio animation',()=>{
   assert.ok(css.includes('prefers-reduced-motion'));
   assert.ok(!/@keyframes|#stage|canvas|#widget-mic\s*\{\s*display\s*:\s*none/.test(css));
 });
+test('widget polish does not own fixed shell or toolbar positioning',()=>{
+  const css=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
+  assert.ok(!/--widget-shell-(?:pad|column-width|specialist-width|platform-top|tools-top)/.test(css));
+  assert.ok(!/#widget-(?:mic|chat-toggle|specialist-toggle|more)\s*\{[^}]*\b(?:top|left|right|bottom)\s*:/s.test(css));
+  assert.ok(!/\.widget-toolbar\s*\{[^}]*\bposition\s*:\s*(?:fixed|absolute)/s.test(css));
+  assert.ok(!/\.widget-toolbar button[^\{]*\{[^}]*\bposition\s*:\s*absolute/s.test(css));
+});
+test('widget stack remains the canonical fixed shell owner',()=>{
+  const css=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
+  for (const token of ['--widget-shell-column-width','--widget-shell-specialist-width','--widget-shell-platform-top','--widget-shell-tools-top']) {
+    assert.ok(css.includes(token), `missing canonical shell token ${token}`);
+  }
+  for (const id of ['widget-mic','widget-chat-toggle','widget-specialist-toggle','widget-more']) {
+    assert.ok(css.includes(`#${id}`), `widget-stack.css must own ${id} geometry`);
+  }
+});
