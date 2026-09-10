@@ -58,7 +58,7 @@ test('only disclosure preferences are persisted, never task or project content',
   let saved;savePanelPreferences({setItem:(_key,value)=>saved=JSON.parse(value)},{...initialPanelState(),brief:'secret',project:'/private'});
   assert.deepEqual(saved,{expanded:['task']});
 });
-test('compact dimensions use the larger stable widget frame',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:1120,y:24,width:WIDTH,height:COMPACT_HEIGHT}));
+test('the companion uses one stable native frame from launch',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:area.x+area.width-WIDTH,y:24,width:WIDTH,height:UTILITY_HEIGHT}));
 test('chat uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
 test('coding uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
 test('calendar leaves room for month controls and event entries within the display',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,Math.min(CALENDAR_HEIGHT,area.height)));
@@ -66,23 +66,28 @@ test('chat+tools size is clamped to the work area',()=>{
   const result=widgetLayout({x:1170,y:100},{chat:true,tools:true},area);
   assert.equal(result.bounds.height,Math.min(UTILITY_HEIGHT,area.height));assert.equal(result.bounds.y,24);
 });
-test('wide utility mode opens a left wing and keeps the compact anchor stable',()=>{
+test('specialists never expand or offset the native companion frame',()=>{
   const result=widgetLayout({x:1170,y:100},{tools:true,wide:true},area);
-  assert.equal(result.side,'left');assert.equal(result.bounds.x,670);assert.equal(result.bounds.width,WIDTH+440+10);assert.equal(result.offset,450);assert.equal(result.wingWidth,440);
+  assert.equal(result.side,'none');assert.equal(result.bounds.x,area.x+area.width-WIDTH);assert.equal(result.bounds.width,WIDTH);assert.equal(result.offset,0);assert.equal(result.wingWidth,0);
 });
-test('closing a large stack restores the original anchor',()=>{
+test('all specialist states retain identical native bounds',()=>{
+  const anchor={x:40,y:100};
+  const closed=widgetLayout(anchor,{},area).bounds;
+  for(const view of [{calendar:true,wide:true},{tools:true,wide:true},{chat:true},{chat:true,tools:true,wide:true}])assert.deepEqual(widgetLayout(anchor,view,area).bounds,closed);
+});
+test('opening and closing a stack leaves the anchor unchanged',()=>{
   const anchor={x:1100,y:24};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
-  assert.deepEqual(widgetLayout(anchor,{},area).bounds,{...anchor,width:WIDTH,height:COMPACT_HEIGHT});
+  assert.deepEqual(widgetLayout(anchor,{},area).bounds,{x:area.x+area.width-WIDTH,y:anchor.y,width:WIDTH,height:UTILITY_HEIGHT});
 });
 test('negative display coordinates are supported',()=>{
   const monitor={x:-1920,y:-100,width:1920,height:1080};
   const result=widgetLayout({x:-300,y:200},{tools:true,wide:true},monitor);
-  assert.equal(result.side,'left');assert.ok(result.bounds.x>=-1920);
+  assert.equal(result.side,'none');assert.ok(result.bounds.x>=-1920);
   assert.ok(result.bounds.x+result.bounds.width<=0);
 });
-test('narrow monitors use an inline wide view instead of offscreen windows',()=>{
+test('narrow monitors keep specialist views inside the fixed companion frame',()=>{
   const result=widgetLayout({x:20,y:20},{tools:true,wide:true},{x:0,y:0,width:500,height:600});
-  assert.equal(result.side,'inline');assert.equal(result.bounds.width,WIDTH);
+  assert.equal(result.side,'none');assert.equal(result.bounds.width,500);
 });
 test('all tested layouts stay within work area bounds',()=>{
   for(const width of [260,400,600,800,1440])for(const height of [370,480,600,900]){
@@ -101,18 +106,16 @@ test('accept only the small boolean panel IPC contract',()=>{
   assert.equal(validPanelsRequest({open:true,wide:true}),true);
   assert.equal(validPanelsRequest({open:false,wide:false}),true);
 });
-test('widget utility geometry is bottom-safe and border-box sized',()=>{
+test('widget geometry uses fixed layers and a modal specialist surface',()=>{
   const css=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
-  assert.ok(css.includes('body.widget #widget-chat,'));
-  assert.ok(css.includes('body.widget #widget-coding-panels,'));
-  assert.ok(css.includes('body.widget #widget-mini-calendar,'));
-  assert.ok(css.includes('body.widget #widget-creative-workspace,'));
-  assert.ok(css.includes('body.widget #widget-code-wing {'));
-  assert.ok(css.includes('top: var(--widget-shell-stack-top) !important;'));
+  assert.ok(css.includes('Fixed companion shell'));
+  assert.ok(css.includes('background: transparent !important;'));
+  assert.ok(css.includes('body.widget main {'));
+  assert.ok(css.includes('width: var(--widget-shell-column-width) !important;'));
+  assert.ok(css.includes('Specialists occupy the reserved left rail'));
+  assert.ok(css.includes('top: 24px !important;'));
   assert.ok(css.includes('bottom: 10px;'));
-  assert.ok(css.includes('max-height: none !important;'));
-  assert.ok(css.includes('min-height: 0 !important;'));
-  assert.ok(css.includes('overflow: auto !important;'));
+  assert.ok(css.includes('z-index: 60 !important;'));
 });
 test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
@@ -129,15 +132,66 @@ test('every panel disclosure references an existing element',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
   for(const match of html.matchAll(/aria-controls="([^"]+)"/g))assert.ok(html.includes(`id="${match[1]}"`),match[1]);
 });
-test('the widget has one fixed platform with a deterministic chat plus specialist stack',()=>{
+test('the widget keeps platform and chat geometry independent from specialists',()=>{
   const css=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
-  assert.match(css,/Widget shell layout v5/);
-  assert.match(css,/body\.widget #widget-tools,\s*body\.widget #widget-chat,[\s\S]*body\.widget #widget-code-wing/);
-  assert.ok(css.includes('--widget-shell-specialist-height: clamp(140px, calc(100vh - 650px), 230px);'));
-  assert.ok(/top:\s*calc\(\s*var\(--widget-shell-stack-top\)\s*\+\s*var\(--widget-shell-specialist-height\)\s*\+\s*var\(--widget-shell-stack-gap\)\s*\)/.test(css));
-  assert.ok(css.includes('body.widget.widget-panels-open #widget-code-wing'));
+  assert.match(css,/body\.widget main \{[\s\S]*top: var\(--widget-shell-platform-top\)/);
+  assert.match(css,/body\.widget #widget-chat \{[\s\S]*top: var\(--widget-shell-stack-top\)/);
+  assert.ok(css.includes('body.widget.widget-wide-open #widget-code-wing'));
   assert.ok(css.includes('display: none !important;'));
   assert.ok(css.includes('left: var(--widget-shell-pad) !important;'));
+});
+test('chat has one stable scrolling region so its controls never shift with a long transcript',()=>{
+  const css=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
+  assert.ok(css.includes('overflow: hidden !important;'));
+  assert.ok(css.includes('overflow-y: auto !important;'));
+  assert.ok(css.includes('scrollbar-gutter: stable !important;'));
+  assert.ok(css.includes('padding-right: var(--widget-scrollbar-gutter) !important;'));
+});
+test('specialists assign scrolling to their content rather than nested panel shells',()=>{
+  const stack=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
+  const panels=readFileSync(new URL('../../src/styles/widget-panels.css',import.meta.url),'utf8');
+  assert.match(panels,/\.widget-panels-scroll\{flex:1;overflow:auto;/);
+  assert.match(stack,/#widget-coding-panels,\s*body\.widget #widget-mini-calendar,[\s\S]*#widget-code-wing \{[\s\S]*overflow: hidden !important;/);
+  assert.match(stack,/#widget-creative-workspace \{ overflow-y: auto !important; scrollbar-gutter: stable !important;/);
+});
+test('each companion picker card uses its own accent when selected',()=>{
+  const css=readFileSync(new URL('../../src/styles/base.css',import.meta.url),'utf8');
+  assert.ok(css.includes('var(--bot-card-accent,#a5e2ce)'));
+  for(const accent of ['#79d8ef','#f0a8d0','#d1b26f','#c9ff55','#9fe7ff'])assert.ok(css.includes(`--bot-card-accent:${accent}`));
+});
+test('the visible specialist icon follows calendar coding and creative panel state',()=>{
+  const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');
+  const panels=readFileSync(new URL('../../src/widget/panels.js',import.meta.url),'utf8');
+  assert.match(runtime,/function syncSpecialistState\(kind,open\)/);
+  assert.match(runtime,/syncSpecialistState\('calendar',opening\)/);
+  assert.match(runtime,/widget-mini-calendar-close'\)\.onclick=.*syncSpecialistState\('calendar',false\)/);
+  assert.match(runtime,/syncSpecialistState\('creative',opening\)/);
+  assert.match(runtime,/widget-creative-close'\)\.onclick=.*syncSpecialistState\('creative',false\)/);
+  assert.match(runtime,/myavatar:specialist-state/);
+  assert.match(panels,/myavatar:specialist-state.*kind: 'coding', open: visible/);
+});
+test('calendar and creative specialists request state without side-layout mutations',()=>{
+  const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');
+  assert.match(runtime,/function requestCalendarLayout\(open\).*widgetCalendar/);
+  assert.match(runtime,/function requestCreativeLayout\(open\).*widgetSpecialist/);
+  assert.match(runtime,/requestCalendarLayout\(opening\)/);
+  assert.match(runtime,/requestCreativeLayout\(opening\)/);
+  assert.doesNotMatch(runtime,/panelSide/);
+});
+test('platform and chat headings reserve control space instead of shifting it for long labels',()=>{
+  const cockpit=readFileSync(new URL('../../src/styles/widget-cockpit.css',import.meta.url),'utf8');
+  const polish=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
+  assert.match(cockpit,/\.cockpit-heading\{[^}]*grid-template-columns:minmax\(0,1fr\) 28px/);
+  assert.match(cockpit,/#widget-stop-slot\{position:static;width:28px/);
+  assert.match(cockpit,/#widget-status\{min-width:0;overflow:hidden;text-overflow:ellipsis/);
+  assert.match(polish,/widget-chat-heading > div:first-child \{[^}]*min-width:0/);
+  assert.match(polish,/#widget-chat-state \{ min-width:0; overflow:hidden; text-overflow:ellipsis;/);
+  assert.match(polish,/\.widget-chat-actions \{ flex:none; white-space:nowrap; \}/);
+});
+test('the platform decorative rail stays below the bot selector text',()=>{
+  const polish=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
+  assert.match(polish,/#widget-tools::before \{ top:31px; \}/);
+  assert.match(polish,/#widget-tools::after \{ top:37px; \}/);
 });
 test('bot changes clear every attached widget surface before rendering the next companion',()=>{
   const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');

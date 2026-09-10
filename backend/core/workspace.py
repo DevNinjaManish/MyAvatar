@@ -2,7 +2,7 @@
 
 This module deliberately performs no writes and runs no commands. It builds a
 bounded view of a repository so the coding specialist can choose relevant files
-from a natural-language request before a later execution batch is introduced.
+for inspection and safe patch proposals.
 """
 from __future__ import annotations
 

@@ -1,246 +1,152 @@
-/* Widget shell layout v5.
- * Deterministic, single-column geometry for widget mode:
- * platform, controls, specialist surfaces, chat.
- * All attached windows live below the platform and never reflow it.
- */
+/* Fixed companion shell.
+ * The native widget never changes size. The companion stays in its right rail;
+ * specialists use the permanently reserved left rail. */
+html:has(body.widget),
 body.widget {
   --widget-shell-pad: 11px;
+  --widget-shell-specialist-width: 300px;
+  --widget-shell-column-width: 238px;
   --widget-shell-platform-top: 40px;
-  --widget-shell-platform-width: calc(100vw - (var(--widget-shell-pad) * 2));
   --widget-shell-platform-height: 272px;
-
   --widget-shell-tools-top: 315px;
   --widget-shell-tools-height: 144px;
-
   --widget-shell-stack-top: 465px;
-  --widget-shell-stack-gap: 9px;
-
-  --widget-shell-specialist-height: clamp(140px, calc(100vh - 650px), 230px);
   --widget-shell-stack-bottom: 10px;
-  --widget-shell-wing-width: 440px;
-  --widget-shell-wing-gap: 10px;
-
+  --widget-shell-menu-top: 250px;
+  --widget-scrollbar-gutter: 14px;
+  background: transparent !important;
   margin: 0 !important;
   overflow: hidden !important;
 }
 
-body.widget,
-body.widget #widget-chat,
+body.widget #unified-workspace-shell,
+body.widget #calendar-workspace,
+body.widget #transcript,
+body.widget #system-workspace { display: none !important; }
+
+body.widget main,
 body.widget #widget-tools,
+body.widget #widget-chat,
+body.widget #widget-menu,
 body.widget #widget-coding-panels,
 body.widget #widget-mini-calendar,
 body.widget #widget-creative-workspace,
-body.widget #widget-code-wing,
-body.widget main,
-body.widget #widget-menu {
+body.widget #widget-code-wing {
   position: fixed !important;
-  left: var(--widget-shell-pad) !important;
-  right: var(--widget-shell-pad) !important;
-  width: auto !important;
-  max-width: none !important;
-  min-width: 0 !important;
-  margin: 0 !important;
   box-sizing: border-box !important;
+  margin: 0 !important;
+  min-width: 0 !important;
 }
 
 body.widget main {
   top: var(--widget-shell-platform-top) !important;
+  right: var(--widget-shell-pad) !important;
+  left: auto !important;
+  width: var(--widget-shell-column-width) !important;
   height: var(--widget-shell-platform-height) !important;
-  width: var(--widget-shell-platform-width) !important;
-  z-index: 8 !important;
+  transform: none !important;
+  z-index: 10 !important;
 }
 
 body.widget #widget-tools {
   top: var(--widget-shell-tools-top) !important;
+  right: var(--widget-shell-pad) !important;
+  left: auto !important;
+  width: var(--widget-shell-column-width) !important;
   height: var(--widget-shell-tools-height) !important;
-  z-index: 9 !important;
-}
-
-/* Overlays are intentionally above the portrait and utility surfaces. */
-body.widget #widget-menu,
-body.widget #bot-library {
-  z-index: 50 !important;
-}
-
-/* The portrait is always the anchor. Utility panels never cover it. */
-body.widget main { z-index: 20 !important; }
-
-/* Surfaces must remain opaque over the avatar and over one another. */
-body.widget #widget-chat,
-body.widget #widget-coding-panels,
-body.widget #widget-mini-calendar,
-body.widget #widget-creative-workspace,
-body.widget #widget-code-wing {
-  background: var(--widget-surface, #141c20) !important;
-  border: 1px solid var(--widget-hairline, #ffffff20) !important;
-  box-shadow: 0 10px 24px #0008, inset 0 1px #ffffff08 !important;
-}
-
-body.widget #widget-chat,
-body.widget #widget-coding-panels,
-body.widget #widget-mini-calendar,
-body.widget #widget-creative-workspace,
-body.widget #widget-code-wing {
-  top: var(--widget-shell-stack-top) !important;
-  bottom: var(--widget-shell-stack-bottom) !important;
-  height: auto !important;
-  max-height: none !important;
-  min-height: 0 !important;
-  overflow: auto !important;
-  z-index: 8 !important;
-  display: none !important;
-  padding: 11px !important;
-  border-radius: 16px !important;
-}
-
-body.widget.widget-panels-open #widget-coding-panels,
-body.widget.widget-calendar-open #widget-mini-calendar,
-body.widget.widget-creative-open #widget-creative-workspace,
-body.widget.widget-wide-open #widget-code-wing {
-  z-index: 10 !important;
+  transform: none !important;
+  z-index: 20 !important;
 }
 
 body.widget #widget-chat {
+  top: var(--widget-shell-stack-top) !important;
+  bottom: var(--widget-shell-stack-bottom) !important;
+  right: var(--widget-shell-pad) !important;
+  left: auto !important;
+  width: var(--widget-shell-column-width) !important;
+  transform: none !important;
+  display: none !important;
   flex-direction: column !important;
-}
-
-body.widget.widget-chat-open #widget-chat {
-  display: flex !important;
-  overflow-x: hidden !important;
+  padding: 11px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--widget-hairline, #ffffff20) !important;
+  border-radius: 16px !important;
+  background: var(--widget-surface, #172024) !important;
+  box-shadow: 0 10px 24px #0008, inset 0 1px #ffffff08 !important;
   z-index: 30 !important;
 }
+body.widget.widget-chat-open #widget-chat { display: flex !important; }
 
-body.widget.widget-chat-open #widget-tools,
-body.widget.widget-chat-open #widget-chat { isolation: isolate; }
-
+/* Specialists occupy the reserved left rail. They never alter companion/chat geometry. */
+body.widget #widget-coding-panels,
+body.widget #widget-mini-calendar,
+body.widget #widget-creative-workspace,
+body.widget #widget-code-wing {
+  top: 24px !important;
+  right: auto !important;
+  bottom: var(--widget-shell-stack-bottom) !important;
+  left: var(--widget-shell-pad) !important;
+  width: var(--widget-shell-specialist-width) !important;
+  display: none !important;
+  flex-direction: column !important;
+  padding: 14px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--widget-hairline, #ffffff20) !important;
+  border-radius: 18px !important;
+  background: var(--widget-surface, #172024) !important;
+  box-shadow: 0 18px 42px #000a, inset 0 1px #ffffff0d !important;
+  z-index: 60 !important;
+}
 body.widget.widget-panels-open #widget-coding-panels,
 body.widget.widget-calendar-open #widget-mini-calendar,
 body.widget.widget-creative-open #widget-creative-workspace,
-body.widget.widget-wide-open #widget-code-wing {
-  display: flex !important;
-  flex-direction: column !important;
-  width: auto !important;
-  height: var(--widget-shell-specialist-height) !important;
-}
+body.widget.widget-wide-open #widget-code-wing { display: flex !important; }
+body.widget #widget-creative-workspace { overflow-y: auto !important; scrollbar-gutter: stable !important; }
 
-body.widget.widget-panels-open #widget-code-wing {
-  width: auto !important;
-  left: var(--widget-shell-pad) !important;
+body.widget #widget-menu {
+  top: var(--widget-shell-menu-top) !important;
   right: var(--widget-shell-pad) !important;
-  padding: 11px !important;
+  left: auto !important;
+  width: var(--widget-shell-column-width) !important;
+  max-height: 430px !important;
+  transform: none !important;
+  overflow: auto !important;
+  z-index: 70 !important;
 }
+body.widget #bot-library { z-index: 80 !important; }
 
-/* Wide specialist view: reserve the left column for the wing and keep the
- * companion/chat column anchored on the right. */
-body.widget[data-panel-side='left'].widget-wide-open main,
-body.widget[data-panel-side='left'].widget-wide-open #widget-tools,
-body.widget[data-panel-side='left'].widget-wide-open #widget-chat,
-body.widget[data-panel-side='left'].widget-panels-open main,
-body.widget[data-panel-side='left'].widget-panels-open #widget-tools,
-body.widget[data-panel-side='left'].widget-panels-open #widget-chat,
-body.widget[data-panel-side='left'].widget-calendar-open main,
-body.widget[data-panel-side='left'].widget-calendar-open #widget-tools,
-body.widget[data-panel-side='left'].widget-calendar-open #widget-chat,
-body.widget[data-panel-side='left'].widget-creative-open main,
-body.widget[data-panel-side='left'].widget-creative-open #widget-tools,
-body.widget[data-panel-side='left'].widget-creative-open #widget-chat {
-  left: calc(var(--widget-shell-pad) + var(--widget-shell-wing-width) + var(--widget-shell-wing-gap)) !important;
-  right: var(--widget-shell-pad) !important;
-  width: calc(100% - var(--widget-shell-pad) * 2 - var(--widget-shell-wing-width) - var(--widget-shell-wing-gap)) !important;
+/* Controls retain a fixed inner grid regardless of which modal is open. */
+body.widget #widget-tools > *,
+body.widget #widget-chat > *,
+body.widget #widget-chat .widget-chat-heading,
+body.widget #widget-chat #widget-messages,
+body.widget #widget-chat #widget-text-form {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
-
-body.widget[data-panel-side='left'].widget-wide-open #widget-code-wing {
-  top: var(--widget-shell-platform-top) !important;
-  left: var(--widget-shell-pad) !important;
-  right: auto !important;
-  width: var(--widget-shell-wing-width) !important;
-  bottom: var(--widget-shell-stack-bottom) !important;
-  height: auto !important;
-  z-index: 10 !important;
+body.widget #widget-chat #widget-messages {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-gutter: stable !important;
+  padding-right: var(--widget-scrollbar-gutter) !important;
 }
-
-body.widget[data-panel-side='left'].widget-panels-open #widget-coding-panels {
-  top: var(--widget-shell-platform-top) !important;
-  left: var(--widget-shell-pad) !important;
-  right: auto !important;
-  width: var(--widget-shell-wing-width) !important;
-  bottom: var(--widget-shell-stack-bottom) !important;
-  height: auto !important;
-  z-index: 10 !important;
-}
-
-body.widget[data-panel-side='left'].widget-calendar-open #widget-mini-calendar,
-body.widget[data-panel-side='left'].widget-creative-open #widget-creative-workspace {
-  top: var(--widget-shell-platform-top) !important;
-  left: var(--widget-shell-pad) !important;
-  right: auto !important;
-  width: var(--widget-shell-wing-width) !important;
-  bottom: var(--widget-shell-stack-bottom) !important;
-  height: auto !important;
-  z-index: 10 !important;
-}
-
-body.widget[data-panel-side='left'].widget-calendar-open #widget-mini-calendar,
-body.widget[data-panel-side='left'].widget-creative-open #widget-creative-workspace {
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-body.widget[data-panel-side='left'].widget-wide-open.widget-chat-open #widget-chat,
-body.widget[data-panel-side='left'].widget-panels-open.widget-chat-open #widget-chat,
-body.widget[data-panel-side='left'].widget-calendar-open.widget-chat-open #widget-chat,
-body.widget[data-panel-side='left'].widget-creative-open.widget-chat-open #widget-chat {
-  top: var(--widget-shell-stack-top) !important;
-}
-
-body.widget.widget-chat-open.widget-panels-open #widget-chat,
-body.widget.widget-chat-open.widget-calendar-open #widget-chat,
-body.widget.widget-chat-open.widget-creative-open #widget-chat,
-body.widget.widget-chat-open.widget-wide-open #widget-chat {
-  top: calc(
-    var(--widget-shell-stack-top) +
-    var(--widget-shell-specialist-height) +
-    var(--widget-shell-stack-gap)
-  ) !important;
-}
-
+body.widget #widget-chat #widget-text,
+body.widget #widget-chat #widget-text-form button,
+body.widget #widget-brief,
+body.widget #widget-terminal-command,
+body.widget #widget-terminal-output,
+body.widget #widget-mini-calendar-events,
+body.widget #widget-calendar-grid { max-width: 100% !important; box-sizing: border-box !important; }
+body.widget #widget-chat-close,
+body.widget .widget-panel-toggle,
+body.widget .panel-actions button { flex: none !important; }
 body.widget .widget-toolbar button[aria-expanded='true'] {
   color: var(--accent) !important;
   border-color: color-mix(in srgb, var(--accent) 70%, transparent) !important;
   background: color-mix(in srgb, var(--accent) 15%, #10181c) !important;
 }
-
-body.widget #widget-chat #widget-messages,
-body.widget #widget-chat #widget-text-form,
-body.widget #widget-chat #widget-text,
-body.widget #widget-chat #widget-text-form button,
-body.widget #widget-chat .widget-message,
-body.widget #widget-chat .widget-chat-heading {
-  max-width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box !important;
-}
-
-body.widget #widget-messages,
-body.widget #widget-brief,
-body.widget #widget-brief-status,
-body.widget #widget-text,
-body.widget #widget-text-form,
-body.widget #widget-terminal-command,
-body.widget #widget-terminal-output,
-body.widget #widget-diff-status,
-body.widget #widget-mini-calendar-events,
-body.widget #widget-calendar-grid {
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-body.widget #widget-chat-close,
-body.widget .widget-panel-toggle,
-body.widget .panel-actions button {
-  flex: none !important;
-}
-
 body.widget #widget-calendar-toggle[hidden],
 body.widget #widget-creative-toggle[hidden],
 body.widget #widget-coding-tools[hidden],
@@ -248,35 +154,34 @@ body.widget #widget-chat[hidden],
 body.widget #widget-coding-panels[hidden],
 body.widget #widget-mini-calendar[hidden],
 body.widget #widget-creative-workspace[hidden],
-  body.widget #widget-code-wing[hidden],
-  body.widget #widget-menu[hidden],
-  body.widget #bot-library[hidden],
-body.widget #widget-specialist-actions[hidden] {
-  display: none !important;
-}
+body.widget #widget-code-wing[hidden],
+body.widget #widget-menu[hidden],
+body.widget #bot-library[hidden],
+body.widget #widget-specialist-actions[hidden] { display: none !important; }
 
-/* Keep platform controls stable while utilities are attached. */
-body.widget.widget-chat-open #widget-tools,
-body.widget.widget-panels-open #widget-tools,
-body.widget.widget-calendar-open #widget-tools,
-body.widget.widget-creative-open #widget-tools,
-body.widget.widget-wide-open #widget-tools {
-  display: flex !important;
-}
-
-@media (max-width: 340px) {
-  body.widget {
-    --widget-shell-pad: 8px;
-    --widget-shell-stack-gap: 6px;
-    --widget-shell-stack-bottom: 6px;
-  }
-
+@media (max-width: 639px) {
+  body.widget { --widget-shell-pad: 8px; }
+  body.widget main,
   body.widget #widget-tools,
   body.widget #widget-chat,
+  body.widget #widget-menu {
+    right: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
   body.widget #widget-coding-panels,
   body.widget #widget-mini-calendar,
   body.widget #widget-creative-workspace,
   body.widget #widget-code-wing {
-    padding: 9px !important;
+    right: var(--widget-shell-pad) !important;
+    width: auto !important;
   }
+}
+
+@media (max-width: 340px) {
+  body.widget #widget-chat,
+  body.widget #widget-coding-panels,
+  body.widget #widget-mini-calendar,
+  body.widget #widget-creative-workspace,
+  body.widget #widget-code-wing { padding: 9px !important; }
 }

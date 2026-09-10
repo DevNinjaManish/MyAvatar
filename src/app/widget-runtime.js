@@ -235,8 +235,10 @@ function openLocalCalendarDialog(){const dialog=$('local-calendar-dialog');$('lo
 $('calendar-local-add').onclick=openLocalCalendarDialog;$('widget-local-calendar-add').onclick=openLocalCalendarDialog;
 $('local-calendar-form').onsubmit=event=>{event.preventDefault();const title=$('local-calendar-title').value.trim(),start=`${$('local-calendar-date').value}T${$('local-calendar-time').value}`;if(!title||!start)return;saveLocalCalendarEvent({title,start});localCalendarEvents=readLocalCalendar();$('local-calendar-dialog').close();void loadCalendarWorkspace();if(!document.body.classList.contains('widget'))return;void loadMiniCalendar();};
 setWorkspaceMode('coding',false);
-  $('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar'),opening=panel.hidden;window.closeAttachedWorkspace?.();panel.hidden=!opening;document.body.classList.toggle('widget-calendar-open',opening);if(opening){window.desktop?.widgetCalendar?.({open:true});renderMiniCalendar();void loadMiniCalendar();}else window.desktop?.widgetCalendar?.({open:false});};
-$('widget-mini-calendar-close').onclick=()=>{$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');window.desktop?.widgetCalendar?.({open:false});};
+function requestCalendarLayout(open){void window.desktop?.widgetCalendar?.({open:Boolean(open)});}
+function requestCreativeLayout(open){void window.desktop?.widgetSpecialist?.(Boolean(open));}
+$('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar'),opening=panel.hidden;window.closeAttachedWorkspace?.();panel.hidden=!opening;document.body.classList.toggle('widget-calendar-open',opening);syncSpecialistState('calendar',opening);requestCalendarLayout(opening);if(opening){renderMiniCalendar();void loadMiniCalendar();}};
+$('widget-mini-calendar-close').onclick=()=>{$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');syncSpecialistState('calendar',false);requestCalendarLayout(false);};
 $('widget-mini-calendar-refresh').onclick=()=>void loadMiniCalendar();
 $('widget-calendar-prev').onclick=()=>{miniCalendarMonth.setMonth(miniCalendarMonth.getMonth()-1);renderMiniCalendar();};
 $('widget-calendar-next').onclick=()=>{miniCalendarMonth.setMonth(miniCalendarMonth.getMonth()+1);renderMiniCalendar();};
@@ -252,8 +254,8 @@ function renderCreativeWorkspace(botId){
   : [['Brief','Clarify the screen or product moment'],['Key decision','Choose the clearest hierarchy'],['Critique','Review spacing, contrast, and emphasis'],['Output','Design notes and visual prompts appear in chat']];
  for(const [label,value] of rows){const row=document.createElement('div');row.className='widget-specialist-row';const key=document.createElement('span');key.textContent=label;const text=document.createElement('strong');text.textContent=value;row.append(key,text);content.append(row);}
 }
-$('widget-creative-toggle').onclick=()=>{const panel=$('widget-creative-workspace'),opening=panel.hidden;renderCreativeWorkspace(config?.conversation?.persona);panel.hidden=!opening;document.body.classList.toggle('widget-creative-open',opening);window.desktop?.widgetSpecialist?.(opening);};
-$('widget-creative-close').onclick=()=>{$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open','widget-creative-context-open');window.desktop?.widgetSpecialist?.(false);};
+$('widget-creative-toggle').onclick=()=>{const panel=$('widget-creative-workspace'),opening=panel.hidden;renderCreativeWorkspace(config?.conversation?.persona);panel.hidden=!opening;document.body.classList.toggle('widget-creative-open',opening);syncSpecialistState('creative',opening);requestCreativeLayout(opening);};
+$('widget-creative-close').onclick=()=>{$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open','widget-creative-context-open');syncSpecialistState('creative',false);requestCreativeLayout(false);};
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
 $('save').onclick=event=>{event.preventDefault();interrupt();send({type:'settings',interaction:$('interaction').value,performanceProfile:$('performance').value,memoryEnabled:$('memory-enabled').checked});$('settings').close();window.desktop?.mode('widget');};
@@ -481,10 +483,20 @@ function syncSpecialistButton(id){
  const specialist=specialistByBot[id],button=$('widget-specialist-toggle');
  activeSpecialist=specialist?.kind||'';
  button.hidden=!specialist;
+ button.setAttribute('aria-expanded','false');
  if(!specialist)return;
  button.innerHTML=iconSvg(widgetIcons[`widget-${specialist.kind}`]);
  button.setAttribute('aria-label',specialist.label);button.title=specialist.title;
 }
+function syncSpecialistState(kind,open){
+ if(kind!==activeSpecialist)return;
+ const button=$('widget-specialist-toggle'),specialist=specialistByBot[config?.conversation?.persona];
+ const isOpen=Boolean(open);
+ button.setAttribute('aria-expanded',String(isOpen));
+ button.setAttribute('aria-label',isOpen?`Close ${specialist?.label?.replace(/^Open /,'')||'specialist workspace'}`:(specialist?.label||'Open specialist workspace'));
+ button.title=button.getAttribute('aria-label');
+}
+window.addEventListener('myavatar:specialist-state',event=>syncSpecialistState(event.detail?.kind,event.detail?.open));
 $('widget-specialist-toggle').onclick=()=>{if(activeSpecialist==='calendar')$('widget-calendar-toggle').click();else if(activeSpecialist==='coding')$('widget-coding-tools').click();else if(activeSpecialist==='creative')$('widget-creative-toggle').click();};
 
 function setWidgetChat(open,focus=true){
@@ -499,8 +511,8 @@ function setWidgetChat(open,focus=true){
 }
 function closeWidgetUtilities(keep=''){
  if(keep!=='chat')setWidgetChat(false,false);
- if(keep!=='calendar'){$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');window.desktop?.widgetCalendar?.({open:false});}
- if(keep!=='creative'){$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open');}
+ if(keep!=='calendar'){$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');syncSpecialistState('calendar',false);requestCalendarLayout(false);}
+ if(keep!=='creative'){$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open');syncSpecialistState('creative',false);requestCreativeLayout(false);}
  if(keep!=='coding')window.closeCodingWorkspace?.();
 }
 $('widget-chat-toggle').onclick=()=>setWidgetChat(!document.body.classList.contains('widget-chat-open'));

@@ -515,8 +515,8 @@ body.widget #widget-menu {
   padding:9px 8px;
   text-align:left}
 .bot-card[aria-pressed=true] {
-  border-color:#a5e2ce66;
-  background:#a5e2ce0d}
+  border-color:color-mix(in srgb,var(--bot-card-accent,#a5e2ce) 40%,transparent);
+  background:color-mix(in srgb,var(--bot-card-accent,#a5e2ce) 8%,transparent)}
 .bot-card b {
   display:block;
   font-size:12px;
@@ -537,18 +537,23 @@ body.widget #widget-menu {
   flex-shrink:0;
   font-size:18px;
   box-shadow:0 0 0 1px #ffffff24}
+.bot-card.nova {--bot-card-accent:#f0a8d0}
 .nova .bot-mark {
   background:#513b49;
   color:#f0c6db}
+.bot-card.butler {--bot-card-accent:#d1b26f}
 .butler .bot-mark {
   background:#344658;
   color:#d9c39f}
+.bot-card.pixel {--bot-card-accent:#c9ff55}
 .pixel .bot-mark {
   background:#493650;
   color:#d4eaa9}
+.bot-card.luma {--bot-card-accent:#9fe7ff}
 .luma .bot-mark {
   background:#38436a;
   color:#a9e7ff}
+.bot-card.robot {--bot-card-accent:#79d8ef}
 
 /* Five companions still need to fit in the compact selector without scrolling. */
 body.widget #bot-library {

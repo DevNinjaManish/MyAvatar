@@ -163,11 +163,6 @@ export function mountWidgetPanels(doc, desktop) {
     $('widget-run-command').disabled = false;
   };
   const isWidget = () => doc.body.classList.contains('widget');
-  const setLayout = layout => {
-    if (!layout?.bounds || !['none', 'left', 'inline'].includes(layout.side)) return;
-    doc.body.dataset.panelSide = layout.side;
-  };
-
   const render = async () => {
     const visible = state.open && isWidget();
     doc.body.classList.toggle('widget-panels-open', visible);
@@ -177,6 +172,7 @@ export function mountWidgetPanels(doc, desktop) {
     $('widget-coding-tools').setAttribute('aria-expanded', String(visible));
     $('widget-coding-tools').title = visible ? 'Collapse coding tools' : 'Open coding tools';
     $('widget-coding-tools').setAttribute('aria-label', $('widget-coding-tools').title);
+    win.dispatchEvent(new CustomEvent('myavatar:specialist-state', {detail: {kind: 'coding', open: visible}}));
     $('widget-panels-collapse').disabled = !state.expanded.length;
 
     cards.forEach(card => {
@@ -228,7 +224,6 @@ export function mountWidgetPanels(doc, desktop) {
       const result = await desktop.widgetPanels({open: state.open, wide: !!state.wide});
       if (signal.aborted || current !== request) return;
       if (result?.ok === false) throw Error(result.error || 'Panel layout is unavailable.');
-      setLayout(result);
     } catch (error) {
       if (current === request) report(`Could not resize the widget: ${error.message}`, 'error');
     }
@@ -661,7 +656,7 @@ export function mountWidgetPanels(doc, desktop) {
     if (records.some(record => record.oldValue?.split(/\s+/).includes('widget') !== isWidget())) onMode();
   });
   observer.observe(doc.body, {attributes: true, attributeFilter: ['class'], attributeOldValue: true});
-  const unsubscribe = desktop?.onWidgetLayout?.(setLayout);
+  const unsubscribe = desktop?.onWidgetLayout?.(() => {});
 
   doc.querySelector('[data-widget-panel="task"] .panel-state').textContent = $('widget-brief').value.trim() ? 'Draft' : 'Not started';
   setTrustLabel();

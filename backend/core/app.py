@@ -13,6 +13,7 @@ from backend.core import settings as runtime_settings
 from backend.core.approvals import request_approval, resolve_approval
 from backend.core.runtime import RuntimeSession
 from backend.core.agent_state import AgentPhase, AgentTask
+from backend.core.bot_behavior import behavior_prompt
 from backend.core.verification import VerificationSummary
 from backend.core.greetings import GreetingCoordinator
 from backend.core.readiness import EngineReadiness
@@ -24,13 +25,15 @@ from backend.core.coding_repair import build_repair_prompt
 from backend.core.edit_ws import CodingEditController
 
 app=FastAPI()
-Path('logs').mkdir(exist_ok=True)
-CONFIG_PATH=Path('config.json')
-PREFERENCES_PATH=Path('data/settings.json')
-SCREEN_EVENTS_PATH=Path('data/screen-awareness/events.jsonl')
+REPO_ROOT=Path(__file__).resolve().parents[2]
+LOGS_PATH=REPO_ROOT/'logs'
+LOGS_PATH.mkdir(exist_ok=True)
+CONFIG_PATH=REPO_ROOT/'config.json'
+PREFERENCES_PATH=REPO_ROOT/'data/settings.json'
+SCREEN_EVENTS_PATH=REPO_ROOT/'data/screen-awareness/events.jsonl'
 logging.basicConfig(level=logging.INFO,handlers=[logging.StreamHandler()])
 timing=logging.getLogger('avatar.timing');timing.propagate=False
-file_handler=logging.FileHandler('logs/latency.jsonl');file_handler.setFormatter(logging.Formatter('%(message)s'));timing.addHandler(file_handler);timing.setLevel(logging.INFO)
+file_handler=logging.FileHandler(LOGS_PATH/'latency.jsonl');file_handler.setFormatter(logging.Formatter('%(message)s'));timing.addHandler(file_handler);timing.setLevel(logging.INFO)
 log=logging.getLogger('avatar')
 speech=Speech()
 stt_pool=ThreadPoolExecutor(1)
@@ -103,7 +106,7 @@ async def ws(socket:WebSocket):
     if client_token != os.environ.get('MYAVATAR_TOKEN','development'):await socket.close(code=1008);return
     if socket.headers.get('origin') not in ('http://127.0.0.1:5173','http://localhost:5173',None):await socket.close(code=1008);return
     await socket.accept();config=load_config();bot_id=config['conversation']['persona'];memory_enabled=config.get('memory',{}).get('enabled',False)
-    history=load_history(bot_id) if memory_enabled else [];log.info(f'Loaded history for {bot_id}: {len(history)} turns');bot_histories={bot_id:history};task=None;verification_task=None;approvals={};runtime=RuntimeSession(bot_id);edits=CodingEditController(Path('.'));agent_ref={'task':None}
+    history=load_history(bot_id) if memory_enabled else [];log.info(f'Loaded history for {bot_id}: {len(history)} turns');bot_histories={bot_id:history};task=None;verification_task=None;approvals={};runtime=RuntimeSession(bot_id);edits=CodingEditController(REPO_ROOT);agent_ref={'task':None}
     async def send(kind,turn=None,operation_id=None,**data):await socket.send_json(runtime.event(kind,turn=turn,operation_id=operation_id,**data))
     async def agent_update(agent_task,phase,turn=None):
         agent_task.set_phase(phase);await send('agent_state',turn,operation_id=agent_task.id,agentState=agent_task.public())
@@ -402,7 +405,7 @@ async def ws(socket:WebSocket):
                 if bot_id!='robot':edits.session.reject_pending(reason='bot_changed')
                 history=bot_histories.get(bot_id)
                 if history is None:history=load_history(bot_id) if memory_enabled else [];bot_histories[bot_id]=history
-                config['conversation'].update(persona=bot_id,system=profile['system']);config['tts']['voice']=profile['voice'];config['avatar']['type']='robot';runtime.switch_bot(bot_id);save_preferences(config);await send('config',config=config);await send('bot_history',history=history)
+                config['conversation'].update(persona=bot_id,system=profile['system'] + behavior_prompt(bot_id));config['tts']['voice']=profile['voice'];config['avatar']['type']='robot';runtime.switch_bot(bot_id);save_preferences(config);await send('config',config=config);await send('bot_history',history=history)
                 if engine_readiness.capability('speak'):greetings.request(config,reason='bot_switch')
             elif kind=='settings':
                 if msg.get('interaction') in ('live','manual'):config.setdefault('audio',{})['mode']=msg['interaction']
@@ -412,7 +415,7 @@ async def ws(socket:WebSocket):
             elif kind=='action_decision':resolve_approval(approvals,msg.get('requestId'),msg.get('decision'))
             elif kind=='onboarding':
                 bot_id=msg.get('bot');profile=config.get('bots',{}).get(bot_id)
-                if profile:config['conversation'].update(persona=bot_id,system=profile['system']);config['tts']['voice']=profile['voice'];history=bot_histories.setdefault(bot_id,[]);runtime.switch_bot(bot_id)
+                if profile:config['conversation'].update(persona=bot_id,system=profile['system'] + behavior_prompt(bot_id));config['tts']['voice']=profile['voice'];history=bot_histories.setdefault(bot_id,[]);runtime.switch_bot(bot_id)
                 if msg.get('interaction') in ('live','manual'):config.setdefault('audio',{})['mode']=msg['interaction']
                 if isinstance(msg.get('performanceProfile'),str) and msg['performanceProfile'] in (*config['performanceProfiles'],'high'):apply_profile(config,msg['performanceProfile'])
                 save_preferences(config);await send('config',config=config);await send('bot_history',history=history)

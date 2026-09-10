@@ -66,9 +66,10 @@ body:not(.widget) #status { font-weight: 650; color: var(--ink); }
   body:not(.widget) .full-header-tools { justify-content:flex-end; }
   body:not(.widget) #workspace-nav { order:3; width:100%; justify-content:space-between; }
   body:not(.widget) #workspace-nav button { flex:1; padding-inline:4px; }
-  body:not(.widget) main { flex-direction: column; padding: 14px; }
-  body:not(.widget) #stage { flex: 1 1 52vh; min-height: 260px; }
+  body:not(.widget) main { flex-direction: column; padding: 14px; overflow:auto; }
+  body:not(.widget) #stage { flex:0 0 min(52vh,420px); min-height:260px; }
+  body:not(.widget) #unified-workspace-shell { flex:none; width:100%; max-height:none; }
   body:not(.widget) #calendar-workspace { padding:18px; }
-  body:not(.widget) aside { width: 100%; height: min(38vh, 300px); }
+  body:not(.widget) aside { flex:none; width:100%; height:min(38vh,300px); min-height:220px; }
   body:not(.widget) footer { padding: 12px 14px 16px; }
 }

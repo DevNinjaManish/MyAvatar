@@ -5,7 +5,7 @@
 .widget-panels-heading>div{display:flex;gap:2px}
 .widget-panels-heading button{width:26px;height:26px;padding:3px;border:0;border-radius:7px;font-size:17px}
 .widget-panels-heading button[data-small-label]{width:auto;font-size:9px;padding:4px}
-.widget-panels-scroll{overflow:auto;overscroll-behavior:contain;min-height:0;padding:0 8px 8px;scrollbar-width:thin}
+.widget-panels-scroll{flex:1;overflow:auto;overscroll-behavior:contain;min-height:0;padding:0 8px 8px;scrollbar-width:thin}
 .widget-project-row{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 0 8px;font-size:10px}
 #widget-project-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .widget-project-row button{flex:none;font-size:10px;padding:6px 7px;border-radius:8px}
