@@ -35,7 +35,15 @@ class CodingEditController:
     def decide(self, transaction_id: str, decision: str) -> dict[str, Any]:
         if decision == 'approve':
             result = self.session.apply(transaction_id)
-            return {'result': result, 'message': 'Rivet applied the approved code change.'}
+            verification = self.verify_last(transaction_id)
+            message = 'Rivet applied the approved code change.'
+            if verification['status'] == 'passed':
+                message += ' Verification passed.'
+            elif verification['status'] == 'failed':
+                message += ' Verification found issues; the edit remains applied and can be rolled back.'
+            else:
+                message += ' No safe automatic verification is configured for these files.'
+            return {'result': result, 'verification': verification, 'message': message}
         if decision == 'reject':
             result = self.session.reject_pending(tx_id=transaction_id)
             if result is None:
