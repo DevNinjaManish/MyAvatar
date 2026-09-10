@@ -306,6 +306,16 @@ body.widget #widget-system-hud { margin:4px 0 8px; padding:10px; border:1px soli
 body.widget #widget-system-hud[hidden] { display:none; }
 body.widget .widget-system-grid strong { white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
 body.widget .workspace-heading-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+/* Attached utilities begin below the complete platform, including its HUD. */
+body.widget.widget-chat-open #widget-chat,
+body.widget.widget-calendar-open #widget-mini-calendar,
+body.widget.widget-panels-open #widget-coding-panels { top:405px; }
+body.widget.widget-panels-open #widget-coding-panels { position:absolute; left:11px; width:238px; height:calc(100vh - 415px); max-height:365px; min-height:0; margin:0; }
+/* Telemetry is a single readable strip, not four disconnected micro-columns. */
+body.widget #widget-system-rail { grid-template-columns:1fr 1fr .78fr; gap:4px; padding:5px 2px 1px; }
+body.widget .system-rail-item { position:relative; display:flex; align-items:center; gap:4px; min-width:0; padding:4px 6px 7px; border:1px solid #ffffff10; border-radius:8px; background:#ffffff03; }
+body.widget .system-rail-item i { position:absolute; left:6px; right:6px; bottom:3px; width:auto; height:2px; }
+body.widget .system-rail-runtime { justify-content:center; padding-inline:5px; border-color:color-mix(in srgb,var(--accent) 22%,#ffffff10); }
 /* Final geometry contract: the platform never participates in document flow. */
 body.widget main {
   position:absolute;
