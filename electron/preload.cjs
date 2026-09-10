@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('desktop',{
   cancelAgentTask:taskId=>ipcRenderer.invoke('agent-cancel-task',taskId),
   getCalendarEvents:()=>ipcRenderer.invoke('calendar-events'),
   chooseProject:()=>ipcRenderer.invoke('widget-choose-project'),
+  chooseRivetWorkspace:()=>ipcRenderer.invoke('rivet-choose-workspace'),
   onWidgetLayout:callback=>{
     const listener=(_event,layout)=>callback(layout);
     ipcRenderer.on('widget-layout-changed',listener);
