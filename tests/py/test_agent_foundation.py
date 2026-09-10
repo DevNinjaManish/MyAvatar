@@ -1,7 +1,8 @@
 import unittest
 
 from backend.core.agent_state import AgentOutcome, AgentPhase, AgentTask
-from backend.core.capabilities import can_use, capabilities_for_bot, get_capability
+from backend.core.capabilities import can_use, capabilities_for_bot, get_capability, profile_for_bot
+from backend.core.skills import skills_for_bot
 from backend.core.verification import VerificationSummary
 
 
@@ -37,6 +38,18 @@ class AgentFoundationTests(unittest.TestCase):
         self.assertIsNone(get_capability('robot', 'coding.edit').handler)
         with self.assertRaises(PermissionError):
             get_capability('nova', 'coding.edit')
+
+    def test_profiles_separate_capabilities_from_inert_specialist_skills(self):
+        rivet = profile_for_bot('robot')
+        nova = profile_for_bot('nova')
+        pixel = profile_for_bot('pixel')
+        self.assertEqual(rivet['label'], 'Rivet')
+        self.assertEqual({item['id'] for item in rivet['capabilities']}, set(capabilities_for_bot('robot')))
+        self.assertTrue(all(item['requiresApproval'] is False for item in rivet['capabilities'][:2]))
+        self.assertEqual(nova['capabilities'], [])
+        self.assertEqual([item.id for item in skills_for_bot('pixel')], ['marketing.message'])
+        self.assertEqual(pixel['capabilities'], [])
+        self.assertNotIn('handler', rivet['capabilities'][0])
 
     def test_verification_contract_preserves_specialist_checks(self):
         summary = VerificationSummary.from_result({'status': 'failed', 'ok': False, 'checks': [{'id': 'tests', 'ok': False}], 'message': 'Issues found.'})

@@ -29,6 +29,12 @@ approved editing, verification, and one bounded repair. Registry entries are
 inert descriptors at this stage; registration does not execute a tool or grant
 filesystem, shell, Git, or external-service authority.
 
+The same module exposes compact bot profiles that combine a bot label with its
+permitted capability metadata. `backend/core/skills.py` provides the separate
+skill descriptor layer: skills describe specialist intent for future instruction
+bundles, but are inert and never grant permissions. Personality prompts remain
+in the bot configuration rather than being mixed into either registry.
+
 Rivet’s existing workspace boundaries, patch validation, explicit approval,
 allowlisted verification, one-repair limit, and rollback checks remain the
 authority. Other companions cannot use Rivet capability IDs merely because the
