@@ -16,7 +16,7 @@ from backend.core.agent_state import AgentPhase, AgentTask
 from backend.core.bot_behavior import behavior_prompt
 from backend.core.verification import VerificationSummary
 from backend.core.greetings import GreetingCoordinator
-from backend.core.readiness import EngineReadiness
+from backend.core.readiness import EngineReadiness, recovery_message
 from backend.core.repo_context import read_files, build_prompt
 from backend.core.workspace import choose_context, build_change_plan_prompt
 from backend.core.coding_router import looks_like_coding_request
@@ -358,7 +358,7 @@ async def ws(socket:WebSocket):
                 if warm_stage!=last_stage:await send('preparing',stage=warm_stage,readiness=engine_readiness.snapshot());last_stage=warm_stage
                 await asyncio.sleep(.12)
             try:await asyncio.shield(warm_task)
-            except Exception as exc:await send('setup_error',message=str(exc));return
+            except Exception:await send('setup_error',message=recovery_message(engine_readiness.snapshot()),readiness=engine_readiness.snapshot());return
         snapshot=engine_readiness.snapshot();await send('ready',capabilities=snapshot['capabilities'],readiness=snapshot)
         if engine_readiness.capability('speak') and config.get('_greetingIndexes',{}).get(bot_id,0)>0:greetings.request(config,reason='startup')
         while True:

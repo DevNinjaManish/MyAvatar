@@ -192,4 +192,5 @@ class Recovery(unittest.TestCase):
                 receive_startup(ws,warm=True)
                 event=ws.receive_json()
                 self.assertEqual(event['type'],'setup_error')
-                self.assertEqual(event['message'],'model missing')
+                self.assertIn('npm run doctor',event['message'])
+                self.assertNotIn('model missing',event['message'])

@@ -85,3 +85,15 @@ class EngineReadiness:
             'engines': deepcopy(self.engines),
             'capabilities': capabilities,
         }
+
+
+def recovery_message(snapshot: dict[str, Any]) -> str:
+    """Return stable setup guidance without exposing provider exception text."""
+    engines = snapshot.get('engines', {}) if isinstance(snapshot, dict) else {}
+    if engines.get('llm', {}).get('state') == 'unavailable':
+        return 'Local chat is unavailable. Run npm run doctor, start Ollama, and confirm the selected model is installed.'
+    if engines.get('stt', {}).get('state') == 'unavailable':
+        return 'Speech recognition is unavailable. Run npm run doctor and check the local speech assets.'
+    if engines.get('tts', {}).get('state') == 'unavailable':
+        return 'Voice output is unavailable. Run npm run doctor and check the Kokoro speech assets.'
+    return 'Local setup could not finish. Run npm run doctor, resolve the reported issue, then reconnect.'

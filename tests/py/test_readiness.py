@@ -2,7 +2,14 @@ import asyncio, base64, unittest
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from backend.core.app import app, engine_readiness
-from backend.core.readiness import EngineReadiness
+from backend.core.readiness import EngineReadiness, recovery_message
+
+
+class RecoveryMessageTests(unittest.TestCase):
+    def test_recovery_message_is_actionable_and_does_not_expose_provider_errors(self):
+        self.assertIn('Ollama', recovery_message({'engines': {'llm': {'state': 'unavailable'}}}))
+        self.assertIn('speech assets', recovery_message({'engines': {'stt': {'state': 'unavailable'}}}))
+        self.assertNotIn('Traceback', recovery_message({'engines': {'tts': {'state': 'unavailable'}}}))
 
 
 class ReadinessModel(unittest.TestCase):

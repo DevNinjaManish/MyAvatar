@@ -16,6 +16,11 @@ test('widget runtime reconnects without creating duplicate timers',()=>{
   assert.match(runtime,/Local service is reconnecting\. Try again in a moment\./);
   assert.match(runtime,/candidate\.onclose=.*scheduleReconnect\(\)/);
 });
+test('startup setup errors replace preparing status with actionable guidance',()=>{
+  const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');
+  assert.match(runtime,/\$\('status'\)\.textContent='Setup needs attention'/);
+  assert.match(runtime,/Run npm run doctor to check local setup/);
+});
 test('all five agreed panels exist in the agreed order',()=>assert.deepEqual(PANEL_IDS,['task','changes','terminal','tests','diff']));
 test('local agent plans expose bounded ordered steps without commands',()=>{
   const steps=agentPlanSteps([{kind:'gitStatus'},{kind:'test'}]);
