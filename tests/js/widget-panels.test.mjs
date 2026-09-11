@@ -178,6 +178,17 @@ test('calendar and creative specialists request state without side-layout mutati
   assert.match(runtime,/requestCreativeLayout\(opening\)/);
   assert.doesNotMatch(runtime,/panelSide/);
 });
+test('Nova calendar exposes explicit loading, ready, empty, and unavailable states',()=>{
+  const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');
+  const polish=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');
+  assert.match(runtime,/section\.dataset\.calendarState='loading'/);
+  assert.match(runtime,/section\.dataset\.calendarState='unavailable'/);
+  assert.match(runtime,/section\.dataset\.calendarState='empty'/);
+  assert.match(runtime,/section\.dataset\.calendarState='ready'/);
+  assert.match(polish,/data-calendar-state=loading/);
+  assert.match(polish,/data-calendar-state=empty/);
+  assert.match(polish,/data-calendar-state=unavailable/);
+});
 test('platform and chat headings reserve control space instead of shifting it for long labels',()=>{
   const cockpit=readFileSync(new URL('../../src/styles/widget-cockpit.css',import.meta.url),'utf8');
   const polish=readFileSync(new URL('../../src/styles/widget-polish.css',import.meta.url),'utf8');

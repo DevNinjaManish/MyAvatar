@@ -94,6 +94,11 @@ body.widget .mini-calendar-heading { display:flex; align-items:flex-start; justi
 body.widget .mini-calendar-heading h2 { margin:2px 0 0; font-size:16px; }
 body.widget .mini-calendar-heading button { width:28px; height:28px; padding:0; border:0; font-size:18px; }
 body.widget #widget-mini-calendar-status { margin:10px 0; color:var(--widget-text-soft); font-size:10px; }
+body.widget #widget-mini-calendar[data-calendar-state=loading] #widget-mini-calendar-status { color:var(--accent); }
+body.widget #widget-mini-calendar[data-calendar-state=empty] #widget-mini-calendar-events { align-content:center; }
+body.widget #widget-mini-calendar[data-calendar-state=empty] #widget-mini-calendar-events>p { padding:12px 9px; border:1px dashed #ffffff1c; border-radius:9px; text-align:center; }
+body.widget #widget-mini-calendar[data-calendar-state=unavailable] #widget-mini-calendar-status { color:#ffd0c7; }
+body.widget #widget-mini-calendar[data-calendar-state=unavailable] #widget-mini-calendar-events { align-content:center; }
 body.widget #widget-mini-calendar-events { min-height:0; flex:1; overflow:auto; display:grid; align-content:start; gap:6px; }
 body.widget .mini-calendar-event { display:flex; flex-direction:column; gap:3px; padding:8px; border:1px solid #ffffff14; border-radius:9px; background:#ffffff05; }
 body.widget .mini-calendar-event strong { font-size:11px; }
