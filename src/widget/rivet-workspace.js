@@ -80,6 +80,7 @@ export function mountRivetWorkspace(win, doc) {
     details.className = 'rivet-details';
 
     const toggle = doc.createElement('button');
+    toggle.id = 'widget-rivet-details-toggle';
     toggle.type = 'button';
     toggle.className = 'rivet-details-toggle';
     toggle.setAttribute('aria-expanded', 'false');
@@ -90,6 +91,8 @@ export function mountRivetWorkspace(win, doc) {
     body.id = 'widget-rivet-details-body';
     body.className = 'rivet-details-body';
     body.hidden = true;
+    body.setAttribute('role','region');
+    body.setAttribute('aria-label','Rivet advanced tools');
 
     const advanced = [...scroll.querySelectorAll('[data-widget-panel="changes"], [data-widget-panel="terminal"], [data-widget-panel="tests"], [data-widget-panel="diff"]')];
     const first = advanced[0];
@@ -102,6 +105,7 @@ export function mountRivetWorkspace(win, doc) {
       const open = toggle.getAttribute('aria-expanded') !== 'true';
       toggle.setAttribute('aria-expanded', String(open));
       body.hidden = !open;
+      win.__myavatarWidgetAccessibility?.sync?.();
     });
   }
 
