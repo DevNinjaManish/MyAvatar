@@ -45,7 +45,8 @@ class RivetCapabilitiesTest(unittest.TestCase):
             status=git_status(root='.')
         args=run.call_args.args[0]
         self.assertEqual(args[0],'git')
-        self.assertEqual(args[2:],('status','--short','--branch','--untracked-files=normal'))
+        self.assertEqual(args[1],'-C')
+        self.assertEqual(args[3:],('status','--short','--branch','--untracked-files=normal'))
         self.assertTrue(status['dirty'])
         self.assertEqual(status['changes'],[' M src/a.py'])
 
