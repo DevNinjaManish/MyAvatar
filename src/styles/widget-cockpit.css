@@ -1,78 +1,78 @@
 /* Widget cockpit presentation. Fixed shell geometry belongs to widget-stack.css. */
 body.widget main{--widget-avatar-size:224px}
 body.widget #stage::before,body.widget[data-bot] #stage::before{inset:auto 20px 0;width:auto;height:78px;border:0;border-radius:50%;background:radial-gradient(ellipse at 50% 62%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 68%);box-shadow:none;animation:none}
-body.widget #widget-tools{border:1px solid #ffffff16;border-radius:20px;background:linear-gradient(180deg,#1a2328ee,#11181cf5);box-shadow:0 10px 28px #0006,inset 0 1px #ffffff10}
-body.widget #widget-tools::before{content:'';position:absolute;left:30px;right:30px;top:31px;height:1px;background:linear-gradient(90deg,transparent,#ffffff16,transparent);pointer-events:none}
+body.widget #widget-tools{border:1px solid var(--ds-border-default);border-radius:var(--ds-radius-2xl);background:linear-gradient(180deg,color-mix(in srgb,var(--ds-surface-raised) 94%,transparent),color-mix(in srgb,var(--ds-surface-canvas) 96%,transparent));box-shadow:var(--ds-shadow-raised)}
+body.widget #widget-tools::before{content:'';position:absolute;left:30px;right:30px;top:31px;height:1px;background:linear-gradient(90deg,transparent,var(--ds-border-default),transparent);pointer-events:none}
 body.widget #widget-tools::after{content:'';position:absolute;left:48px;right:48px;top:37px;height:2px;border-radius:99px;background:var(--accent);opacity:.45;box-shadow:0 0 8px color-mix(in srgb,var(--accent) 55%,transparent);pointer-events:none}
 
 /* Identity strip: companion first, status second, contextual stop last. */
-body.widget .cockpit-heading{display:grid;grid-template-columns:minmax(0,1fr) 28px;align-items:center;width:100%;gap:4px;min-width:0;box-sizing:border-box;padding:0 2px}
-body.widget .widget-caption{flex:1;min-width:0;max-width:none;height:27px;justify-content:flex-start;gap:7px;padding:3px 7px;border:0;border-radius:9px;background:transparent;box-shadow:none}
-body.widget .widget-caption:hover{background:#ffffff07}
-body.widget .widget-caption:active{background:#ffffff0b}
+body.widget .cockpit-heading{display:grid;grid-template-columns:minmax(0,1fr) 28px;align-items:center;width:100%;gap:var(--ds-space-1);min-width:0;box-sizing:border-box;padding:0 2px}
+body.widget .widget-caption{flex:1;min-width:0;max-width:none;height:27px;justify-content:flex-start;gap:var(--ds-space-2);padding:3px var(--ds-space-2);border:0;border-radius:var(--ds-radius-sm);background:transparent;box-shadow:none}
+body.widget .widget-caption:hover{background:var(--ds-surface-hover)}
+body.widget .widget-caption:active{background:var(--ds-surface-active)}
 body.widget #widget-bot-icon{width:17px;height:17px;margin-left:0;opacity:.92;box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 32%,transparent)}
-body.widget #widget-name{max-width:70px;font-size:11px;font-weight:700;letter-spacing:.18px}
-body.widget #widget-status{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:9px;font-weight:550;color:#9fadb1}
-body.widget #widget-status::before{width:4px;height:4px;box-shadow:0 0 0 2px #ffffff05}
+body.widget #widget-name{max-width:70px;font-size:var(--ds-text-sm);font-weight:700;letter-spacing:.18px}
+body.widget #widget-status{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:var(--ds-text-2xs);font-weight:550;color:var(--ds-text-tertiary)}
+body.widget #widget-status::before{width:4px;height:4px;box-shadow:0 0 0 2px var(--ds-surface-subtle)}
 body.widget .picker-chevron{display:none}
 
 /* Four primary controls read as one compact instrument cluster. */
-body.widget .widget-toolbar{border-radius:14px;border:1px solid #ffffff12;background:linear-gradient(180deg,#0f171bd6,#0b1216d6);box-shadow:inset 0 1px #ffffff07,0 4px 14px #0002}
-body.widget .widget-toolbar button,body.widget.widget-chat-open .widget-toolbar button{border:1px solid transparent;border-radius:11px;padding:7px;color:#aebbc0;background:transparent;transition:background .14s ease,border-color .14s ease,color .14s ease,transform .14s ease}
-body.widget .widget-toolbar button:hover:not(:disabled){border-color:#ffffff14;background:#ffffff08;color:#dce7e8}
-body.widget .widget-toolbar button:active:not(:disabled){transform:translateY(1px);background:#ffffff0d}
+body.widget .widget-toolbar{border-radius:var(--ds-radius-lg);border:1px solid var(--ds-border-subtle);background:linear-gradient(180deg,color-mix(in srgb,var(--ds-surface-base) 84%,transparent),color-mix(in srgb,var(--ds-surface-canvas) 84%,transparent));box-shadow:inset 0 1px #ffffff07,var(--ds-shadow-soft)}
+body.widget .widget-toolbar button,body.widget.widget-chat-open .widget-toolbar button{border:1px solid transparent;border-radius:var(--ds-radius-md);padding:7px;color:var(--ds-text-secondary);background:transparent;transition:background var(--ds-transition-fast),border-color var(--ds-transition-fast),color var(--ds-transition-fast),transform var(--ds-transition-fast)}
+body.widget .widget-toolbar button:hover:not(:disabled){border-color:var(--ds-border-default);background:var(--ds-surface-hover);color:var(--ds-text-primary)}
+body.widget .widget-toolbar button:active:not(:disabled){transform:translateY(1px);background:var(--ds-surface-active)}
 body.widget .widget-toolbar button:disabled{opacity:.42}
-body.widget .widget-toolbar #widget-mic{background:color-mix(in srgb,var(--accent) 12%,#172226);border-color:color-mix(in srgb,var(--accent) 18%,transparent);color:color-mix(in srgb,var(--accent) 82%,white)}
-body.widget .widget-toolbar #widget-mic:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 17%,#172226);border-color:color-mix(in srgb,var(--accent) 28%,transparent)}
+body.widget .widget-toolbar #widget-mic{background:color-mix(in srgb,var(--accent) 12%,var(--ds-surface-raised));border-color:color-mix(in srgb,var(--accent) 18%,transparent);color:color-mix(in srgb,var(--accent) 82%,white)}
+body.widget .widget-toolbar #widget-mic:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 17%,var(--ds-surface-raised));border-color:color-mix(in srgb,var(--accent) 28%,transparent)}
 body.widget .widget-toolbar #widget-mic.active{background:var(--accent);border-color:transparent;color:#10262a;box-shadow:0 0 14px color-mix(in srgb,var(--accent) 22%,transparent)}
 body.widget .widget-toolbar #widget-mic.muted{background:#5a353b;border-color:#8f555d55;color:#ffd1d6;box-shadow:none}
-body.widget .widget-toolbar button[aria-expanded=true]{background:color-mix(in srgb,var(--accent) 10%,#ffffff06);border-color:color-mix(in srgb,var(--accent) 42%,transparent);color:var(--accent)}
+body.widget .widget-toolbar button[aria-expanded=true]{background:color-mix(in srgb,var(--accent) 10%,var(--ds-surface-hover));border-color:color-mix(in srgb,var(--accent) 42%,transparent);color:var(--accent)}
 body.widget .widget-toolbar #widget-specialist-toggle[aria-expanded=true]{box-shadow:inset 0 -2px color-mix(in srgb,var(--accent) 70%,transparent)}
 
 /* Stop is contextual beside status; never replace the mic/mute control. */
 body.widget #widget-stop-slot{position:static;width:28px;height:28px;display:grid;place-items:center}
-body.widget #widget-stop{padding:4px;border:1px solid #ffb2a52a;border-radius:8px;background:#4a2d30;color:#ffd0ca;box-shadow:inset 0 1px #ffffff08}
-body.widget #widget-stop:hover{border-color:#ffb2a54d;background:#583438}
+body.widget #widget-stop{padding:4px;border:1px solid color-mix(in srgb,var(--ds-danger) 24%,transparent);border-radius:var(--ds-radius-sm);background:color-mix(in srgb,var(--ds-danger-bg) 82%,var(--ds-surface-raised));color:var(--ds-danger);box-shadow:inset 0 1px #ffffff08}
+body.widget #widget-stop:hover{border-color:color-mix(in srgb,var(--ds-danger) 42%,transparent);background:color-mix(in srgb,var(--ds-danger-bg) 72%,#5b3538)}
 body.widget #widget-stop svg{width:16px;height:16px}
 
 /* Telemetry is intentionally subordinate to the companion controls. */
-body.widget #widget-system-rail{display:grid;grid-template-columns:1fr 1fr .78fr;align-items:center;gap:4px;width:100%;min-height:31px;height:31px;padding:5px 2px 1px;color:#829196;font-size:8px;letter-spacing:.04em;text-transform:uppercase}
-body.widget .system-rail-item{position:relative;display:flex;align-items:center;gap:4px;min-width:0;padding:4px 6px 7px;border:0;border-radius:8px;background:transparent}
-body.widget .system-rail-icon{color:color-mix(in srgb,var(--accent) 70%,#809096);font-size:7px;opacity:.8}
-body.widget .system-rail-item strong{color:#c7d2d4;font-size:8px;font-weight:650;letter-spacing:0;white-space:nowrap}
-body.widget .system-rail-item i{position:absolute;left:6px;right:6px;bottom:3px;display:block;width:auto;height:2px;overflow:hidden;border-radius:99px;background:#ffffff0d}
-body.widget .system-rail-item i b{display:block;width:0;height:100%;border-radius:inherit;background:color-mix(in srgb,var(--accent) 72%,#ffffff33);transition:width .3s ease}
-body.widget .system-rail-runtime{justify-content:center;padding-inline:5px;color:#aebabc;font-weight:650;white-space:nowrap;border-left:1px solid #ffffff0d}
+body.widget #widget-system-rail{display:grid;grid-template-columns:1fr 1fr .78fr;align-items:center;gap:var(--ds-space-1);width:100%;min-height:31px;height:31px;padding:5px 2px 1px;color:var(--ds-text-tertiary);font-size:8px;letter-spacing:.04em;text-transform:uppercase}
+body.widget .system-rail-item{position:relative;display:flex;align-items:center;gap:var(--ds-space-1);min-width:0;padding:4px 6px 7px;border:0;border-radius:var(--ds-radius-sm);background:transparent}
+body.widget .system-rail-icon{color:color-mix(in srgb,var(--accent) 70%,var(--ds-text-tertiary));font-size:7px;opacity:.8}
+body.widget .system-rail-item strong{color:var(--ds-text-secondary);font-size:8px;font-weight:650;letter-spacing:0;white-space:nowrap}
+body.widget .system-rail-item i{position:absolute;left:6px;right:6px;bottom:3px;display:block;width:auto;height:2px;overflow:hidden;border-radius:99px;background:var(--ds-border-subtle)}
+body.widget .system-rail-item i b{display:block;width:0;height:100%;border-radius:inherit;background:color-mix(in srgb,var(--accent) 72%,#ffffff33);transition:width var(--ds-transition-base)}
+body.widget .system-rail-runtime{justify-content:center;padding-inline:5px;color:var(--ds-text-secondary);font-weight:650;white-space:nowrap;border-left:1px solid var(--ds-border-subtle)}
 body.widget .system-rail-runtime .system-rail-icon{font-size:6px}
-body.widget .system-rail-runtime[data-state=preparing],body.widget .system-rail-runtime[data-state=degraded],body.widget .system-rail-runtime[data-state=limited],body.widget .system-rail-runtime[data-state=awaiting-approval]{color:#e0c487}
-body.widget .system-rail-runtime[data-state=unavailable],body.widget .system-rail-runtime[data-state=offline],body.widget .system-rail-runtime[data-state=task-blocked]{color:#f3aca0}
+body.widget .system-rail-runtime[data-state=preparing],body.widget .system-rail-runtime[data-state=degraded],body.widget .system-rail-runtime[data-state=limited],body.widget .system-rail-runtime[data-state=awaiting-approval]{color:var(--ds-warning)}
+body.widget .system-rail-runtime[data-state=unavailable],body.widget .system-rail-runtime[data-state=offline],body.widget .system-rail-runtime[data-state=task-blocked]{color:var(--ds-danger)}
 body.widget .system-rail-runtime[data-state=listening],body.widget .system-rail-runtime[data-state=thinking],body.widget .system-rail-runtime[data-state=speaking],body.widget .system-rail-runtime[data-state=working]{color:var(--accent)}
 
 /* Canonical interaction states: one visual language across avatar, status and controls. */
 body.widget[data-interaction-state=listening] #widget-tools,
 body.widget[data-interaction-state=thinking] #widget-tools,
 body.widget[data-interaction-state=speaking] #widget-tools,
-body.widget[data-interaction-state=working] #widget-tools{border-color:color-mix(in srgb,var(--accent) 28%,#ffffff16)}
+body.widget[data-interaction-state=working] #widget-tools{border-color:color-mix(in srgb,var(--accent) 28%,var(--ds-border-default))}
 body.widget[data-interaction-state=listening] #widget-tools::after,
 body.widget[data-interaction-state=thinking] #widget-tools::after,
 body.widget[data-interaction-state=speaking] #widget-tools::after,
 body.widget[data-interaction-state=working] #widget-tools::after{opacity:.78}
 body.widget #widget-status[data-tone=active]{color:var(--accent)}
-body.widget #widget-status[data-tone=warning]{color:#e0c487}
-body.widget #widget-status[data-tone=error]{color:#f3aca0}
+body.widget #widget-status[data-tone=warning]{color:var(--ds-warning)}
+body.widget #widget-status[data-tone=error]{color:var(--ds-danger)}
 body.widget[data-interaction-state=offline] .widget-toolbar,
-body.widget[data-interaction-state=limited] .widget-toolbar{border-color:#ffffff0d;background:#0d1418c7}
-body.widget[data-interaction-state=offline] #widget-mic{background:#ffffff05;border-color:#ffffff0c;color:#77868a;box-shadow:none}
-body.widget[data-interaction-state=awaiting-approval] #widget-specialist-toggle{border-color:#e0c48755;color:#e0c487;background:#e0c48710}
-body.widget[data-interaction-state=task-blocked] #widget-specialist-toggle{border-color:#f3aca055;color:#f3aca0;background:#f3aca010}
+body.widget[data-interaction-state=limited] .widget-toolbar{border-color:var(--ds-border-subtle);background:color-mix(in srgb,var(--ds-surface-canvas) 78%,transparent)}
+body.widget[data-interaction-state=offline] #widget-mic{background:var(--ds-surface-subtle);border-color:var(--ds-border-subtle);color:var(--ds-text-tertiary);box-shadow:none}
+body.widget[data-interaction-state=awaiting-approval] #widget-specialist-toggle{border-color:color-mix(in srgb,var(--ds-warning) 34%,transparent);color:var(--ds-warning);background:color-mix(in srgb,var(--ds-warning) 6%,transparent)}
+body.widget[data-interaction-state=task-blocked] #widget-specialist-toggle{border-color:color-mix(in srgb,var(--ds-danger) 34%,transparent);color:var(--ds-danger);background:color-mix(in srgb,var(--ds-danger) 6%,transparent)}
 body.widget[data-interaction-state=speaking] #stage::before{background:radial-gradient(ellipse at 50% 62%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 68%)}
 body.widget[data-interaction-state=listening] #stage::before{background:radial-gradient(ellipse at 50% 62%,color-mix(in srgb,var(--accent) 24%,transparent),transparent 68%)}
 body.widget[data-interaction-state=offline] #stage::before{opacity:.34;filter:saturate(.25)}
 
-body.widget.widget-chat-open #widget-chat{border-color:#ffffff16;background:#11191df4;box-shadow:0 12px 28px #0005,inset 0 1px #ffffff07}
-#widget-menu .menu-control-row{display:flex;align-items:center;justify-content:space-between;min-height:39px;padding:5px 10px;border-radius:8px;color:var(--ink);font-size:12px}
-#widget-menu .menu-control-row:hover{background:#ffffff08}
-#widget-menu .menu-control-row button{width:30px;height:30px;padding:5px;border:0;border-radius:9px;background:#ffffff08;color:#b8c4c7}
+body.widget.widget-chat-open #widget-chat{border-color:var(--ds-border-default);background:color-mix(in srgb,var(--ds-surface-base) 96%,transparent);box-shadow:var(--ds-shadow-raised)}
+#widget-menu .menu-control-row{display:flex;align-items:center;justify-content:space-between;min-height:39px;padding:5px var(--ds-space-4);border-radius:var(--ds-radius-sm);color:var(--ds-text-primary);font-size:var(--ds-text-md)}
+#widget-menu .menu-control-row:hover{background:var(--ds-surface-hover)}
+#widget-menu .menu-control-row button{width:30px;height:30px;padding:5px;border:0;border-radius:var(--ds-radius-sm);background:var(--ds-surface-hover);color:var(--ds-text-secondary)}
 #widget-menu #widget-awareness[aria-pressed=true]{background:#3b3948;color:#ddd0ff}
 body.widget #widget-more{position:relative}
 body.widget:has(#widget-awareness[aria-pressed=true]) #widget-more::after{content:'';position:absolute;right:3px;top:3px;width:5px;height:5px;background:#ddd0ff;border-radius:50%;box-shadow:0 0 6px #ddd0ffaa}
