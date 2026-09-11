@@ -4,6 +4,7 @@ dist/
 __pycache__/
 models/*
 !models/.gitkeep
+!models/README.md
 public/assets/*.vrm
 logs/
 data/

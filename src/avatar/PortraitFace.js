@@ -11,9 +11,9 @@ const poses={
 };
 const blend=(from,to,amount,key)=>THREE.MathUtils.lerp(from[key]||0,to[key]||0,amount);
 const characters={
-  robot:{idle:.85,listening:.9,thinking:1.15,speaking:.95,tilt:.7},
+  rivet:{idle:.85,listening:.9,thinking:1.15,speaking:.95,tilt:.7},
   nova:{idle:1.05,listening:1.2,thinking:.8,speaking:1.1,tilt:1.25},
-  butler:{idle:.48,listening:.62,thinking:.55,speaking:.58,tilt:.42},
+  sterling:{idle:.48,listening:.62,thinking:.55,speaking:.58,tilt:.42},
   pixel:{idle:1.3,listening:1.38,thinking:1.42,speaking:1.35,tilt:1.08},
   luma:{idle:.9,listening:1.03,thinking:.78,speaking:.86,tilt:.9}
 };
@@ -21,9 +21,9 @@ const characters={
 // the companion. Nova is intentionally more responsive and conversational:
 // she makes brief eye-contact gestures instead of looping one large idle pose.
 const expressiveProfiles={
-  robot:{microInterval:[5.5,10],microLift:.006,microYaw:.018,microRoll:.012,eye:'#ff9d4d',lightSpeed:1.05},
+  rivet:{microInterval:[5.5,10],microLift:.006,microYaw:.018,microRoll:.012,eye:'#ff9d4d',lightSpeed:1.05},
   nova:{microInterval:[2.6,5.1],microLift:.012,microYaw:.042,microRoll:.03,eye:'#ffb3d4',lightSpeed:.82},
-  butler:{microInterval:[6,11],microLift:.004,microYaw:.012,microRoll:.008,eye:'#9edfff',lightSpeed:.48},
+  sterling:{microInterval:[6,11],microLift:.004,microYaw:.012,microRoll:.008,eye:'#9edfff',lightSpeed:.48},
   pixel:{microInterval:[2.1,4],microLift:.01,microYaw:.035,microRoll:.028,eye:'#dcff81',lightSpeed:1.55},
   luma:{microInterval:[3.4,6.5],microLift:.008,microYaw:.028,microRoll:.02,eye:'#9fe7ff',lightSpeed:.68}
 };
@@ -38,7 +38,7 @@ const personaMotion=(bot,state,t,mouth)=>{
   const speaking=state==='SPEAKING',listening=state==='LISTENING',thinking=state==='THINKING';
   const energy=Math.max(.2,mouth);
   switch(bot){
-    case 'robot':
+    case 'rivet':
       // Rivet surveys problems in short, precise mechanical passes and gives
       // compact confirmation nods while explaining a fix.
       return {
@@ -56,7 +56,7 @@ const personaMotion=(bot,state,t,mouth)=>{
         yaw:thinking?.014*Math.sin(t*.9):speaking?.009*Math.sin(t*1.3)*energy:0,
         roll:.006*Math.sin(t*(speaking?1.9:.72)),scale:listening?.003:0
       };
-    case 'butler':
+    case 'sterling':
       // Sterling stays composed. His motion is economical: an attentive lean
       // and slow, deliberate nods at the end of spoken phrases.
       return {
@@ -102,7 +102,7 @@ export class PortraitFace {
     // otherwise static 2.5D card into a full-resolution canvas animation.
     this.performance.effectFps=THREE.MathUtils.clamp(Number.isFinite(this.performance.effectFps)?this.performance.effectFps:24,1,60);
     this.bot=bot;this.scene=new THREE.Group();this.root=new THREE.Group();this.scene.add(this.root);this.root.position.y=1.30;
-    const portraits={robot:'rivet',nova:'nova',butler:'butler',pixel:'pixel',luma:'luma'};
+    const portraits={rivet:'rivet',nova:'nova',sterling:'sterling',pixel:'pixel',luma:'luma'};
     this.canvas=document.createElement('canvas');this.canvas.width=this.performance.portraitSize;this.canvas.height=this.performance.portraitSize;
     this.context=this.canvas.getContext('2d');
     const map=new THREE.CanvasTexture(this.canvas);map.colorSpace=THREE.SRGBColorSpace;map.generateMipmaps=false;map.minFilter=THREE.LinearFilter;map.magFilter=THREE.LinearFilter;map.anisotropy=1;
@@ -116,9 +116,9 @@ export class PortraitFace {
     // frame without obscuring animated eyes or speaker hardware.
     this.bust=null;this.bustShadow=null;
     const bustProfiles={
-      robot:{asset:'rivet/bust.png',fade:[.44,.59],size:1.48,y:-.15},
+      rivet:{asset:'rivet/bust.png',fade:[.44,.59],size:1.48,y:-.15},
       nova:{asset:'nova/bust.png',fade:[.47,.62],size:1.48,y:-.145},
-      butler:{asset:'butler/bust.png',fade:[.43,.58],size:1.46,y:-.15},
+      sterling:{asset:'sterling/bust.png',fade:[.43,.58],size:1.46,y:-.15},
       pixel:{asset:'pixel/bust.png',fade:[.46,.61],size:1.49,y:-.15},
       luma:{asset:'luma/bust.png',fade:[.42,.57],size:1.48,y:-.15}
     };
@@ -139,14 +139,14 @@ export class PortraitFace {
     }
     // Source-pixel maps place the live effects within each illustrated device.
     this.hardware={
-      robot:{speaker:[314,340,110,70,'vertical','#ff9d4d'],eyes:[[198,221,64,58],[407,221,48,48]]},
+      rivet:{speaker:[314,340,110,70,'vertical','#ff9d4d'],eyes:[[198,221,64,58],[407,221,48,48]]},
       nova:{speaker:[314,381,58,72,'vertical','#ff9ab9'],eyes:[[220,260,57,42],[405,260,57,42]]},
-      butler:{speaker:[314,344,47,60,'dots','#75d8ff'],eyes:[[228,231,48,45],[399,231,48,45]]},
+      sterling:{speaker:[314,344,47,60,'dots','#75d8ff'],eyes:[[228,231,48,45],[399,231,48,45]]},
       pixel:{speaker:[314,344,82,52,'dots','#c9ff55'],eyes:[[225,242,53,43],[404,242,53,43]]},
       luma:{speaker:[314,339,80,54,'vertical','#73d8ff'],eyes:[[192,242,82,24],[435,242,82,24]]}
     }[bot]||null;
-    this.character=characters[bot]||characters.robot;
-    this.profile=expressiveProfiles[bot]||expressiveProfiles.robot;
+    this.character=characters[bot]||characters.rivet;
+    this.profile=expressiveProfiles[bot]||expressiveProfiles.rivet;
     this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.lastEmotion='relaxed';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.expressionKick=0;this.nextGaze=1.8;this.gaze=0;this.gazeTarget=0;this.transitionKick=0;this.dragKick=0;this.ambientKick=0;this.nextAmbient=2;this.ambientTarget={lift:0,roll:0};this.surpriseJump=0;this.nextMicroGesture=1.2;this.microGesture={lift:0,yaw:0,roll:0,scale:0};this.microTarget={...this.microGesture};this.nextIdleLightPaintAt=0;
     this.image=new Image();this.image.decoding='async';
     this.image.onload=()=>{this.imageReady=true;this.paintHardware(0,0);};
@@ -233,7 +233,7 @@ export class PortraitFace {
     // first so a lit mouth always means audible companion speech. Microphone
     // input, listening, thinking, and idle states never illuminate the grille.
     ctx.save();ctx.beginPath();
-    if(this.bot==='robot')ctx.ellipse(x,y,width*.39,height*.49,0,0,Math.PI*2);
+    if(this.bot==='rivet')ctx.ellipse(x,y,width*.39,height*.49,0,0,Math.PI*2);
     else ctx.roundRect(x-width/2,y-height/2,width,height,Math.min(width,height)*.24);
     ctx.clip();ctx.fillStyle=state==='SPEAKING'?'rgba(5,9,11,.64)':'rgba(5,9,11,.84)';ctx.fillRect(x-width/2,y-height/2,width,height);
     ctx.strokeStyle='rgba(184,194,190,.22)';ctx.lineWidth=1;
@@ -308,7 +308,7 @@ export class PortraitFace {
     const phase=t*this.profile.lightSpeed;
     const color=this.profile.eye;
     ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=color;ctx.strokeStyle=color;
-    if(this.bot==='robot'){
+    if(this.bot==='rivet'){
       // Rivet performs a measured diagnostic sweep across the camera and scope.
       const [camera,scope]=hardware.eyes,angle=phase%(Math.PI*2);
       ctx.globalAlpha=.16+.18*active;ctx.lineWidth=2.2;
@@ -322,7 +322,7 @@ export class PortraitFace {
         ctx.globalAlpha=(.2+.34*active)*(1-blink*.65);ctx.shadowColor=color;ctx.shadowBlur=6;
         ctx.beginPath();ctx.arc(glintX,eyeY-ry*.2+Math.cos(orbit)*ry*.06,Math.max(2,rx*.075),0,Math.PI*2);ctx.fill();
       }
-    }else if(this.bot==='butler'){
+    }else if(this.bot==='sterling'){
       // Sterling's slow paired glints move in lockstep like polished optics.
       for(const [eyeX,eyeY,rx,ry] of hardware.eyes){
         const travel=Math.sin(phase)*rx*.2;

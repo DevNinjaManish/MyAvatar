@@ -13,6 +13,8 @@ The MVP is intentionally smaller than the deleted prototype. Product definition,
 5. [Wireframes](wireframes/README.md) — low-fidelity layouts and interaction states.
 6. Design reference — approved visual mockups used for implementation and visual QA.
 
+See the [asset contract](ASSETS.md) before adding, replacing, or renaming companion artwork.
+
 ## Working rule
 
 No new feature work should be started because it exists in the old prototype. A feature enters implementation only when it is named in the MVP scope, represented in a wireframe, and covered by an acceptance item.

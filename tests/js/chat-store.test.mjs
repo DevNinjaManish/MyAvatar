@@ -5,13 +5,13 @@ import {ChatStore,shouldFollowScroll} from '../../src/conversation/chat-store.js
 const config=(botId,name)=>({type:'config',botId,config:{conversation:{persona:botId},bots:{[botId]:{name}}}});
 
 test('streaming assistant message keeps one stable id through completion',()=>{
-  const store=new ChatStore();store.applyRuntimeEvent(config('robot','Rivet'));
-  store.applyRuntimeEvent({type:'transcript',botId:'robot',turn:4,text:'Hello'});
-  store.applyRuntimeEvent({type:'token',botId:'robot',turn:4,text:'First '});
-  store.applyRuntimeEvent({type:'token',botId:'robot',turn:4,text:'answer'});
+  const store=new ChatStore();store.applyRuntimeEvent(config('rivet','Rivet'));
+  store.applyRuntimeEvent({type:'transcript',botId:'rivet',turn:4,text:'Hello'});
+  store.applyRuntimeEvent({type:'token',botId:'rivet',turn:4,text:'First '});
+  store.applyRuntimeEvent({type:'token',botId:'rivet',turn:4,text:'answer'});
   let messages=store.snapshot();
   assert.equal(messages[1].id,'turn-4-assistant');assert.equal(messages[1].text,'First answer');assert.equal(messages[1].status,'streaming');
-  store.applyRuntimeEvent({type:'done',botId:'robot',turn:4});messages=store.snapshot();
+  store.applyRuntimeEvent({type:'done',botId:'rivet',turn:4});messages=store.snapshot();
   assert.equal(messages[1].id,'turn-4-assistant');assert.equal(messages[1].status,'complete');
 });
 
@@ -28,13 +28,13 @@ test('tts degradation annotates message without failing text answer',()=>{
 });
 
 test('drafts are isolated per bot and restored on switch',()=>{
-  const store=new ChatStore();store.setDraft('Rivet draft','robot');store.setBot('nova','Nova');store.setDraft('Nova draft');
-  assert.equal(store.draft(),'Nova draft');store.setBot('robot','Rivet');assert.equal(store.draft(),'Rivet draft');
+  const store=new ChatStore();store.setDraft('Rivet draft','rivet');store.setBot('nova','Nova');store.setDraft('Nova draft');
+  assert.equal(store.draft(),'Nova draft');store.setBot('rivet','Rivet');assert.equal(store.draft(),'Rivet draft');
 });
 
 test('history replaces only the active bot conversation',()=>{
-  const store=new ChatStore();store.loadHistory([{role:'user',content:'Rivet memory'}],'robot');store.setBot('nova','Nova');store.loadHistory([{role:'assistant',content:'Nova memory'}],'nova');
-  assert.equal(store.snapshot()[0].text,'Nova memory');assert.equal(store.snapshot('robot')[0].text,'Rivet memory');
+  const store=new ChatStore();store.loadHistory([{role:'user',content:'Rivet memory'}],'rivet');store.setBot('nova','Nova');store.loadHistory([{role:'assistant',content:'Nova memory'}],'nova');
+  assert.equal(store.snapshot()[0].text,'Nova memory');assert.equal(store.snapshot('rivet')[0].text,'Rivet memory');
 });
 
 test('session focus follows the latest user intent and survives bot switching',()=>{
@@ -53,12 +53,12 @@ test('history restores only the latest user focus and clear removes it',()=>{
 });
 
 test('session focus is bounded and never stores the whole long request',()=>{
-  const store=new ChatStore();store.setBot('butler','Sterling');store.setFocus('x'.repeat(400));
+  const store=new ChatStore();store.setBot('sterling','Sterling');store.setFocus('x'.repeat(400));
   assert.ok(store.focus().length<=140);assert.match(store.focus(),/…$/);
 });
 
 test('old bot runtime output is ignored after companion switch',()=>{
-  const store=new ChatStore();store.applyRuntimeEvent(config('nova','Nova'));store.applyRuntimeEvent({type:'token',botId:'robot',turn:1,text:'stale'});assert.equal(store.snapshot().length,0);
+  const store=new ChatStore();store.applyRuntimeEvent(config('nova','Nova'));store.applyRuntimeEvent({type:'token',botId:'rivet',turn:1,text:'stale'});assert.equal(store.snapshot().length,0);
 });
 
 test('scroll follow policy follows only near the bottom',()=>{

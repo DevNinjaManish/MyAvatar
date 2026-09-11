@@ -14,7 +14,7 @@ export class Avatar {
     this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
     this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.08;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio,this.performance.pixelRatio));container.append(this.renderer.domElement);
-    this.robot=new PortraitFace('robot',this.performance);this.bot='robot';this.scene.add(this.robot.scene);
+    this.robot=new PortraitFace('rivet',this.performance);this.bot='rivet';this.scene.add(this.robot.scene);
     this.resize=()=>{const {width,height}=this.container.getBoundingClientRect();this.camera.aspect=width/height;this.camera.position.z=2.55/Math.min(1,width/height);this.camera.updateProjectionMatrix();this.renderer.setSize(width,height);};
     new ResizeObserver(this.resize).observe(container);
     container.addEventListener('pointermove',event=>{
@@ -27,7 +27,7 @@ export class Avatar {
     this.clock=new THREE.Clock();this.frames=0;this.frameTime=0;this.fps=0;this.maxFps=this.performance.maxFps;this.lastFrame=0;
     this.renderer.setAnimationLoop(now=>{if(now-this.lastFrame<1000/this.maxFps-.5)return;this.lastFrame=now;this.update();});
   }
-  showRobot(bot='robot'){
+  showRobot(bot='rivet'){
     if(this.bot===bot)return;
     this.scene.remove(this.robot.scene);this.robot.dispose();this.robot=new PortraitFace(bot,this.performance);this.bot=bot;this.scene.add(this.robot.scene);
   }

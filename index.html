@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://127.0.0.1:8765; worker-src 'self' blob:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; worker-src 'self' blob:;">
     <title>MyAvatar</title>
   </head>
   <body class="mvp-widget">
@@ -11,7 +11,7 @@
       <div id="stage" aria-label="Companion avatar"></div>
       <section class="widget-card" aria-label="Companion controls">
         <button id="companion-toggle" class="identity" type="button" aria-expanded="false" aria-controls="companion-picker">
-          <span id="companion-name">Rivet</span><span id="runtime-status" role="status">Ready</span>
+        <span id="companion-name">Rivet</span><span id="runtime-status" role="status">Ready</span>
         </button>
         <div class="toolbar" aria-label="Primary controls">
           <button id="mic-toggle" type="button" aria-label="Start microphone">Mic</button>
@@ -26,11 +26,7 @@
       </section>
       <section id="companion-picker" class="picker" aria-label="Choose companion" hidden>
         <header><strong>Your companions</strong><button id="picker-close" type="button" aria-label="Close companion picker">×</button></header>
-        <button type="button" data-companion="robot">Rivet <small>Technical companion</small></button>
-        <button type="button" data-companion="nova">Nova <small>Everyday companion</small></button>
-        <button type="button" data-companion="butler">Sterling <small>Planning companion</small></button>
-        <button type="button" data-companion="pixel">Pixel <small>Marketing companion</small></button>
-        <button type="button" data-companion="luma">Luma <small>Design companion</small></button>
+        <div id="companion-options" class="picker-options"></div>
       </section>
       <p id="notice" class="notice" role="status" hidden></p>
     </main>

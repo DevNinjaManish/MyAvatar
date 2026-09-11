@@ -25,6 +25,8 @@ The app is always widget-only. There is no full-screen mode, dashboard, coding w
 
 ```text
 docs/mvp/          product scope, acceptance, wireframes, and design reference
+config.json        small local model and default-companion configuration
+models/            ignored local model assets with a checked-in README
 src/app/           renderer entry point and MVP interaction wiring
 src/avatar/        avatar rendering primitives
 src/audio/         small audio contracts reserved for the optional voice slice
