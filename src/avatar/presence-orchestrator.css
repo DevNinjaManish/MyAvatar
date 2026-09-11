@@ -1,12 +1,19 @@
-#stage{--listen-energy:0;--listen-lift:0px;--listen-scale:1;}
+#stage{--listen-energy:0;--listen-lift:0px;--listen-scale:1;--speak-lift:1px;}
 #stage canvas{transition:transform .18s ease,filter .18s ease;transform-origin:50% 56%;}
+#stage[data-presence-phase="attentive"] canvas{filter:brightness(1.035);}
+#stage[data-presence-phase="settling"] canvas{transform:translateY(-.5px) scale(1.002);filter:brightness(1.015);}
 #stage[data-presence-state="listening"] canvas{transform:translateY(calc(var(--listen-lift) * -1)) scale(var(--listen-scale));filter:brightness(calc(1 + var(--listen-energy) * .05));}
-#stage[data-presence-state="speaking"] canvas{transform:translateY(-1px) scale(1.004);}
+#stage[data-presence-state="speaking"] canvas{transform:translateY(calc(var(--speak-lift) * -1)) scale(1.004);}
 #stage[data-presence-state="thinking"][data-thinking-profile="rivet"] canvas{animation:rivet-think 1.15s ease-in-out infinite alternate;}
 #stage[data-presence-state="thinking"][data-thinking-profile="nova"] canvas{animation:nova-think 1.8s ease-in-out infinite alternate;}
 #stage[data-presence-state="thinking"][data-thinking-profile="sterling"] canvas{animation:sterling-think 2.3s ease-in-out infinite alternate;}
 #stage[data-presence-state="thinking"][data-thinking-profile="pixel"] canvas{animation:pixel-think .95s ease-in-out infinite alternate;}
 #stage[data-presence-state="thinking"][data-thinking-profile="luma"] canvas{animation:luma-think 1.7s ease-in-out infinite alternate;}
+#stage[data-presence-motion="warm"][data-presence-phase="settling"] canvas{transition-duration:.48s;}
+#stage[data-presence-motion="composed"] canvas{transition-duration:.28s;}
+#stage[data-presence-motion="snappy"] canvas{transition-duration:.11s;}
+#stage[data-presence-motion="calm"] canvas{transition-duration:.32s;}
+#stage[data-presence-motion="mechanical"] canvas{transition-timing-function:cubic-bezier(.4,0,.2,1);}
 @keyframes rivet-think{from{transform:translateX(-1px) rotate(-.15deg)}to{transform:translateX(1px) rotate(.15deg)}}
 @keyframes nova-think{from{transform:translateY(0) rotate(-.12deg)}to{transform:translateY(-2px) rotate(.12deg)}}
 @keyframes sterling-think{from{transform:translateY(0)}to{transform:translateY(-1px)}}
