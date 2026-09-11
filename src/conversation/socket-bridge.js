@@ -28,6 +28,7 @@ export function installSocketBridge(win=window){
         if(!this._handlers.message){
           this._messageBacklog.push({data:event.data,origin:event.origin||'',lastEventId:event.lastEventId||''});
           if(this._messageBacklog.length>32)this._messageBacklog.shift();
+          return;
         }
         this.dispatchEvent(makeEvent('message',event));
       });
@@ -48,7 +49,10 @@ export function installSocketBridge(win=window){
         this._handlers[type]=handler;this.addEventListener(type,handler);
         if(type==='message'&&this._messageBacklog.length){
           const pending=this._messageBacklog.splice(0);
-          queueMicrotask(()=>{if(this._handlers.message!==handler)return;for(const source of pending)handler.call(this,makeEvent('message',source));});
+          queueMicrotask(()=>{
+            if(this._handlers.message!==handler||this._closed)return;
+            for(const source of pending)this.dispatchEvent(makeEvent('message',source));
+          });
         }
       }else delete this._handlers[type];
     }
