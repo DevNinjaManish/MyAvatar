@@ -12,6 +12,7 @@ The MVP is intentionally smaller than the deleted prototype. Product definition,
 4. [Technical foundation](TECHNICAL_FOUNDATION.md) — the smallest architecture that can support the agreed product.
 5. [Wireframes](wireframes/README.md) — low-fidelity layouts and interaction states.
 6. Design reference — approved visual mockups used for implementation and visual QA.
+7. [Visual QA workflow](VISUAL_QA.md) — required native states and interaction checks after UI changes.
 
 See the [asset contract](ASSETS.md) before adding, replacing, or renaming companion artwork.
 

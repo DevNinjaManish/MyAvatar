@@ -4,12 +4,14 @@ import {fileURLToPath} from 'node:url';
 import electronPath from 'electron';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const runtime=spawn('node',['scripts/conversation-service.mjs'],{cwd:root,stdio:'inherit'});
 const vite=spawn('node',['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5173','--strictPort'],{cwd:root,stdio:'inherit'});
 let electron;
 let stopping=false;
-const stop=()=>{if(stopping)return;stopping=true;vite.kill('SIGTERM');electron?.kill('SIGTERM');setTimeout(()=>process.exit(),300).unref();};
+const stop=()=>{if(stopping)return;stopping=true;runtime.kill('SIGTERM');vite.kill('SIGTERM');electron?.kill('SIGTERM');setTimeout(()=>process.exit(),300).unref();};
 process.on('SIGINT',stop);process.on('SIGTERM',stop);
 vite.on('exit',(code)=>{if(!stopping&&code!==0)stop();});
+runtime.on('exit',(code)=>{if(!stopping&&code!==0)console.error(`Conversation service exited with code ${code}; the widget remains available for Retry.`);});
 
 const waitForVite=async()=>{
   for(let attempt=0;attempt<60;attempt++){

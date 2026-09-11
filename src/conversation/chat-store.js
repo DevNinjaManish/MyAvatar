@@ -17,6 +17,7 @@ export class ChatStore extends EventTarget{
   snapshot(bot=this.botId){return this._messages(bot).map(item=>({...item,meta:{...(item.meta||{})}}));}
   draft(bot=this.botId){return this.drafts.get(bot)||'';}
   setDraft(text,bot=this.botId){this.drafts.set(bot,String(text??''));this._emit('draft');}
+  addUserText(text,turn){return this._upsert({id:`turn-${turn}-user`,role:'user',text:String(text||''),status:'complete',turn});}
   focus(bot=this.botId){return this.focusByBot.get(bot)||'';}
   setFocus(text,bot=this.botId){const value=cleanFocus(text);if(value)this.focusByBot.set(bot,value);else this.focusByBot.delete(bot);this._emit('focus');return value;}
   setBot(botId,name){if(typeof botId==='string'&&botId)this.botId=botId;if(typeof name==='string'&&name)this.botName=name;this._emit('bot');}

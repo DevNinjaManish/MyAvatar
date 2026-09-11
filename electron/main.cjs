@@ -12,7 +12,7 @@ const createWindow=()=>{
     width,height,
     x:area.x+area.width-width-24,
     y:area.y+area.height-height-24,
-    minWidth:width,minHeight:height,maxWidth:width,maxHeight:height,
+    minWidth:width,minHeight:height,maxWidth:width,maxHeight:770,
     frame:false,transparent:true,hasShadow:false,resizable:false,
     backgroundColor:'#00000000',title:'MyAvatar',
     webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}
@@ -28,6 +28,10 @@ if(!app.requestSingleInstanceLock()) app.quit();
 else app.whenReady().then(()=>{
   ipcMain.on('window-close',event=>{if(event.sender===mainWindow?.webContents) mainWindow.close();});
   ipcMain.on('window-minimize',event=>{if(event.sender===mainWindow?.webContents) mainWindow.minimize();});
+  ipcMain.on('window-resize',(event,height)=>{
+    if(event.sender!==mainWindow?.webContents)return;
+    mainWindow.setSize(260,height===770?770:470);
+  });
   ipcMain.on('widget-drag-start',event=>{
     if(event.sender!==mainWindow?.webContents) return;
     if(dragTimer) clearInterval(dragTimer);

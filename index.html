@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; worker-src 'self' blob:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws://127.0.0.1:8787; worker-src 'self' blob:;">
     <title>MyAvatar</title>
   </head>
   <body class="mvp-widget">
@@ -20,15 +20,15 @@
         </div>
       </section>
       <section id="chat-panel" class="chat-panel" aria-label="Chat" hidden>
-        <header><strong>Chat</strong><button id="chat-close" type="button" aria-label="Close chat">×</button></header>
+        <header><strong>Chat</strong><span><button id="clear-chat" type="button" aria-label="Clear conversation">Clear</button><button id="chat-close" type="button" aria-label="Close chat">×</button></span></header>
         <div id="messages" class="messages"><p class="empty">What can I help with?</p></div>
-        <form id="chat-form"><textarea id="message" aria-label="Message" placeholder="Message companion…" maxlength="2000"></textarea><button type="submit">Send</button></form>
+        <form id="chat-form"><textarea id="message" aria-label="Message" placeholder="Message companion…" maxlength="2000"></textarea><button id="send-message" type="submit">Send</button><button id="stop-response" type="button" hidden>Stop</button></form>
       </section>
       <section id="companion-picker" class="picker" aria-label="Choose companion" hidden>
         <header><strong>Your companions</strong><button id="picker-close" type="button" aria-label="Close companion picker">×</button></header>
         <div id="companion-options" class="picker-options"></div>
       </section>
-      <p id="notice" class="notice" role="status" hidden></p>
+      <p id="notice" class="notice" role="status" hidden><span id="notice-text"></span><button id="runtime-retry" type="button" hidden>Retry</button></p>
     </main>
     <script type="module" src="/src/app/entry.js"></script>
   </body>
