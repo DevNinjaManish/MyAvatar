@@ -45,6 +45,14 @@ test('Nova workspace gives active focus and planning context a restrained visual
   assert.match(css,/data-focus-active=true\].*uws-focus\{box-shadow/);
   assert.match(css,/data-bot=nova\].*uws-modules>div:last-child/);
 });
+test('full calendar workspace exposes explicit availability states',()=>{
+  const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../../src/styles/full-polish.css',import.meta.url),'utf8');
+  assert.match(runtime,/workspace\.dataset\.calendarState='loading'/);
+  assert.match(runtime,/workspace\.dataset\.calendarState=result\?\.ok\?/);
+  assert.match(css,/data-calendar-state=unavailable/);
+  assert.match(css,/data-calendar-state=empty/);
+});
 
 test('Sterling workspace isolates priorities and does not invent decisions or schedule data',()=>{
   const state=companionWorkspaceState('butler',{focus:'Finish the launch brief',messages:[],calendar:{available:false}});
