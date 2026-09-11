@@ -1,11 +1,12 @@
-"""Rivet read-only workspace planning orchestration."""
+"""Rivet workspace planning and bounded read-only inspection orchestration."""
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
+from backend.core.capabilities import execute_capability, profile_for_bot
 from backend.core.patch_proposal import parse_patch_proposal
-from backend.core.workspace import build_change_plan_prompt, choose_context, list_workspace, search_workspace
+from backend.core.workspace import build_change_plan_prompt, choose_context
 
 InspectFn = Callable[[list[dict[str, str]], dict[str, Any]], Awaitable[str]]
 
@@ -25,8 +26,6 @@ async def plan_workspace(
     try:
         patch = parse_patch_proposal(answer)
     except ValueError:
-        # Missing/invalid patch remains a useful plan; never make unsafe model
-        # output actionable just because it accompanied otherwise useful advice.
         patch = None
     return {
         'plan': answer,
@@ -37,12 +36,29 @@ async def plan_workspace(
     }
 
 
+def capability_snapshot() -> dict[str, Any]:
+    """Describe Rivet's registered tools without exposing handlers or command text."""
+    profile=profile_for_bot('robot')
+    return {'bot':profile['id'],'label':profile['label'],'capabilities':profile['capabilities']}
+
+
 def workspace_snapshot(request: str = '', *, root: Path | str = '.') -> dict[str, Any]:
-    """Return bounded discovery metadata suitable for Rivet's UI/cockpit."""
-    tree = list_workspace(root=root)
-    matches = search_workspace(request, root=root) if request.strip() else []
+    """Return bounded repository, search, capability, and Git inspection metadata."""
+    tree=execute_capability('robot','repository.list',root=root)
+    matches=execute_capability('robot','repository.search',root=root,query=request) if request.strip() else []
+    git: dict[str,Any]
+    try:
+        git={
+            'status':execute_capability('robot','git.status',root=root),
+            'recentCommits':execute_capability('robot','git.log',root=root,limit=8),
+            'diffSummary':execute_capability('robot','git.diff',root=root),
+        }
+    except (ValueError,RuntimeError):
+        git={'available':False,'readOnly':True}
     return {
         'files': tree,
         'matches': matches,
+        'git': git,
+        'capabilities': capability_snapshot()['capabilities'],
         'readOnly': True,
     }
