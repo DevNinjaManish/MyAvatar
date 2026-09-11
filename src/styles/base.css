@@ -133,6 +133,8 @@ dialog {
   box-shadow:0 24px 80px #0008}
 dialog::backdrop { background:#080c10aa; backdrop-filter:blur(5px) }
 dialog form { flex-direction:column }
+dialog select,dialog input:not([type=checkbox]) { width:100%; box-sizing:border-box }
+dialog form>button { min-height:38px }
 label { display:flex; flex-direction:column; gap:9px; margin:8px 0; font-size:12px; color:var(--muted) }
 #save { background:var(--accent); color:#163329; font-weight:600 }
 #widget-tools,#widget-drag,#widget-menu,#widget-chat { display:none }
