@@ -1,55 +1,33 @@
-// Install socket capture and runtime guards before widget-runtime.js creates the WebSocket.
-import {installSocketBridge} from '../conversation/socket-bridge.js';
-import {installRuntimeEventGuard} from '../conversation/runtime-events.js';
-import {installDualSpeakerEqualizers} from '../avatar/dual-speaker-patch.js';
-installSocketBridge(window);
-installRuntimeEventGuard(window);
-installDualSpeakerEqualizers();
-await import('./widget-runtime.js');
-import '../styles/widget-cockpit.css';
-import '../styles/widget-panels.css';
-import '../styles/widget-polish.css';
-import '../styles/full-polish.css';
-import '../styles/widget-stack.css';
-import '../conversation/chat-actions.css';
-import '../conversation/coding-edits.css';
-import '../avatar/presence-orchestrator.css';
-import '../workspace/unified-workspace.css';
-import '../workspace/companion-workspace.css';
-import '../workspace/agent-task.css';
-import '../workspace/system-cockpit.css';
-import {mountWidgetPanels} from '../widget/panels.js';
-import {mountSpecialistState} from '../widget/specialist-state.js';
-import {mountAgentUxGuard} from '../widget/agent-ux-guard.js';
-import {mountRivetTaskController} from '../widget/rivet-task-controller.js';
-import {mountRivetWorkspace} from '../widget/rivet-workspace.js';
-import {mountRivetTaskPresentation} from '../widget/rivet-task-presentation.js';
-import {mountReadinessUI} from '../conversation/readiness-ui.js';
-import {installCaptureLifecycleGuards} from '../audio/lifecycle.js';
-import {mountCanonicalChat} from '../conversation/chat-ui.js';
-import {mountCodingEdits} from '../conversation/coding-edits.js';
-import {mountLatencyUI} from '../conversation/latency-ui.js';
-import {mountInteractionIntelligence} from '../conversation/interaction-intelligence.js';
-import {mountIdlePresence} from '../avatar/idle-presence.js';
-import {mountPresenceOrchestrator} from '../avatar/presence-orchestrator.js';
-import {mountReadinessPresence} from '../avatar/readiness-presence.js';
-import '../avatar/readiness-presence.css';
-import {mountUnifiedWorkspace} from '../workspace/unified-workspace.js';
-import {mountSystemCockpit} from '../workspace/system-cockpit.js';
-mountSpecialistState(window,document);
-mountWidgetPanels(document, window.desktop);
-mountRivetTaskController(window,document,window.desktop);
-mountAgentUxGuard(window,document);
-mountRivetWorkspace(window,document);
-mountRivetTaskPresentation(window,document);
-mountReadinessUI(window,document);
-installCaptureLifecycleGuards(window,document);
-mountCanonicalChat(window,document);
-mountCodingEdits(window,document);
-mountLatencyUI(window,document);
-mountInteractionIntelligence(window,document);
-mountIdlePresence(window,document);
-mountPresenceOrchestrator(window,document);
-mountReadinessPresence(window,document);
-mountUnifiedWorkspace(window,document);
-mountSystemCockpit(window,document);
+import '../styles/base.css';
+import {Avatar} from '../avatar/Avatar.js';
+
+const $=id=>document.getElementById(id);
+const stage=$('stage');
+const avatar=new Avatar(stage);
+const companions={robot:'Rivet',nova:'Nova',butler:'Sterling',pixel:'Pixel',luma:'Luma'};
+let selected='robot';
+
+const desktop=globalThis.desktop;
+const stopDrag=()=>{document.body.classList.remove('dragging');avatar.setDragging(false);desktop?.stopDrag?.();};
+stage.addEventListener('pointerdown',event=>{if(event.button!==0)return;document.body.classList.add('dragging');avatar.setDragging(true);desktop?.startDrag?.();stage.setPointerCapture?.(event.pointerId);});
+stage.addEventListener('pointerup',stopDrag);
+stage.addEventListener('pointercancel',stopDrag);
+
+function setOpen(id,open){
+  const panel=$(id);panel.hidden=!open;
+  if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(open)$('message').focus();}
+  if(id==='companion-picker')$('companion-toggle').setAttribute('aria-expanded',String(open));
+}
+function showNotice(text){$('notice').textContent=text;$('notice').hidden=!text;}
+
+$('chat-toggle').addEventListener('click',()=>{setOpen('companion-picker',false);setOpen('chat-panel',$('chat-panel').hidden);});
+$('chat-close').addEventListener('click',()=>setOpen('chat-panel',false));
+$('companion-toggle').addEventListener('click',()=>{setOpen('chat-panel',false);setOpen('companion-picker',$('companion-picker').hidden);});
+$('picker-close').addEventListener('click',()=>setOpen('companion-picker',false));
+document.querySelectorAll('[data-companion]').forEach(button=>button.addEventListener('click',()=>{
+  selected=button.dataset.companion; $('companion-name').textContent=companions[selected]; $('stage').setAttribute('aria-label',`${companions[selected]} avatar`); document.body.dataset.companion=selected;
+  avatar.showRobot(selected);setOpen('companion-picker',false);showNotice(`${companions[selected]} selected.`);setTimeout(()=>showNotice(''),1600);
+}));
+$('mic-toggle').addEventListener('click',()=>showNotice('Microphone wiring will be added after the MVP shell is approved.'));
+$('more-toggle').addEventListener('click',()=>showNotice('MVP keeps one conversation surface.'));
+$('chat-form').addEventListener('submit',event=>{event.preventDefault();const text=$('message').value.trim();if(!text)return;showNotice('Conversation service wiring will be added in the next MVP implementation slice.');});

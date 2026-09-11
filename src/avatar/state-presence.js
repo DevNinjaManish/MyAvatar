@@ -1,9 +1,4 @@
-const DURATIONS={
-  IDLE:.30,
-  LISTENING:.20,
-  THINKING:.26,
-  SPEAKING:.16,
-};
+const DURATIONS={IDLE:.30,LISTENING:.20,THINKING:.26,SPEAKING:.16};
 
 export function stateTransitionDuration(state,{reducedMotion=false}={}){
   if(reducedMotion)return .01;

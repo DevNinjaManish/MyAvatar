@@ -5,9 +5,8 @@
 ## Validation
 
 - [ ] `npm test`
-- [ ] `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'`
 - [ ] `npm run build`
-- [ ] I visually checked the affected widget or expanded-view state
+- [ ] I visually checked the affected widget or chat state
 
 ## Local-first and privacy
 
@@ -17,4 +16,3 @@
 ## Screenshots or notes
 
 <!-- Add screenshots for visual changes, or explain why none apply. -->
-

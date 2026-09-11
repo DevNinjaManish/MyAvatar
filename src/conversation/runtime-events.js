@@ -44,7 +44,7 @@ export function validApprovalDecision(detail){
   return Boolean(detail&&typeof detail.requestId==='string'&&detail.requestId.length>0&&detail.requestId.length<=128&&APPROVAL_DECISIONS.has(detail.decision));
 }
 
-/** Install before widget-runtime.js creates the socket. It filters obsolete runtime events
+/** Install before the future conversation service creates the socket. It filters obsolete runtime events
  * and coordinates turn/audio freshness without deriving authority from prose.
  */
 export function installRuntimeEventGuard(win=window){

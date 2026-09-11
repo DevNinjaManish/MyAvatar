@@ -1,72 +1,47 @@
-const {app,BrowserWindow,session,systemPreferences,ipcMain,screen,desktopCapturer,dialog}=require('electron');
-const {execFile}=require('node:child_process');
+const {app,BrowserWindow,ipcMain,screen}=require('electron');
 const path=require('node:path');
-const {accessSync,constants,readFileSync,writeFileSync,mkdirSync,statSync}=require('node:fs');
-const PROJECT_ROOT=((() => {
-  if (typeof process === 'object' && typeof process.cwd === 'function') return process.cwd();
-  return path.resolve(__dirname, '..');
-})());
-let activeProjectRoot=PROJECT_ROOT;
-let activeProjectSource='app folder';
-const activeAgentProcesses=new Map();
-const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_WIDTH,COMPACT_HEIGHT,UTILITY_HEIGHT}=require('./widget-layout.cjs');
-const ALLOWED_AGENT_COMMANDS={
-  build:{label:'npm run build',command:'npm',args:['run','build'],shell:false},test:{label:'npm run test',command:'npm',args:['run','test'],shell:false},testJs:{label:'npm run test:js',command:'npm',args:['run','test:js'],shell:false},testPy:{label:'npm run test:py',command:'.venv/bin/python',args:['-m','unittest','discover','-s','tests/py','-p','test_*.py'],shell:false},gitStatus:{label:'git status --short',command:'git',args:['status','--short'],shell:false},gitDiff:{label:'git diff --stat',command:'git',args:['diff','--stat'],shell:false},gitFiles:{label:'git ls-files',command:'git',args:['ls-files'],shell:false},gitLog:{label:'git log --oneline -7',command:'git',args:['log','--oneline','-7'],shell:false},gitBranch:{label:'git branch --show-current',command:'git',args:['branch','--show-current'],shell:false},gitCommit:{label:'git commit -am',command:'git',args:['commit','-am',''],shell:false}
-};
-const commandError=(message)=>({ok:false,error:message||'Command rejected.'});
-const parseAgentRequest=request=>{
-  if(!request||typeof request!=='object')return null;const {kind}=request;
-  if(kind==='custom')return null;
-  if(kind==='gitCommit'){const commitMessage=(request.commitMessage||'').toString().trim();if(!commitMessage)return null;return {command:'git',args:['commit','-am',commitMessage],shell:false,label:`git commit -am "${commitMessage}"`};}
-  const preset=ALLOWED_AGENT_COMMANDS[kind];return preset?{...preset,id:kind}:null;
-};
-const sanitizeProjectRoot=candidate=>{if(typeof candidate!=='string'||!candidate.trim())return PROJECT_ROOT;const root=path.resolve(candidate.trim());try{accessSync(root,constants.F_OK|constants.R_OK);if(typeof statSync==='function'&&!statSync(root).isDirectory())return PROJECT_ROOT;}catch{return PROJECT_ROOT;}return root;};
-const runCommand=(command,args,shell=false,cwd=PROJECT_ROOT,taskId)=>new Promise(resolve=>{const id=typeof taskId==='string'&&taskId.trim()?taskId:`command-${Date.now()}-${Math.random().toString(16).slice(2)}`;const child=execFile(command,args,{cwd,timeout:120000,maxBuffer:2_000_000,shell},(error,stdout,stderr)=>{activeAgentProcesses.delete(id);if(error)return resolve({ok:false,error:error.message,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:error.code||1});resolve({ok:true,stdout:(stdout||'').trim(),stderr:(stderr||'').trim(),code:0});});activeAgentProcesses.set(id,child);});
-const readMacCalendar=()=>new Promise(resolve=>{const namesScript='tell application "Calendar" to get name of calendars';execFile('/usr/bin/osascript',['-e',namesScript],{timeout:4000,maxBuffer:100_000},(nameError,namesOut,nameErr)=>{if(nameError)return resolve({ok:false,error:nameErr?.trim()||nameError.message,code:nameError.code||1});const names=(namesOut||'').trim().split(/,\s*/).filter(Boolean);const eventScript=`on run argv
-set calName to item 1 of argv
-tell application "Calendar"
-set nowDate to current date
-set endDate to nowDate + (14 * days)
-set rows to ""
-set cal to calendar calName
-repeat with itemRef in (every event of cal whose start date is greater than or equal to nowDate and start date is less than endDate)
-set rows to rows & (summary of itemRef) & tab & (start date of itemRef as string) & tab & (end date of itemRef as string) & tab & calName & linefeed
-end repeat
-return rows
-end tell
-end run`;Promise.all(names.map(name=>new Promise(done=>execFile('/usr/bin/osascript',['-e',eventScript,name],{timeout:2500,maxBuffer:200_000},(error,stdout)=>done(error?'':(stdout||'')))))).then(outputs=>{const events=outputs.join('').trim().split('\n').filter(Boolean).map((line,index)=>{const [title,start,end,calendar]=line.split('\t');return {id:`calendar-${index}`,title:title||'Untitled event',start:start||'',end:end||'',calendar:calendar||'Calendar'};});resolve({ok:true,events});});});});
-const executeAgentCommand=async request=>{const parsed=parseAgentRequest(request);if(!parsed)return commandError('This command type is not allowed.');return runCommand(parsed.command,parsed.args,parsed.shell,activeProjectRoot,request.taskId);};
+
 let mainWindow=null;
-if(!app.requestSingleInstanceLock())app.quit();
-else app.whenReady().then(async()=>{
-  const projectStateDir=typeof app.getPath==='function'?app.getPath('userData'):path.join(PROJECT_ROOT,'.local-state');const projectStateFile=path.join(projectStateDir,'coding-project.json');
-  try{const saved=JSON.parse(readFileSync(projectStateFile,'utf8'));const candidate=sanitizeProjectRoot(saved?.path);if(candidate!==PROJECT_ROOT||saved?.path===PROJECT_ROOT){activeProjectRoot=candidate;activeProjectSource='saved workspace';}}catch{}
-  const local=url=>{try{return new URL(url).origin==='http://127.0.0.1:5173';}catch{return false;}};session.defaultSession.setPermissionRequestHandler((wc,permission,callback)=>callback(local(wc.getURL())&&permission==='media'));if(process.platform==='darwin')await systemPreferences.askForMediaAccess('microphone');
-  const area=screen.getPrimaryDisplay().workArea;const initialY=area.y+area.height-Math.min(COMPACT_HEIGHT,area.height);const win=new BrowserWindow({width:WIDTH,height:Math.min(COMPACT_HEIGHT,area.height),x:area.x+area.width-WIDTH-10,y:initialY,minWidth:WIDTH,minHeight:COMPACT_HEIGHT,title:'MyAvatar',frame:false,acceptFirstMouse:true,transparent:true,hasShadow:false,resizable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});mainWindow=win;win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',(event,url)=>{if(!local(url))event.preventDefault();});
-  let anchor={x:win.getBounds().x,y:win.getBounds().y},mode='widget';let view={chat:false,tools:false,wide:false,calendar:false},layout=widgetLayout(anchor,view,area);let dragTimer=null,selectingProject=false;
-  const trusted=event=>!win.isDestroyed()&&event.sender===win.webContents&&event.senderFrame===win.webContents.mainFrame&&local(win.webContents.getURL());const notify=()=>{if(!win.isDestroyed())win.webContents.send('window-mode-changed',mode);};
-  const reflow=()=>{if(win.isDestroyed()||mode!=='widget')return null;const display=screen.getDisplayNearestPoint({x:Math.round(anchor.x+WIDTH/2),y:Math.round(anchor.y+COMPACT_HEIGHT/2)});layout=widgetLayout(anchor,view,display.workArea);win.setMinimumSize(Math.min(layout.bounds.width,display.workArea.width),Math.min(layout.bounds.height,display.workArea.height));win.setBounds(layout.bounds);win.webContents.send('widget-layout-changed',layout);return layout;};
-  const stopDrag=()=>{if(!dragTimer)return;clearInterval(dragTimer);dragTimer=null;if(!win.isDestroyed()&&mode==='widget'){const bounds=win.getBounds();anchor={x:bounds.x+layout.offset,y:bounds.y};reflow();}};
-  const chooseWorkspace=async({exposePath=false}={})=>{if(selectingProject)return {ok:false,error:'A folder picker is already open.'};selectingProject=true;stopDrag();try{const result=await dialog.showOpenDialog(win,{title:'Choose a coding project',buttonLabel:'Select folder',properties:['openDirectory','createDirectory'],message:'Select a local workspace for Rivet.'});if(win.isDestroyed())return {ok:false,error:'The widget was closed.'};if(result.canceled||!result.filePaths.length)return {ok:true,canceled:true};const selected=path.resolve(result.filePaths[0]||'');activeProjectRoot=sanitizeProjectRoot(selected);activeProjectSource='selected workspace';try{mkdirSync(path.dirname(projectStateFile),{recursive:true});writeFileSync(projectStateFile,JSON.stringify({path:activeProjectRoot},{space:2}),'utf8');}catch{}const response={ok:true,project:{name:path.basename(selected)||selected}};if(exposePath)response.workspacePath=activeProjectRoot;return response;}catch{return {ok:false,error:'The folder picker could not be opened.'};}finally{selectingProject=false;}};
-  ipcMain.on('widget-drag-start',event=>{if(!trusted(event)||mode!=='widget'||win.isFullScreen())return;stopDrag();const origin=screen.getCursorScreenPoint(),bounds=win.getBounds();dragTimer=setInterval(()=>{if(win.isDestroyed()){clearInterval(dragTimer);dragTimer=null;return;}const cursor=screen.getCursorScreenPoint();win.setPosition(bounds.x+cursor.x-origin.x,bounds.y+cursor.y-origin.y);},16);});ipcMain.on('widget-drag-stop',event=>{if(trusted(event))stopDrag();});win.on('blur',stopDrag);win.on('closed',stopDrag);win.webContents.on('did-start-loading',()=>{stopDrag();view={chat:false,tools:false,wide:false,calendar:false};reflow();});
-  const restoreWidget=()=>{win.setResizable(false);reflow();notify();};
-  ipcMain.handle('window-mode',async(event,next)=>{if(!trusted(event)||!['widget','full'].includes(next))return mode;stopDrag();if(next===mode)return mode;if(next==='full'){mode='full';view={chat:false,tools:false,wide:false,calendar:false,menu:false};win.setResizable(true);win.setMinimumSize(800,560);win.setSize(1120,720);win.center();notify();}else{mode='widget';if(win.isFullScreen()){win.once('leave-full-screen',restoreWidget);win.setFullScreen(false);}else restoreWidget();}return mode;});
-  ipcMain.handle('agent-run-command',async(event,request)=>trusted(event)?executeAgentCommand(request):commandError('Command request is unavailable.'));
-  ipcMain.handle('agent-run-query',async(event,request)=>{if(!trusted(event))return {ok:false,error:'Query request is unavailable.'};const parsed=parseAgentRequest(request);if(!parsed||!parsed.id||parsed.command!=='git')return commandError('This query is not allowed.');return runCommand(parsed.command,parsed.args,parsed.shell,activeProjectRoot);});
-  ipcMain.handle('agent-project-state',async event=>trusted(event)?{ok:true,project:{name:path.basename(activeProjectRoot)||activeProjectRoot,source:activeProjectSource}}:{ok:false,error:'Project state is unavailable.'});
-  ipcMain.handle('system-metrics',async event=>{if(!trusted(event))return {ok:false,error:'System metrics are unavailable.'};try{const cpu=typeof process.getCPUUsage==='function'?process.getCPUUsage().percentCPU:null;const memory=typeof process.getSystemMemoryInfo==='function'?process.getSystemMemoryInfo():null;const totalMb=memory?.total!=null?memory.total/1024:null;const freeMb=memory?.free!=null?memory.free/1024:null;return {ok:true,cpuPercent:Number.isFinite(cpu)?cpu:null,memory:totalMb!=null&&freeMb!=null?{totalMb,freeMb,usedMb:Math.max(0,totalMb-freeMb),usedPercent:totalMb?((totalMb-freeMb)/totalMb)*100:null}:null};}catch{return {ok:false,error:'System metrics are unavailable.'};}});
-  ipcMain.handle('agent-cancel-task',async(event,taskId)=>{if(!trusted(event)||typeof taskId!=='string')return {ok:false,error:'Task cancellation is unavailable.'};const child=activeAgentProcesses.get(taskId);if(!child||child.killed)return {ok:false,error:'No running task found.'};child.kill('SIGTERM');return {ok:true};});
-  ipcMain.handle('calendar-events',async event=>trusted(event)?readMacCalendar():{ok:false,error:'Calendar access is unavailable.'});
-  ipcMain.handle('widget-chat',async(event,expanded)=>{if(!trusted(event)||mode!=='widget'||typeof expanded!=='boolean')return false;stopDrag();view.chat=expanded;reflow();return expanded;});
-  ipcMain.handle('widget-menu',async(event,open)=>{if(!trusted(event)||mode!=='widget'||typeof open!=='boolean')return false;stopDrag();view.menu=open;reflow();return open;});
-  ipcMain.handle('widget-panels',async(event,next)=>{if(!trusted(event)||mode!=='widget'||!validPanelsRequest(next))return {ok:false,error:'Invalid widget panel request.'};stopDrag();view.tools=next.open;view.wide=next.open||view.calendar;return {ok:true,...reflow()};});
-  ipcMain.handle('widget-calendar',async(event,next)=>{if(!trusted(event)||!next||typeof next.open!=='boolean')return {ok:false,error:'Invalid calendar view request.'};stopDrag();view.calendar=next.open;view.wide=next.open||view.tools;return {ok:true,...reflow()};});
-  ipcMain.handle('widget-specialist',async(event,open)=>{if(!trusted(event)||mode!=='widget'||typeof open!=='boolean')return false;stopDrag();view.wide=open||view.tools||view.calendar;return reflow();});
-  ipcMain.handle('widget-choose-project',async event=>trusted(event)?chooseWorkspace({exposePath:false}):{ok:false,error:'Folder selection is unavailable.'});
-  // Dedicated Rivet picker returns the selected path only to this trusted, sandboxed renderer call.
-  // The UI immediately forwards it to the local Python service and never renders or persists it.
-  ipcMain.handle('rivet-choose-workspace',async event=>trusted(event)?chooseWorkspace({exposePath:true}):{ok:false,error:'Folder selection is unavailable.'});
-  ipcMain.handle('screen-capture',async event=>{if(!trusted(event))return {ok:false,error:'Screen capture is unavailable.'};if(process.platform==='darwin'&&systemPreferences.getMediaAccessStatus('screen')==='denied')return {ok:false,error:'Allow screen recording for MyAvatar in System Settings, then restart the app.'};try{const display=screen.getDisplayNearestPoint(screen.getCursorScreenPoint());const sources=await desktopCapturer.getSources({types:['screen'],thumbnailSize:{width:960,height:540},fetchWindowIcons:false});const source=sources.find(item=>item.display_id===String(display.id))||sources[0];if(!source||source.thumbnail.isEmpty())return {ok:false,error:'No screen image was available.'};return {ok:true,source:source.name,image:source.thumbnail.toDataURL()};}catch(error){return {ok:false,error:error.message||'Screen capture failed.'};}});
-  ipcMain.on('window-close',event=>{if(trusted(event))win.close();});ipcMain.on('window-minimize',event=>{if(trusted(event))win.minimize();});win.on('leave-full-screen',()=>{if(mode==='full'){mode='widget';restoreWidget();}});const displayChanged=()=>{stopDrag();reflow();};screen.on('display-metrics-changed',displayChanged);screen.on('display-removed',displayChanged);win.on('closed',()=>{mainWindow=null;screen.removeListener('display-metrics-changed',displayChanged);screen.removeListener('display-removed',displayChanged);});win.webContents.on('did-finish-load',()=>{reflow();notify();});await win.loadURL('http://127.0.0.1:5173');
+let dragTimer=null;
+
+const createWindow=()=>{
+  const area=screen.getPrimaryDisplay().workArea;
+  const width=260;
+  const height=470;
+  const win=new BrowserWindow({
+    width,height,
+    x:area.x+area.width-width-24,
+    y:area.y+area.height-height-24,
+    minWidth:width,minHeight:height,maxWidth:width,maxHeight:height,
+    frame:false,transparent:true,hasShadow:false,resizable:false,
+    backgroundColor:'#00000000',title:'MyAvatar',
+    webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}
+  });
+  mainWindow=win;
+  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
+  win.webContents.on('will-navigate',event=>event.preventDefault());
+  win.loadURL('http://127.0.0.1:5173');
+  win.on('closed',()=>{mainWindow=null;});
+};
+
+if(!app.requestSingleInstanceLock()) app.quit();
+else app.whenReady().then(()=>{
+  ipcMain.on('window-close',event=>{if(event.sender===mainWindow?.webContents) mainWindow.close();});
+  ipcMain.on('window-minimize',event=>{if(event.sender===mainWindow?.webContents) mainWindow.minimize();});
+  ipcMain.on('widget-drag-start',event=>{
+    if(event.sender!==mainWindow?.webContents) return;
+    if(dragTimer) clearInterval(dragTimer);
+    const origin=screen.getCursorScreenPoint();
+    const bounds=mainWindow.getBounds();
+    dragTimer=setInterval(()=>{
+      if(mainWindow?.isDestroyed()){clearInterval(dragTimer);dragTimer=null;return;}
+      const cursor=screen.getCursorScreenPoint();
+      mainWindow.setPosition(bounds.x+cursor.x-origin.x,bounds.y+cursor.y-origin.y);
+    },16);
+  });
+  ipcMain.on('widget-drag-stop',event=>{if(event.sender===mainWindow?.webContents&&dragTimer){clearInterval(dragTimer);dragTimer=null;}});
+  createWindow();
 });
-app.on('second-instance',()=>{if(!mainWindow||mainWindow.isDestroyed())return;if(mainWindow.isMinimized?.())mainWindow.restore?.();mainWindow.show?.();mainWindow.focus?.();});app.on('window-all-closed',()=>app.quit());
+
+app.on('second-instance',()=>mainWindow?.show());
+app.on('window-all-closed',()=>app.quit());

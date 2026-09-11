@@ -3,7 +3,6 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 
 const config=JSON.parse(readFileSync(new URL('../../config.json',import.meta.url),'utf8'));
-const markup=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
 const expectedBots=['robot','nova','butler','pixel','luma'];
 
 test('companion configuration is complete and unique',()=>{
@@ -48,15 +47,4 @@ test('live voice latency defaults remain conservative but responsive',()=>{
   assert.ok(config.audio.resumeDelayMs>=100&&config.audio.resumeDelayMs<=160);
   assert.ok(vad.bargeIn.threshold>vad.threshold);
   assert.ok(vad.bargeIn.minSpeechMs>vad.minSpeechMs);
-});
-
-test('all performance controls expose only Fast and Balanced',()=>{
-  assert.match(markup,/id="widget-quality-slider"[^>]*max="1"/);
-  assert.doesNotMatch(markup,/value="high"/);
-});
-
-test('widget uses one microphone control for listening and mute',()=>{
-  assert.equal((markup.match(/id="widget-mic"/g)||[]).length,1);
-  assert.doesNotMatch(markup,/id="widget-mute"/);
-  assert.match(markup,/id="widget-end-conversation"/);
 });

@@ -10,6 +10,6 @@ Do not open a public issue for a suspected vulnerability or an exposed credentia
 
 ## Locality and secrets
 
-MyAvatar uses a randomly generated, in-memory loopback token for each launch. It is not an API key and must never be hard-coded. The repository must not contain `.env` files, private keys, model weights, microphone recordings, transcripts, or latency logs.
+The MVP foundation has no network service, account, telemetry, screen capture, filesystem agent, or external integration. The native bridge is limited to widget drag, minimize, and close. Future conversation services must remain loopback-only and use a per-launch in-memory token.
 
-Screen awareness is off until the user enables the eye control. Captured frames stay in memory, go only to the configured loopback Ollama service, and are not written to disk. Text visible on screen is untrusted model input and cannot bypass action parsing, allowlisting, request IDs, timeouts, or the user approval prompt. The screen-awareness activity log contains derived comments only.
+The repository must not contain `.env` files, private keys, model weights, microphone recordings, transcripts, logs, or generated build output. Optional audio must be explicit, permission-gated, and unable to block typed chat.

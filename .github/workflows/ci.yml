@@ -18,19 +18,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - uses: astral-sh/setup-uv@v6
-        with:
-          version: latest
       - name: Install JavaScript dependencies
         run: npm ci
-      - name: Install Python dependencies
-        run: |
-          uv venv --python 3.11
-          uv pip install --python .venv/bin/python -r requirements.lock
       - name: Run JavaScript tests
         run: npm test
-      - name: Run Python tests
-        run: .venv/bin/python -m unittest discover -s tests -p 'test_*.py'
       - name: Production build
         run: npm run build
-

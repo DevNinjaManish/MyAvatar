@@ -2,9 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dualSpeakerLevels,equalizerActive} from '../../src/avatar/speaker-equalizer.js';
 import {stateTransitionDuration,motionScaleForState} from '../../src/avatar/state-presence.js';
-import {readFileSync} from 'node:fs';
-
-const entry=readFileSync(new URL('../../src/app/entry.js',import.meta.url),'utf8');
 
 test('all speaking bots use two amplitude-driven equalizer channels',()=>{
   const result=dualSpeakerLevels(.6,1.25);
@@ -28,10 +25,6 @@ test('reduced motion preserves amplitude feedback without phase animation',()=>{
   const second=dualSpeakerLevels(.5,20,{reducedMotion:true});
   assert.deepEqual(first,second);
   assert.ok(first.left.some(value=>value>0));
-});
-
-test('dual equalizer patch installs before avatar runtime starts',()=>{
-  assert.ok(entry.indexOf('installDualSpeakerEqualizers();')<entry.indexOf("await import('./widget-runtime.js')"));
 });
 
 test('presence transitions are fastest into speech and reduced motion is immediate',()=>{
