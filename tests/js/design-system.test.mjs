@@ -33,10 +33,13 @@ test('high-impact surfaces consume design tokens directly', () => {
   }
 });
 
-test('widget token aliases are owned by design-tokens css', () => {
+test('widget semantic defaults are owned by design tokens while contrast may override them', () => {
   const tokens=read('../../src/styles/design-tokens.css');
   const polish=read('../../src/styles/widget-polish.css');
   assert.match(tokens,/--widget-surface:\s*var\(--ds-surface-raised\)/);
-  assert.doesNotMatch(polish,/--widget-surface\s*:/);
-  assert.doesNotMatch(polish,/--widget-text-soft\s*:/);
+  assert.match(tokens,/--widget-text-soft:/);
+  assert.doesNotMatch(polish,/body\.widget\s*\{[^}]*--widget-surface\s*:/s);
+  const softOverrides=[...polish.matchAll(/--widget-text-soft\s*:/g)];
+  assert.ok(softOverrides.length<=1);
+  if(softOverrides.length) assert.match(polish,/@media \(prefers-contrast:more\)[\s\S]*--widget-text-soft:/);
 });
