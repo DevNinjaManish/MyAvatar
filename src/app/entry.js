@@ -1,3 +1,4 @@
+import '../styles/base.css';
 import '../styles/design-tokens.css';
 import '../styles/widget-components.css';
 import '../styles/widget-cockpit.css';
