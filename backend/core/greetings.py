@@ -20,10 +20,10 @@ log = logging.getLogger('avatar.greetings')
 
 GREETING_LINES = {
     'nova': {
-        'morning': ['Good morning. What should we tackle?', 'Morning. What would make today easier?'],
-        'afternoon': ['Good afternoon. What needs your attention?', 'I am here. What should we work through?'],
-        'evening': ['Good evening. What should we finish or plan?', 'Evening. What is on your mind?'],
-        'night': ['Still up? I am here if you need me.', 'Late night. What should we work through?'],
+        'morning': ['Good morning. What would make today easier?', 'Morning. I am here. What are we tackling first?'],
+        'afternoon': ['Hey. What needs your attention right now?', 'I am here. What should we make easier?'],
+        'evening': ['Evening. What do you want to finish or figure out?', 'Hey. What is still on your mind?'],
+        'night': ['Still up? I am here. What are we sorting out?', 'Late one? Tell me what you want off your mind.'],
     },
     'robot': {
         'morning': ['Rivet here. What needs fixing?', 'Morning. Hand me the tricky part.'],
@@ -52,7 +52,7 @@ GREETING_LINES = {
 }
 
 BOT_SWITCH_LINES = {
-    'nova': ['Nova here. What are we working on?', 'I am with you. What do you need?'],
+    'nova': ['Nova here. What are we picking up?', 'I am with you. What do you need right now?'],
     'robot': ['Rivet here. What needs fixing?', 'Rivet ready. Show me the problem.'],
     'butler': ['Sterling here. What needs attention?', 'At your service. Where shall we begin?'],
     'pixel': ['Pixel here. What are we sharpening?', 'Pixel ready. Give me the brief.'],
@@ -60,7 +60,7 @@ BOT_SWITCH_LINES = {
 }
 
 ONBOARDING_LINES = {
-    'nova': ['Hi, I am Nova. Tell me what you would like help with.'],
+    'nova': ['Hi, I am Nova. Tell me what is on your mind, and we will work it out.'],
     'robot': ['Hi, I am Rivet. Give me something to inspect, fix, or build.'],
     'butler': ['Hello, I am Sterling. Tell me what needs organising.'],
     'pixel': ['Hi, I am Pixel. Give me a campaign, idea, or draft to sharpen.'],
@@ -68,7 +68,7 @@ ONBOARDING_LINES = {
 }
 
 IDLE_RETURN_LINES = {
-    'nova': ['I am here. What should we pick up?'],
+    'nova': ['I am here. What should we pick back up?'],
     'robot': ['Rivet is here. What are we picking back up?'],
     'butler': ['I am here. Shall we continue?'],
     'pixel': ['Back to it. What are we sharpening?'],
