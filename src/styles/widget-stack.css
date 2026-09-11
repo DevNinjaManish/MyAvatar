@@ -59,6 +59,11 @@ body.widget #widget-drag {
   height: 20px !important;
   z-index: 50 !important;
 }
+body.widget #widget-drag:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
 
 body.widget main {
   top: var(--widget-shell-platform-top) !important;
@@ -112,6 +117,10 @@ body.widget .widget-toolbar #widget-more {
   right: auto !important;
   bottom: auto !important;
   left: var(--widget-toolbar-slot-4) !important;
+}
+body.widget .widget-toolbar button:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
 }
 
 body.widget #widget-chat {
