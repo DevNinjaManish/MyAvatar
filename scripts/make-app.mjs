@@ -20,21 +20,34 @@ LOG="$HOME/Library/Logs/MyAvatar-launcher.log"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 mkdir -p "$HOME/Library/Logs"
 START_PROCESS='[n]ode scripts/start\\.mjs'
+ELECTRON_BIN="$ROOT/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron"
 ELECTRON_PROCESS="$ROOT/node_modules/electron/dist/[E]lectron.app/Contents/MacOS/Electron $ROOT"
-if pgrep -f "$ELECTRON_PROCESS" >/dev/null; then
-  # Electron may outlive the launcher wrapper. Never start a second visible
-  # companion while the existing MyAvatar window is still running.
+SERVICES_HEALTHY=false
+if pgrep -f "$START_PROCESS" >/dev/null && \
+   /usr/bin/curl -fsS --max-time 1 http://127.0.0.1:8765/health >/dev/null 2>&1 && \
+   /usr/bin/curl -fsS --max-time 1 http://127.0.0.1:5173/ >/dev/null 2>&1; then
+  SERVICES_HEALTHY=true
+fi
+if pgrep -f "$ELECTRON_PROCESS" >/dev/null && [ "$SERVICES_HEALTHY" = true ]; then
+  # Launching Electron again triggers the existing instance's second-instance
+  # handler, which restores/focuses the companion instead of silently exiting.
+  nohup "$ELECTRON_BIN" "$ROOT" >> "$LOG" 2>&1 &
   exit 0
 fi
-if pgrep -f "$START_PROCESS" >/dev/null; then
-  # Keep an existing visible companion running, but recover when its services
-  # outlive Electron after the window was closed.
-  pkill -TERM -f "$START_PROCESS"
-  for _ in {1..30}; do
-    pgrep -f "$START_PROCESS" >/dev/null || break
-    sleep 0.1
-  done
+if pgrep -f "$ELECTRON_PROCESS" >/dev/null; then
+  # Electron without a healthy local stack is stale. Tear it down so this
+  # launch can rebuild a coherent backend + Vite + renderer session.
+  pkill -TERM -f "$ELECTRON_PROCESS"
 fi
+if pgrep -f "$START_PROCESS" >/dev/null; then
+  pkill -TERM -f "$START_PROCESS"
+fi
+for _ in {1..30}; do
+  if ! pgrep -f "$START_PROCESS" >/dev/null && ! pgrep -f "$ELECTRON_PROCESS" >/dev/null; then
+    break
+  fi
+  sleep 0.1
+done
 cd "$ROOT" || exit 1
 nohup /usr/bin/env npm start >> "$LOG" 2>&1 &
 `);
