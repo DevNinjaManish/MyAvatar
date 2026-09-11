@@ -136,7 +136,6 @@ def choose_context(query: str, *, root: Path | str = '.', limit: int = MAX_FILES
     if not paths:
         raise ValueError('No readable repository text files were found.')
     files = read_files(paths, root=repo_root)
-    # Private local metadata used only to start the bounded coding-agent loop.
     for item in files:
         item['_root'] = str(repo_root)
     return files
@@ -163,8 +162,10 @@ def build_change_plan_prompt(request: str, files: Iterable[dict[str, str]]) -> l
         'omit the diff rather than inventing code.'
     )
     user = f"Requested change: {request.strip()}\n\nSelected seed context:\n{context}"
+    # Preserve the legacy [system, user] positions for existing callers/tests;
+    # provider-owned orchestration metadata is appended as a third system message.
     return [
-        {'role': 'system', 'content': marker},
         {'role': 'system', 'content': system},
         {'role': 'user', 'content': user},
+        {'role': 'system', 'content': marker},
     ]
