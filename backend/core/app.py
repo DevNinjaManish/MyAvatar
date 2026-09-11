@@ -107,7 +107,7 @@ async def ws(socket:WebSocket):
     if socket.headers.get('origin') not in ('http://127.0.0.1:5173','http://localhost:5173',None):await socket.close(code=1008);return
     await socket.accept();config=load_config();bot_id=config['conversation']['persona'];memory_enabled=config.get('memory',{}).get('enabled',False)
     history=load_history(bot_id) if memory_enabled else [];log.info(f'Loaded history for {bot_id}: {len(history)} turns');bot_histories={bot_id:history};task=None;verification_task=None;approvals={};runtime=RuntimeSession(bot_id);edits=CodingEditController(REPO_ROOT);agent_ref={'task':None}
-    async def send(kind,turn=None,operation_id=None,**data):await socket.send_json(runtime.event(kind,turn=turn,operation_id=operation_id,**data))
+    async def send(event_type,turn=None,operation_id=None,**data):await socket.send_json(runtime.event(event_type,turn=turn,operation_id=operation_id,**data))
     async def agent_update(agent_task,phase,turn=None):
         agent_task.set_phase(phase);await send('agent_state',turn,operation_id=agent_task.id,agentState=agent_task.public())
     def new_agent_task(goal, current_bot):
