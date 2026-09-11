@@ -6,7 +6,8 @@ const BOT_TRANSITION_TYPES=new Set(['config']);
 const APPROVAL_DECISIONS=new Set(['allow_once','deny']);
 
 export class RuntimeEventGate{
-  constructor(){this.sessionId=null;this.sequence=0;this.botId=null;this.typed=false;}
+  constructor(){this.reset();}
+  reset(){this.sessionId=null;this.sequence=0;this.botId=null;this.typed=false;return this;}
   accept(event){
     if(!event||typeof event!=='object')return false;
     const typed=Number.isInteger(event.runtimeVersion)&&typeof event.sessionId==='string'&&Number.isInteger(event.sequence)&&typeof event.botId==='string';
@@ -49,7 +50,7 @@ export function installRuntimeEventGuard(win=window){
   win.WebSocket=new Proxy(NativeWebSocket,{
     construct(Target,args,newTarget){
       const socket=Reflect.construct(Target,args,newTarget===win.WebSocket?Target:newTarget);
-      let gate=new RuntimeEventGate();
+      const gate=new RuntimeEventGate();
       const nativeSend=socket.send.bind(socket);
       socket.send=data=>{noteClientMessage(data,win);return nativeSend(data);};
       const decide=event=>{
@@ -69,7 +70,7 @@ export function installRuntimeEventGuard(win=window){
         if(payload.type==='action_request')event.stopImmediatePropagation();
       },{capture:true});
       socket.addEventListener('close',()=>{
-        gate=new RuntimeEventGate();
+        gate.reset();
         turnPlayback.cancelTurn();
         win.dispatchEvent(new CustomEvent('myavatar:socket-close'));
       });
