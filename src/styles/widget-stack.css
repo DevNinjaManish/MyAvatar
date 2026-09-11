@@ -179,6 +179,15 @@ body.widget #widget-menu {
   z-index: 70 !important;
 }
 body.widget #bot-library { z-index: 80 !important; }
+body.widget #widget-menu[hidden],
+body.widget #bot-library[hidden],
+body.widget #widget-coding-panels[hidden],
+body.widget #widget-mini-calendar[hidden],
+body.widget #widget-creative-workspace[hidden],
+body.widget #widget-code-wing[hidden] {
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
 
 /* Controls retain a fixed inner grid regardless of which modal is open. */
 body.widget #widget-tools > *,

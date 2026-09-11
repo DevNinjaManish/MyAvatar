@@ -64,6 +64,10 @@ test('closed chat is non-interactive even if a compositor briefly retains its la
   const stack=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
   assert.match(stack,/body\.widget:not\(\.widget-chat-open\) #widget-chat \{ pointer-events: none !important; visibility: hidden !important; \}/);
 });
+test('hidden menus and specialist surfaces cannot intercept clicks',()=>{
+  const stack=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
+  assert.match(stack,/#widget-menu\[hidden\],[\s\S]*#widget-code-wing\[hidden\] \{[\s\S]*pointer-events: none !important;[\s\S]*visibility: hidden !important;/);
+});
 test('coding uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
 test('calendar leaves room for month controls and event entries within the display',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,Math.min(CALENDAR_HEIGHT,area.height)));
 test('chat+tools size is clamped to the work area',()=>{
