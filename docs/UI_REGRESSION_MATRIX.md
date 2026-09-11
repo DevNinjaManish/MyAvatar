@@ -64,6 +64,9 @@ Generated screenshots are intentionally gitignored. They are local QA artifacts,
 The default fixture set is:
 
 - `compact`
+- `listening`
+- `thinking`
+- `speaking`
 - `chat`
 - `rivet`
 - `chat-rivet`
@@ -71,9 +74,14 @@ The default fixture set is:
 - `picker`
 - `running`
 - `approval`
+- `blocked`
 - `complete`
+- `cancelled`
 - `offline`
 - `limited`
+- `limited-approval`
+- `speaking-running`
+- `wide-diff`
 
 To capture a smaller subset:
 
@@ -92,3 +100,16 @@ Every `main` push and pull request now captures the same deterministic fixture s
 This is intentionally a **review gate**, not a fake pixel-perfect pass/fail signal. The current design is still being polished, so committing binary baselines and failing CI on arbitrary pixel thresholds would create noisy churn. The stable contracts are enforced by state/geometry/accessibility tests; the uploaded screenshots make clipping, overlap, density, hierarchy, and state contradictions inspectable without starting local models.
 
 When the visual design is explicitly frozen, the next step is to approve a baseline set and add a measured diff threshold. Until then, a green CI run means logic/build contracts passed and the canonical visual captures were successfully generated; it does not mean a human has approved every pixel.
+
+## Milestone 5 completion gate
+
+Milestone 5 — UI hardening and regression protection — is considered crossed when all of the following are true on `main`:
+
+- deterministic fixture startup is isolated from live model/microphone/socket startup;
+- canonical companion, overlay, Rivet lifecycle, degraded/approval, speaking/working, and wide-diff states are reproducibly capturable;
+- generated captures are local artifacts rather than source assets;
+- CI runs state/accessibility/geometry tests, builds production, captures the canonical matrix, and uploads it for review;
+- narrow inspector/file/diff layouts have explicit wrapping/truncation contracts and regression tests;
+- the final CI run for the milestone is green.
+
+Pixel baselines are deliberately **not** required to cross this milestone while visual design is still evolving. They become appropriate only after an explicit visual freeze.
