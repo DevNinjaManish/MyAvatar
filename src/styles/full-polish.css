@@ -11,9 +11,9 @@ body:not(.widget) header {
 }
 body:not(.widget) header strong { font-size: 20px; letter-spacing: -.7px; }
 body:not(.widget) header>div:last-child { gap: 7px; }
-body:not(.widget) .full-header-tools { display:flex; align-items:center; gap:8px; }
+body:not(.widget) .full-header-tools { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
 body:not(.widget) #workspace-nav { display:flex; gap:3px; padding:3px; border:1px solid #ffffff16; border-radius:11px; background:#ffffff05; }
-body:not(.widget) #workspace-nav button { min-height:30px; padding:5px 9px; border:0; border-radius:8px; color:var(--muted); font-size:11px; }
+body:not(.widget) #workspace-nav button { min-height:30px; padding:5px 9px; border:0; border-radius:8px; color:var(--muted); font-size:11px; white-space:nowrap; }
 body:not(.widget) #workspace-nav button.active { color:#173329; background:var(--accent); font-weight:700; }
 body:not(.widget) header button,
 body:not(.widget) header select { min-height: 36px; border-radius: 9px; }
