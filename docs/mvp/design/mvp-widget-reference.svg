@@ -87,10 +87,14 @@
     <rect y="466" width="260" height="48" rx="10" fill="#202d32" stroke="#ffb2a5" stroke-opacity=".55"/>
     <circle cx="23" cy="490" r="7" fill="#ffb2a5"/><text x="40" y="486" fill="#ffd0c7" font-family="system-ui,sans-serif" font-size="10">Runtime unavailable</text>
     <rect x="168" y="476" width="76" height="28" rx="7" fill="#ffb2a5" fill-opacity=".18" stroke="#ffb2a5" stroke-opacity=".65"/><text x="179" y="494" fill="#ffd0c7" font-family="system-ui,sans-serif" font-size="9" font-weight="650">Retry</text>
-    <rect y="524" width="260" height="48" rx="10" fill="#202d32" stroke="#ffffff" stroke-opacity=".16"/>
-    <circle cx="23" cy="548" r="7" fill="#839398"/><text x="40" y="544" fill="#b3c0c4" font-family="system-ui,sans-serif" font-size="10">Microphone disabled</text><text x="40" y="559" fill="#839398" font-family="system-ui,sans-serif" font-size="9">Permission needed</text>
-    <rect y="582" width="260" height="48" rx="10" fill="#202d32" stroke="#79d8ef" stroke-opacity=".9"/>
-    <text x="16" y="612" fill="#edf4f1" font-family="system-ui,sans-serif" font-size="10">[ focused control ]</text>
-    <rect x="12" y="591" width="236" height="30" rx="7" fill="none" stroke="#79d8ef" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect y="524" width="260" height="48" rx="10" fill="#202d32" stroke="#79d8ef" stroke-opacity=".8"/>
+    <circle cx="23" cy="548" r="7" fill="#79d8ef"/><text x="40" y="544" fill="#b3c0c4" font-family="system-ui,sans-serif" font-size="10">Listening…</text><text x="40" y="559" fill="#79d8ef" font-family="system-ui,sans-serif" font-size="9">Stop listening</text>
+    <rect y="582" width="260" height="48" rx="10" fill="#202d32" stroke="#79d8ef" stroke-opacity=".8"/>
+    <circle cx="23" cy="606" r="7" fill="#79d8ef"/><text x="40" y="602" fill="#b3c0c4" font-family="system-ui,sans-serif" font-size="10">Speaking</text><text x="40" y="617" fill="#79d8ef" font-family="system-ui,sans-serif" font-size="9">Stop response</text>
+    <rect y="640" width="260" height="48" rx="10" fill="#202d32" stroke="#ffffff" stroke-opacity=".16"/>
+    <circle cx="23" cy="664" r="7" fill="#839398"/><text x="40" y="660" fill="#b3c0c4" font-family="system-ui,sans-serif" font-size="10">Microphone unavailable</text><text x="40" y="675" fill="#839398" font-family="system-ui,sans-serif" font-size="9">Permission needed</text>
+    <rect y="698" width="260" height="48" rx="10" fill="#202d32" stroke="#79d8ef" stroke-opacity=".9"/>
+    <text x="16" y="728" fill="#edf4f1" font-family="system-ui,sans-serif" font-size="10">[ focused control ]</text>
+    <rect x="12" y="707" width="236" height="30" rx="7" fill="none" stroke="#79d8ef" stroke-width="2" stroke-dasharray="4 3"/>
   </g>
 </svg>

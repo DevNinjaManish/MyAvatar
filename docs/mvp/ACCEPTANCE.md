@@ -27,6 +27,16 @@ The MVP is not ready when individual features work in isolation. It is ready whe
 - [ ] Clear removes the visible transcript only after the user invokes it.
 - [ ] Closing and reopening chat preserves the intended transcript behavior from the wireframe.
 
+## Voice conversation
+
+- [ ] Mic permission is requested only after an explicit user action.
+- [ ] Listening is visibly distinct from thinking and speaking.
+- [ ] A spoken turn is bounded, transcribed locally, and submitted once.
+- [ ] The response appears as text and plays through local speech output.
+- [ ] Stop ends listening or speaking without leaving microphone or playback resources active.
+- [ ] Microphone denial, recognition failure, and speech-output failure leave typed chat usable.
+- [ ] Voice focus and controls remain keyboard accessible and match the audio wireframe.
+
 ## Recovery and boundaries
 
 - [ ] Backend unavailable, model unavailable, microphone denied, and request failure each have a clear state.

@@ -10,7 +10,7 @@ Each wireframe should include:
 - compact widget dimensions and overflow behavior;
 - the acceptance checklist items it satisfies.
 
-Planned set: launch/ready, companion picker, closed chat, open chat, responding/interrupted chat, unavailable/retry, and quit/relaunch.
+Planned set: launch/ready, companion picker, closed chat, open chat, typed and voice conversation states, unavailable/retry, and quit/relaunch.
 
 ## Wireframe set
 

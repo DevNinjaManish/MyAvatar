@@ -14,7 +14,7 @@ A Mac user who wants an approachable local AI companion for short everyday conve
 
 ## Core user outcome
 
-The user can complete one useful conversation quickly and understand what the app is doing at every point: ready, listening, thinking, responding, unavailable, or stopped.
+The user can complete one useful voice or typed conversation quickly and understand what the app is doing at every point: ready, listening, thinking, speaking, unavailable, or stopped.
 
 ## Product principles
 
@@ -27,4 +27,4 @@ The user can complete one useful conversation quickly and understand what the ap
 
 ## MVP success signal
 
-On a clean Mac setup, a user can launch the widget, choose a companion, send a typed message, receive a response, stop an in-progress response, and relaunch without losing the basic interface state or getting trapped in a broken mode.
+On a clean Mac setup, a user can launch the widget, choose a companion, speak or type a message, receive a readable and spoken response, stop an in-progress response, fall back to typed chat when audio is unavailable, and relaunch without getting trapped in a broken mode.

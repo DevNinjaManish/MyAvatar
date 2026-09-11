@@ -50,6 +50,8 @@ Quiet local instrument: dark graphite surfaces, one companion accent, soft edges
 - Ready: neutral surface, companion accent used sparingly.
 - Active: accent fill or outline with high contrast icon.
 - Loading: warning accent and authored progress text.
+- Listening: companion accent halo, clear `Listening…` label, and an explicit stop action.
+- Speaking: restrained avatar/equalizer motion, readable transcript, and an explicit `Stop` action.
 - Error: danger accent, concise explanation, one recovery action.
 - Disabled: preserve readable contrast; explain why when the action is unavailable.
 - Focus: 2px accent outline with 2px offset; never rely on color alone.
@@ -61,12 +63,12 @@ The SVG below shows the two most important implementation targets:
 1. compact ready widget;
 2. same widget with chat open;
 3. companion picker overlay;
-4. loading, unavailable, and interrupted states;
+4. loading, listening, speaking, unavailable, and interrupted states;
 5. visible keyboard focus treatment.
 
 The mockup uses an abstract avatar silhouette so the geometry and hierarchy remain independent of any single companion artwork. Production implementation must use the approved companion portrait assets.
 
-The picker is allowed to scroll when needed, but its close control and selected companion must remain visible. Disabled microphone controls use readable contrast and an adjacent reason, such as `Microphone permission needed`.
+The picker is allowed to scroll when needed, but its close control and selected companion must remain visible. Microphone controls use readable contrast and authored labels such as `Allow microphone`, `Listening…`, `Stop listening`, `Speaking`, and `Microphone unavailable`. Voice failure never hides typed chat input.
 
 ![MVP widget design reference](mvp-widget-reference.svg)
 

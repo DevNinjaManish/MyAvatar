@@ -17,3 +17,5 @@ Rules:
 - Permission is explicit; the app does not silently begin recording.
 - The microphone control label describes the current action, not an internal state name.
 - Stopping audio releases or pauses only the resources defined by the approved runtime contract.
+- Speaking uses the same compact widget geometry: the transcript shows the response, the avatar enters its speaking state, and the primary control becomes `[Stop]`.
+- Recognition and playback failures show a concise reason and keep `[Chat]` and typed input available.
