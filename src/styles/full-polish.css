@@ -48,6 +48,9 @@ body:not(.widget) aside {
 }
 body:not(.widget) aside h2 { margin: 0 0 16px; color: var(--ink); font-size: 14px; letter-spacing: -.2px; }
 body:not(.widget) #messages { padding: 4px 2px 12px; }
+body:not(.widget) #messages .session-focus { display:grid; gap:4px; margin:0 0 10px; padding:10px 11px; border:1px solid #ffffff14; border-radius:10px; background:#ffffff05; }
+body:not(.widget) #messages .session-focus strong { color:var(--muted); font-size:10px; letter-spacing:.06em; text-transform:uppercase; }
+body:not(.widget) #messages .session-focus span { color:var(--ink); font-size:12px; line-height:1.45; }
 body:not(.widget) #text-form { gap: 8px; }
 body:not(.widget) #text-form input { min-height: 42px; }
 body:not(.widget) #text-form button { min-width: 66px; background: var(--accent); color: #163329; font-weight: 700; }
