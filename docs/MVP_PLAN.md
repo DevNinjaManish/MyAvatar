@@ -127,7 +127,7 @@ Verification: 2026-09-12 — The acceptance checklist is checked against the cle
 
 ## Current next step
 
-Begin Milestone 5: run the acceptance checklist and clean-setup release-candidate QA.
+MVP is wrapped. Future work belongs to the V1 backlog: bundle or automate Whisper setup, reduce the Vite bundle warning, and expand voice quality testing.
 
 ## Change log
 
@@ -145,3 +145,4 @@ Begin Milestone 5: run the acceptance checklist and clean-setup release-candidat
 - 2026-09-12: Completed and checkpointed Milestone 1 with native launch, picker, banner, expanded-chat visual QA, clean relaunch, and automated verification.
 - 2026-09-12: Increased the closed native shell to 500px so status-banner copy has a deliberate bottom safety margin; added ellipsis protection for long fallback messages.
 - 2026-09-12: Completed Milestone 4 with local Whisper STT, macOS `say`/WAV TTS, explicit microphone interaction, voice integration testing, and typed-chat fallback.
+- 2026-09-12: Wrapped the MVP with optional-voice setup diagnostics, actionable Whisper fallback messaging, final acceptance QA, and clean-install verification.

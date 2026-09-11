@@ -37,6 +37,11 @@ async function synthesizeSpeech(text){
   }finally{await fs.rm(dir,{recursive:true,force:true});}
 }
 
+function voiceSetupError(error){
+  if(error?.code==='ENOENT')return 'Whisper is not installed. Run brew install openai-whisper ffmpeg, then try voice again.';
+  return error?.message||'Voice processing failed.';
+}
+
 const server=new WebSocketServer({host:'127.0.0.1',port});
 server.on('connection',(socket,request)=>{
   if(new URL(request.url,'ws://127.0.0.1').searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
@@ -71,7 +76,7 @@ server.on('connection',(socket,request)=>{
       }
       if(typeof text!=='string'||!text.trim())throw Error('Empty request.');
       await answer(turn,text,{speak:message.type==='voice'});
-    }catch(error){if(!stopped.has(turn))send({type:'error',turn,message:`${message.type==='voice'?'Voice':'Conversation'} unavailable: ${error.message}`});stopped.delete(turn);}
+    }catch(error){if(!stopped.has(turn))send({type:'error',turn,message:`${message.type==='voice'?'Voice':'Conversation'} unavailable: ${message.type==='voice'?voiceSetupError(error):error.message}`});stopped.delete(turn);}
   });
 });
 server.on('listening',()=>console.log(`Conversation service listening on ws://127.0.0.1:${port}`));

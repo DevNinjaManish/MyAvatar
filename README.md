@@ -43,6 +43,8 @@ Start with [the MVP planning index](docs/mvp/README.md), then use [the scope](do
 ```sh
 npm test
 npm run build
+npm run doctor
+npm run test:voice
 ```
 
 Native smoke QA is required before calling the MVP stable: launch, drag, companion switching, chat open/close, typed send, stop, quit, and relaunch.
@@ -52,3 +54,14 @@ Native smoke QA is required before calling the MVP stable: launch, drag, compani
 Do not add telemetry, cloud accounts, paid runtime APIs, remote model providers, or persisted sensitive data without an explicit product decision. See [SECURITY](docs/SECURITY.md) and [CONTRIBUTING](docs/CONTRIBUTING.md).
 
 MyAvatar is released under the [MIT License](LICENSE).
+
+## Optional voice setup
+
+Typed chat works without voice dependencies. To enable local voice input, install Whisper and FFmpeg on macOS:
+
+```sh
+brew install openai-whisper ffmpeg
+npm run doctor
+```
+
+The first voice turn downloads the configured Whisper `tiny` model if it is not already cached. macOS speech output uses the built-in `say` command. If Whisper is unavailable, the widget keeps typed chat available and shows a recoverable voice warning.
