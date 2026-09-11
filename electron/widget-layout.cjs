@@ -15,13 +15,14 @@ function widgetLayout(anchor, view, area) {
   // Menus live entirely inside the companion column. Only specialist surfaces
   // need the reserved left rail and the wider native hit-test frame.
   const expanded = Boolean(view.tools || view.wide || view.calendar);
+  const tall = expanded || Boolean(view.chat || view.menu);
   const width = Math.min(expanded ? WIDTH : COMPACT_WIDTH, area.width);
-  const height = Math.min(expanded || view.chat ? UTILITY_HEIGHT : COMPACT_HEIGHT, area.height);
+  const height = Math.min(tall ? UTILITY_HEIGHT : COMPACT_HEIGHT, area.height);
   const x = clamp(anchor.x + (expanded ? 0 : WIDTH - COMPACT_WIDTH), area.x, area.x + area.width - width);
   // Keep the visible companion anchored vertically when a utility expands.
   // The native frame may extend below the work area; moving the avatar is
   // more disruptive than letting the utility surface be clipped at the edge.
-  const y = expanded || view.chat ? Math.max(anchor.y, area.y) : clamp(anchor.y, area.y, area.y + area.height - height);
+  const y = tall ? Math.max(anchor.y, area.y) : clamp(anchor.y, area.y, area.y + area.height - height);
 
   return {
     bounds: {
