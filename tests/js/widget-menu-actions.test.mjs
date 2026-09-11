@@ -6,6 +6,10 @@ const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta
 const preload=readFileSync(new URL('../../electron/preload.cjs',import.meta.url),'utf8');
 const main=readFileSync(new URL('../../electron/main.cjs',import.meta.url),'utf8');
 
+test('opening Chat refreshes its runtime status label',()=>{
+  assert.match(runtime,/if\(shouldOpen\)\{widgetUnread=0;syncWidgetUnread\(\);syncWidgetStatus\(\);\}/);
+});
+
 test('Settings action exits widget mode before opening modal',()=>{
   assert.match(runtime,/function openSettings\(\)\{closeWidgetMenu\(false\);if\(document\.body\.classList\.contains\('widget'\)\)\{window\.desktop\?\.mode\('full'\);setTimeout\(\(\)=>\$\('settings'\)\.showModal\(\),180\);\}else \$\('settings'\)\.showModal\(\);\}/);
   assert.match(runtime,/\$\('widget-settings'\)\.onclick=openSettings/);
