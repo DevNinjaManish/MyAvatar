@@ -13,7 +13,7 @@ export function installSocketBridge(win=window){
   };
   class BridgedWebSocket extends Base{
     constructor(url,protocols){
-      super();this.url=String(url);this.protocols=protocols;this.readyState=Native.CONNECTING;this.bufferedAmount=0;this.extensions='';this.protocol='';this.binaryType='blob';this._native=null;this._closed=false;this._attempt=0;this._timer=0;this._handlers={};win.__myAvatarSocket=this;this._connect();
+      super();this.url=String(url);this.protocols=protocols;this.readyState=Native.CONNECTING;this.bufferedAmount=0;this.extensions='';this.protocol='';this.binaryType='blob';this._native=null;this._closed=false;this._attempt=0;this._timer=0;this._handlers={};this._messageBacklog=[];win.__myAvatarSocket=this;this._connect();
     }
     _connect(){
       if(this._closed)return;
@@ -23,9 +23,16 @@ export function installSocketBridge(win=window){
       this._native=native;
       try{native.binaryType=this.binaryType;}catch{}
       native.addEventListener('open',event=>{if(this._native!==native||this._closed)return;this.readyState=Native.OPEN;this._attempt=0;this.extensions=native.extensions||'';this.protocol=native.protocol||'';this.dispatchEvent(makeEvent('open',event));});
-      native.addEventListener('message',event=>{if(this._native===native&&!this._closed)this.dispatchEvent(makeEvent('message',event));});
+      native.addEventListener('message',event=>{
+        if(this._native!==native||this._closed)return;
+        if(!this._handlers.message){
+          this._messageBacklog.push({data:event.data,origin:event.origin||'',lastEventId:event.lastEventId||''});
+          if(this._messageBacklog.length>32)this._messageBacklog.shift();
+        }
+        this.dispatchEvent(makeEvent('message',event));
+      });
       native.addEventListener('error',event=>{if(this._native===native&&!this._closed)this.dispatchEvent(makeEvent('error',event));});
-      native.addEventListener('close',event=>{if(this._native!==native)return;this.readyState=Native.CLOSED;this.dispatchEvent(makeEvent('close',event));if(!this._closed)this._scheduleReconnect();});
+      native.addEventListener('close',event=>{if(this._native!==native)return;this.readyState=Native.CLOSED;this._messageBacklog=[];this.dispatchEvent(makeEvent('close',event));if(!this._closed)this._scheduleReconnect();});
     }
     _scheduleReconnect(error){
       if(this._closed)return;
@@ -34,8 +41,17 @@ export function installSocketBridge(win=window){
       this._timer=setTimeout(()=>this._connect(),delay);
     }
     send(data){if(this.readyState!==Native.OPEN||!this._native)throw new Error('Local service is reconnecting. Try again in a moment.');return this._native.send(data);}
-    close(code,reason){this._closed=true;clearTimeout(this._timer);if(this._native&&this.readyState<Native.CLOSING){this.readyState=Native.CLOSING;this._native.close(code,reason);}else this.readyState=Native.CLOSED;}
-    _setHandler(type,handler){const current=this._handlers[type];if(current)this.removeEventListener(type,current);if(typeof handler==='function'){this._handlers[type]=handler;this.addEventListener(type,handler);}else delete this._handlers[type];}
+    close(code,reason){this._closed=true;clearTimeout(this._timer);this._messageBacklog=[];if(this._native&&this.readyState<Native.CLOSING){this.readyState=Native.CLOSING;this._native.close(code,reason);}else this.readyState=Native.CLOSED;}
+    _setHandler(type,handler){
+      const current=this._handlers[type];if(current)this.removeEventListener(type,current);
+      if(typeof handler==='function'){
+        this._handlers[type]=handler;this.addEventListener(type,handler);
+        if(type==='message'&&this._messageBacklog.length){
+          const pending=this._messageBacklog.splice(0);
+          queueMicrotask(()=>{if(this._handlers.message!==handler)return;for(const source of pending)handler.call(this,makeEvent('message',source));});
+        }
+      }else delete this._handlers[type];
+    }
     _getHandler(type){return this._handlers[type]||null;}
     set onopen(value){this._setHandler('open',value);}get onopen(){return this._getHandler('open');}
     set onmessage(value){this._setHandler('message',value);}get onmessage(){return this._getHandler('message');}
