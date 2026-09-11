@@ -3,6 +3,7 @@ import {Avatar} from '../avatar/Avatar.js';
 import {AudioEngine,toBase64} from '../audio/engine.js';
 import {AppState} from '../conversation/state.js';
 import {mergeCalendarEvents,readLocalCalendar,saveLocalCalendarEvent} from '../calendar/local-calendar.js';
+import {reconnectDelay} from '../conversation/reconnect-policy.js';
 const $=id=>document.getElementById(id);
 const avatar=new Avatar($('stage'));const audio=new AudioEngine(v=>avatar.setMouth(v));const state=new AppState();
 const emotionEmoji={happy:'😊',sad:'😔',relaxed:'😌',surprised:'😮',curious:'🤔',listening:'👂',thinking:'💭',speaking:'🔊'};
@@ -25,8 +26,10 @@ state.addEventListener('change',()=>{
     thinkingTimer=setTimeout(()=>{if(state.value==='THINKING')audio.playFiller();},600);
   }
 });
-const socket=new WebSocket(`ws://127.0.0.1:8765/ws?token=${import.meta.env.VITE_API_TOKEN||'development'}`);
-const send=data=>{if(socket.readyState!==WebSocket.OPEN)throw Error('Local service is disconnected. Restart the app.');socket.send(JSON.stringify(data));};
+const socketUrl=`ws://127.0.0.1:8765/ws?token=${import.meta.env.VITE_API_TOKEN||'development'}`;
+let socket=null,reconnectTimer=0,reconnectAttempt=0,closing=false;
+const socketState=()=>socket?.readyState??WebSocket.CLOSED;
+const send=data=>{if(socketState()!==WebSocket.OPEN)throw Error('Local service is reconnecting. Try again in a moment.');socket.send(JSON.stringify(data));};
 const error=e=>{
  const text=String(e?.message||e||'Unknown error');$('error').textContent=text;
  const now=Date.now();if(text===lastWidgetError&&now-lastWidgetErrorAt<5000)return text;
@@ -37,7 +40,9 @@ const error=e=>{
  if(!document.body.classList.contains('widget-chat-open')){widgetUnread++;syncWidgetUnread();}
  return text;
 };
-socket.onopen=()=>{$('status').textContent='Preparing…';};socket.onclose=()=>{$('mic').disabled=true;interrupt(false);if(!$('error').textContent)error('Local service disconnected. Restart with npm start.');};
+function scheduleReconnect(){if(closing||reconnectTimer)return;const delay=reconnectDelay(reconnectAttempt++);$('status').textContent='Reconnecting…';reconnectTimer=setTimeout(()=>{reconnectTimer=0;connectSocket();},delay);}
+function connectSocket(){if(closing)return;const candidate=new WebSocket(socketUrl);socket=candidate;candidate.onopen=()=>{if(socket!==candidate)return;reconnectAttempt=0;$('error').textContent='';$('status').textContent='Preparing…';};candidate.onclose=()=>{if(socket!==candidate)return;$('mic').disabled=true;interrupt(false);if(!$('error').textContent)error('Local service disconnected. Reconnecting…');scheduleReconnect();};candidate.onmessage=handleSocketMessage;}
+connectSocket();
 function parseEmotionText(text){
  const match=String(text).match(/^\s*\[(happy|sad|relaxed|surprised|curious)\]\s*/i);
  return match?{emotion:match[1].toLowerCase(),text:String(text).slice(match[0].length)}:{emotion:null,text:String(text)};
@@ -109,7 +114,7 @@ function interrupt(notify=true, sessionStop=false){
   complete=false;
   state.set('IDLE');
   avatar.setExpression('relaxed');
-  if(notify&&socket.readyState===1)send({type:'stop'});
+  if(notify&&socketState()===1)send({type:'stop'});
 }
 function begin(data){
   if($('interaction').value!=='live')audio.setListening(false);
@@ -139,7 +144,7 @@ function playGreeting(m){
  interrupt(false);state.set('SPEAKING');avatar.setExpression('happy');
  audio.enqueue(m.audio,()=>state.set('SPEAKING'),()=>{state.set('IDLE');avatar.setExpression('relaxed');startListeningSoon();}).catch(e=>{error(e);startListeningSoon();});
 }
-socket.onmessage=event=>{
+function handleSocketMessage(event){
  let m;try{m=JSON.parse(event.data);}catch{return;}if(m.type==='preparing'){document.body.classList.add('model-loading');$('status').lastChild.textContent=m.stage||'Preparing local models…';$('onboarding-status').textContent=m.stage||'Preparing local models…';$('mic').disabled=true;return;}if(m.type==='ready'){document.body.classList.remove('model-loading');$('mic').disabled=false;$('onboarding-status').textContent='Local models are ready. When you continue, macOS will ask to use your microphone.';state.set('IDLE');updateMicLabel();return;}if(m.type==='setup_error'){document.body.classList.remove('model-loading');$('mic').disabled=true;$('onboarding-status').textContent='Setup needs attention: '+m.message;error('Local model setup: '+m.message);return;}if(m.type==='config'){config=m.config; $('interaction').value=config.audio?.mode||'live';$('performance').value=config.performanceProfile||'low';$('memory-enabled').checked=!!config.memory?.enabled;$('onboarding-bot').value=config.conversation.persona;$('onboarding-performance').value=config.performanceProfile||'low';performanceNote();avatar.configure(config.avatar);avatar.showRobot(config.conversation.persona);syncBotUI();openOnboarding();return;}if(m.type==='bot_history')return;if(m.type==='greeting'){playGreeting(m);return;}if(m.type==='action_request'){actionRequest(m);return;}if(m.turn!==turn)return;
  if(m.type==='state')state.set(m.state);
  if(m.type==='transcript'&&inputKind==='speech')metrics.speech_to_stt_ms=Math.round(performance.now()-started);
@@ -153,7 +158,7 @@ socket.onmessage=event=>{
  if(m.type==='metrics'){Object.assign(metrics,m.metrics);displayMetrics();}
  if(m.type==='done'){complete=true;finish();}
  if(m.type==='error'){interrupt();error(m.message);}
-};
+}
 function updateMicLabel(){
  $('mic').textContent=liveOn?'Mic on · end conversation':recording?'Finish & send':$('interaction').value==='live'?'Start live conversation':'Start microphone';
  $('detail').textContent=micMuted?'Microphone muted · conversation remains active':$('interaction').value==='live'?'Mic stays on · pause to send · listening resumes after the reply':'Click once to talk, again to send · microphone is off until enabled';
@@ -183,7 +188,7 @@ $('mic').onclick=async()=>{
   }
   state.set('LISTENING');updateMicLabel();
  }catch(e){audio.stopRecord();recording=false;liveOn=false;updateMicLabel();state.set('IDLE');error(e);}
- finally{starting=false;$('mic').disabled=socket.readyState!==1;}
+ finally{starting=false;$('mic').disabled=socketState()!==1;}
 };
 $('interaction').onchange=()=>{interrupt();updateMicLabel();};
 $('stop').onclick=()=>interrupt();
@@ -267,13 +272,13 @@ function openOnboarding(){
  setTimeout(()=>{if(!$('onboarding').open)$('onboarding').showModal();},180);
 }
 $('onboarding-start').onclick=event=>{
- event.preventDefault();if(!config||socket.readyState!==1)return;
+ event.preventDefault();if(!config||socketState()!==1)return;
  localStorage.setItem('myavatar.onboarding.complete','1');
  send({type:'onboarding',bot:$('onboarding-bot').value,performanceProfile:$('onboarding-performance').value,interaction:$('interaction').value});
  $('onboarding').close();window.desktop?.mode('widget');
 };
 $('onboarding-later').onclick=()=>{localStorage.setItem('myavatar.onboarding.complete','1');window.desktop?.mode('widget');};
-window.addEventListener('beforeunload',()=>{audio.stream?.getTracks().forEach(t=>t.stop());audio.stop();});
+window.addEventListener('beforeunload',()=>{closing=true;clearTimeout(reconnectTimer);audio.stream?.getTracks().forEach(t=>t.stop());audio.stop();socket?.close();});
 // Public animation interface for experiments and automated shell validation.
 window.avatar=avatar;window.appState=state;
 
@@ -429,7 +434,7 @@ function syncBotUI(){
  $('widget-picker-toggle').setAttribute('aria-label',$('widget-picker-toggle').title);
 }
 function switchBot(id){
- if(!config?.bots?.[id]||socket.readyState!==1)return;
+ if(!config?.bots?.[id]||socketState()!==1)return;
  interrupt();avatar.showRobot(id);window.dispatchEvent(new Event('myavatar:bot-switch'));
  send({type:'bot',bot:id});
 }

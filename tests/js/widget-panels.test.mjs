@@ -3,11 +3,19 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initialPanelState, reducePanelState, readPanelPreferences, savePanelPreferences, PANEL_IDS} from '../../src/widget/panel-model.js';
 import {agentPlanSteps,agentStepObservation,agentStepVerification} from '../../src/widget/panels.js';
+import {RECONNECT_DELAYS_MS,reconnectDelay} from '../../src/conversation/reconnect-policy.js';
 import layoutAPI from '../../electron/widget-layout.cjs';
 const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_WIDTH,COMPACT_HEIGHT,UTILITY_HEIGHT,CALENDAR_HEIGHT}=layoutAPI;
 const area={x:0,y:24,width:1440,height:820};
 
 test('panels start closed with only Task expanded',()=>assert.deepEqual(initialPanelState(),{open:false,expanded:['task'],wide:null}));
+test('reconnect policy backs off and caps service retries',()=>{assert.deepEqual(RECONNECT_DELAYS_MS,[500,1000,2000,4000,8000,15000]);assert.equal(reconnectDelay(0),500);assert.equal(reconnectDelay(4),8000);assert.equal(reconnectDelay(99),15000);});
+test('widget runtime reconnects without creating duplicate timers',()=>{
+  const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');
+  assert.match(runtime,/function scheduleReconnect\(\)\{if\(closing\|\|reconnectTimer\)return/);
+  assert.match(runtime,/Local service is reconnecting\. Try again in a moment\./);
+  assert.match(runtime,/candidate\.onclose=.*scheduleReconnect\(\)/);
+});
 test('all five agreed panels exist in the agreed order',()=>assert.deepEqual(PANEL_IDS,['task','changes','terminal','tests','diff']));
 test('local agent plans expose bounded ordered steps without commands',()=>{
   const steps=agentPlanSteps([{kind:'gitStatus'},{kind:'test'}]);
