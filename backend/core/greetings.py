@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from typing import Awaitable, Callable
 
 log = logging.getLogger('avatar.greetings')
+DEFAULT_GREETING_TIMEOUT_SECONDS = 8.0
 
 GREETING_LINES = {
     'nova': {
@@ -126,13 +127,15 @@ DEFAULT_STARTUP_GUARD = StartupGreetingGuard()
 class GreetingCoordinator:
     def __init__(self, *, generate: Callable[[str, dict], bytes], executor,
                  send: Callable[..., Awaitable[None]], save_preferences: Callable[[dict], bool],
-                 enabled: bool = True, startup_guard: StartupGreetingGuard | None = None):
+                 enabled: bool = True, startup_guard: StartupGreetingGuard | None = None,
+                 timeout_seconds: float = DEFAULT_GREETING_TIMEOUT_SECONDS):
         self.generate = generate
         self.executor = executor
         self.send = send
         self.save_preferences = save_preferences
         self.enabled = enabled
         self.startup_guard = startup_guard or DEFAULT_STARTUP_GUARD
+        self.timeout_seconds = max(0.1, float(timeout_seconds))
         self._generation = 0
         self._task: asyncio.Task | None = None
         self._startup_requested = False
@@ -173,7 +176,8 @@ class GreetingCoordinator:
                 if not still_current():
                     return
                 loop = asyncio.get_running_loop()
-                wav = await loop.run_in_executor(self.executor, self.generate, text, tts_config)
+                future = loop.run_in_executor(self.executor, self.generate, text, tts_config)
+                wav = await asyncio.wait_for(asyncio.shield(future), timeout=self.timeout_seconds)
                 if not still_current():
                     return
                 await self.send('greeting', operation_id=operation_id, text=text,
@@ -183,6 +187,8 @@ class GreetingCoordinator:
                 indexes = config.setdefault('_greetingIndexes', {})
                 indexes[bot_id] = rotation_index + 1
                 self.save_preferences(config)
+            except asyncio.TimeoutError:
+                log.warning('Greeting synthesis timed out after %.1fs; continuing without automatic speech.', self.timeout_seconds)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
