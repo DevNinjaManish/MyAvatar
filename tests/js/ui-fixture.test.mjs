@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 
 const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
 
-const canonical=['compact','chat','rivet','chat-rivet','menu','picker','running','approval','complete','offline','limited'];
+const canonical=['compact','listening','thinking','speaking','chat','rivet','chat-rivet','menu','picker','running','approval','blocked','complete','cancelled','offline','limited','limited-approval','speaking-running','wide-diff'];
 
 test('fixture mode is explicitly query gated and isolated from live runtime startup',()=>{
   const entry=read('../../src/app/entry.js');
@@ -16,13 +16,18 @@ test('fixture mode is explicitly query gated and isolated from live runtime star
   assert.match(entry,/else\{[\s\S]*installSocketBridge/);
 });
 
-test('fixture module owns the canonical visual states and readiness marker',()=>{
+test('fixture module owns the full canonical visual state matrix and readiness marker',()=>{
   const code=read('../../src/app/ui-fixture.js');
-  for(const state of canonical)assert.ok(code.includes(`'${state}'`),`missing fixture ${state}`);
+  const runner=read('../../scripts/capture-ui.cjs');
+  for(const state of canonical){
+    assert.ok(code.includes(`'${state}'`),`missing fixture ${state}`);
+    assert.ok(runner.includes(state),`capture runner missing ${state}`);
+  }
   assert.match(code,/dataset\.fixtureReady='true'/);
   assert.match(code,/myavatar:agent-task/);
   assert.match(code,/myavatar:readiness/);
   assert.match(code,/myavatar:socket-close/);
+  assert.match(code,/myavatar:conversation-phase/);
 });
 
 test('capture runner waits for fixture readiness and writes local PNG artifacts',()=>{
