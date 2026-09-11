@@ -2,23 +2,35 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {installSocketBridge} from '../../src/conversation/socket-bridge.js';
 
-class FakeSocket{
-  static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;
-  constructor(url){this.url=url;this.readyState=FakeSocket.OPEN;}
+class FakeSocket extends EventTarget{
+  static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;static instances=[];
+  constructor(url){super();this.url=url;this.readyState=FakeSocket.CONNECTING;this.sent=[];FakeSocket.instances.push(this);}
+  open(){this.readyState=FakeSocket.OPEN;this.dispatchEvent(new Event('open'));}
+  send(data){this.sent.push(data);}
+  fail(){this.readyState=FakeSocket.CLOSED;this.dispatchEvent(new Event('close'));}
+  close(){this.readyState=FakeSocket.CLOSED;this.dispatchEvent(new Event('close'));}
 }
 
+const makeWin=()=>({WebSocket:FakeSocket,EventTarget,Event,MessageEvent,dispatchEvent(){}});
+
 test('socket bridge preserves WebSocket constants and exposes latest socket',()=>{
-  const win={WebSocket:FakeSocket};
-  installSocketBridge(win);
-  const socket=new win.WebSocket('ws://local');
-  assert.equal(win.__myAvatarSocket,socket);
-  assert.equal(win.WebSocket.OPEN,1);
-  assert.equal(socket.url,'ws://local');
+  FakeSocket.instances=[];const win=makeWin();installSocketBridge(win);const socket=new win.WebSocket('ws://local');
+  assert.equal(win.__myAvatarSocket,socket);assert.equal(win.WebSocket.OPEN,1);assert.equal(socket.url,'ws://local');
+});
+
+test('socket bridge reconnects after an unexpected close',async()=>{
+  FakeSocket.instances=[];const win=makeWin();installSocketBridge(win);const socket=new win.WebSocket('ws://local');
+  FakeSocket.instances[0].open();assert.equal(socket.readyState,win.WebSocket.OPEN);
+  FakeSocket.instances[0].fail();assert.equal(socket.readyState,win.WebSocket.CONNECTING);
+  await new Promise(resolve=>setTimeout(resolve,300));
+  assert.equal(FakeSocket.instances.length,2);FakeSocket.instances[1].open();assert.equal(socket.readyState,win.WebSocket.OPEN);
+  socket.send('hello');assert.deepEqual(FakeSocket.instances[1].sent,['hello']);socket.close();
+});
+
+test('explicit close does not reconnect',async()=>{
+  FakeSocket.instances=[];const win=makeWin();installSocketBridge(win);const socket=new win.WebSocket('ws://local');FakeSocket.instances[0].open();socket.close();await new Promise(resolve=>setTimeout(resolve,300));assert.equal(FakeSocket.instances.length,1);
 });
 
 test('socket bridge installs only once',()=>{
-  const win={WebSocket:FakeSocket};
-  installSocketBridge(win);const Bridged=win.WebSocket;
-  installSocketBridge(win);
-  assert.equal(win.WebSocket,Bridged);
+  FakeSocket.instances=[];const win=makeWin();installSocketBridge(win);const Bridged=win.WebSocket;installSocketBridge(win);assert.equal(win.WebSocket,Bridged);
 });
