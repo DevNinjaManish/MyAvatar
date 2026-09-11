@@ -14,3 +14,9 @@ test('widget More menu has an opaque bounded surface',()=>{
   assert.match(css,/body\.widget #widget-menu\s*\{[\s\S]*?border-radius:\s*16px/);
   assert.match(css,/body\.widget #widget-menu\s*\{[\s\S]*?box-shadow:/);
 });
+
+test('widget More menu has an opaque bounded surface',()=>{
+  assert.match(css,/body\.widget #widget-menu\s*\{[\s\S]*?background:\s*var\(--widget-surface/);
+  assert.match(css,/body\.widget #widget-menu\s*\{[\s\S]*?border-radius:\s*16px/);
+  assert.match(css,/body\.widget #widget-menu\s*\{[\s\S]*?box-shadow:/);
+});
