@@ -60,6 +60,10 @@ test('only disclosure preferences are persisted, never task or project content',
 });
 test('the closed companion owns only its visible right column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:COMPACT_HEIGHT}));
 test('chat-only mode keeps the bot visible in the narrow right column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{chat:true},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:UTILITY_HEIGHT}));
+test('closed chat is non-interactive even if a compositor briefly retains its layer',()=>{
+  const stack=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
+  assert.match(stack,/body\.widget:not\(\.widget-chat-open\) #widget-chat \{ pointer-events: none !important; visibility: hidden !important; \}/);
+});
 test('coding uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
 test('calendar leaves room for month controls and event entries within the display',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,Math.min(CALENDAR_HEIGHT,area.height)));
 test('chat+tools size is clamped to the work area',()=>{

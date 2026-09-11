@@ -131,7 +131,9 @@ body.widget #widget-chat {
   box-shadow: 0 10px 24px #0008, inset 0 1px #ffffff08 !important;
   z-index: 30 !important;
 }
+body.widget:not(.widget-chat-open) #widget-chat { pointer-events: none !important; visibility: hidden !important; }
 body.widget.widget-chat-open #widget-chat { display: flex !important; }
+body.widget.widget-chat-open #widget-chat { visibility: visible !important; }
 
 /* Specialists occupy the reserved left rail. They never alter companion/chat geometry. */
 body.widget #widget-coding-panels,
