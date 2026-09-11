@@ -1,6 +1,6 @@
 # UI Regression Matrix
 
-This matrix defines the canonical MyAvatar UI states that future automated screenshot coverage should capture. The current JavaScript regression suite protects the DOM, state-model, accessibility and fixed-shell contracts for these states.
+This matrix defines the canonical MyAvatar UI states protected by automated state tests and the deterministic Electron screenshot harness.
 
 ## Companion states
 
@@ -45,25 +45,46 @@ This matrix defines the canonical MyAvatar UI states that future automated scree
 5. Offline + any task state: Offline wins because execution is unavailable.
 6. Menu or bot picker open: focus cannot escape behind the active overlay.
 
-## Screenshot automation target
+## Deterministic screenshot harness
 
-When browser/Electron screenshot automation is added, capture at minimum:
+Run:
 
-- compact-ready
-- compact-listening
-- compact-speaking
-- compact-offline
-- chat-open
-- menu-open
-- bot-picker-open
-- rivet-draft
-- rivet-working
-- rivet-approval
-- rivet-blocked
-- rivet-complete
-- chat-plus-rivet
-- calendar-open
-- creative-open
-- wide-diff
+```bash
+npm run test:ui:screenshots
+```
 
-Use a deterministic local fixture mode: fixed bot, fixed text, fixed CPU/RAM placeholders, disabled animation, and no live network/model dependency. Screenshot tests should compare layout and presentation only; behavioral correctness remains in the JavaScript state tests.
+The command builds the app, launches a hidden Electron window without the normal MyAvatar backend/model startup, renders deterministic fixture states, and writes PNGs to:
+
+```text
+artifacts/ui-regression/
+```
+
+Generated screenshots are intentionally gitignored. They are local QA artifacts, not source assets.
+
+The default fixture set is:
+
+- `compact`
+- `chat`
+- `rivet`
+- `chat-rivet`
+- `menu`
+- `picker`
+- `running`
+- `approval`
+- `complete`
+- `offline`
+- `limited`
+
+To capture a smaller subset:
+
+```bash
+MYAVATAR_UI_STATES=compact,running,approval npm run test:ui:screenshots
+```
+
+Fixture mode uses fixed Rivet artwork, fixed project/task copy, deterministic CPU/RAM placeholders, disabled animation/transitions, and no live WebSocket, microphone, calendar, or model dependency. Normal app startup does not mount fixture mode unless the explicit `?fixture=<state>` query is present.
+
+Screenshot review should concentrate on shell position, clipping, overlap, visual hierarchy, contextual task actions, and state consistency. Behavioral correctness remains covered by the JavaScript state tests.
+
+## Future baseline comparison
+
+The current harness produces deterministic captures for human review. The next stage can add approved baseline images and pixel-diff thresholds once the current visual design is considered stable enough to avoid intentional polish changes creating excessive baseline churn.
