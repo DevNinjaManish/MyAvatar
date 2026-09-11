@@ -237,7 +237,7 @@ $('local-calendar-form').onsubmit=event=>{event.preventDefault();const title=$('
 setWorkspaceMode('coding',false);
 function requestCalendarLayout(open){void window.desktop?.widgetCalendar?.({open:Boolean(open)});}
 function requestCreativeLayout(open){void window.desktop?.widgetSpecialist?.(Boolean(open));}
-$('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar'),opening=panel.hidden;window.closeAttachedWorkspace?.();panel.hidden=!opening;document.body.classList.toggle('widget-calendar-open',opening);syncSpecialistState('calendar',opening);requestCalendarLayout(opening);if(opening){renderMiniCalendar();void loadMiniCalendar();}};
+ $('widget-calendar-toggle').onclick=()=>{const panel=$('widget-mini-calendar'),opening=panel.hidden;if(opening)window.closeWidgetUtilities?.('calendar');panel.hidden=!opening;document.body.classList.toggle('widget-calendar-open',opening);syncSpecialistState('calendar',opening);requestCalendarLayout(opening);if(opening){renderMiniCalendar();void loadMiniCalendar();}};
 $('widget-mini-calendar-close').onclick=()=>{$('widget-mini-calendar').hidden=true;document.body.classList.remove('widget-calendar-open');syncSpecialistState('calendar',false);requestCalendarLayout(false);};
 $('widget-mini-calendar-refresh').onclick=()=>void loadMiniCalendar();
 $('widget-calendar-prev').onclick=()=>{miniCalendarMonth.setMonth(miniCalendarMonth.getMonth()-1);renderMiniCalendar();};
@@ -254,7 +254,7 @@ function renderCreativeWorkspace(botId){
   : [['Brief','Clarify the screen or product moment'],['Key decision','Choose the clearest hierarchy'],['Critique','Review spacing, contrast, and emphasis'],['Output','Design notes and visual prompts appear in chat']];
  for(const [label,value] of rows){const row=document.createElement('div');row.className='widget-specialist-row';const key=document.createElement('span');key.textContent=label;const text=document.createElement('strong');text.textContent=value;row.append(key,text);content.append(row);}
 }
- $('widget-creative-toggle').onclick=()=>{const panel=$('widget-creative-workspace'),opening=panel.hidden;if(opening)window.closeAttachedWorkspace?.();renderCreativeWorkspace(config?.conversation?.persona);panel.hidden=!opening;document.body.classList.toggle('widget-creative-open',opening);syncSpecialistState('creative',opening);requestCreativeLayout(opening);};
+ $('widget-creative-toggle').onclick=()=>{const panel=$('widget-creative-workspace'),opening=panel.hidden;if(opening)window.closeWidgetUtilities?.('creative');renderCreativeWorkspace(config?.conversation?.persona);panel.hidden=!opening;document.body.classList.toggle('widget-creative-open',opening);syncSpecialistState('creative',opening);requestCreativeLayout(opening);};
 $('widget-creative-close').onclick=()=>{$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open','widget-creative-context-open');syncSpecialistState('creative',false);requestCreativeLayout(false);};
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;
@@ -515,5 +515,6 @@ function closeWidgetUtilities(keep=''){
  if(keep!=='creative'){$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open');syncSpecialistState('creative',false);requestCreativeLayout(false);}
  if(keep!=='coding')window.closeCodingWorkspace?.();
 }
+window.closeWidgetUtilities=closeWidgetUtilities;
 $('widget-chat-toggle').onclick=()=>setWidgetChat(!document.body.classList.contains('widget-chat-open'));
 $('widget-chat-close').onclick=()=>setWidgetChat(false);

@@ -202,6 +202,8 @@ test('bot changes clear every attached widget surface before rendering the next 
   const panels=readFileSync(new URL('../../src/widget/panels.js',import.meta.url),'utf8');
   assert.match(runtime,/function syncBotUI\(\)\{\s*closeWidgetUtilities\(\);/);
   assert.match(runtime,/function closeWidgetUtilities\(keep=''\)\{[\s\S]*widget-mini-calendar[\s\S]*widget-creative-workspace[\s\S]*closeCodingWorkspace/);
-  assert.match(runtime,/if\(opening\)window\.closeAttachedWorkspace\?\.\(\);renderCreativeWorkspace/);
+  assert.match(runtime,/if\(opening\)window\.closeWidgetUtilities\?\.\('creative'\);renderCreativeWorkspace/);
+  assert.match(runtime,/window\.closeWidgetUtilities=closeWidgetUtilities/);
+  assert.match(panels,/if \(!state\.open\) win\.closeWidgetUtilities\?\.\('coding'\);/);
   assert.match(panels,/win\.closeCodingWorkspace = \(\) => dispatch\(\{type: 'close-tools'\}\);/);
 });

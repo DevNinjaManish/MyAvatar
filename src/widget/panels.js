@@ -393,6 +393,7 @@ export function mountWidgetPanels(doc, desktop) {
   // Core panel controls.
   on($('widget-coding-tools'), 'click', () => {
     closeMenus();
+    if (!state.open) win.closeWidgetUtilities?.('coding');
     dispatch({type: 'toggle-tools'});
     if (state.open) $('widget-panels-title').focus({preventScroll: true});
   });
