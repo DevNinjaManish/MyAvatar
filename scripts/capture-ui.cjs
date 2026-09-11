@@ -4,7 +4,7 @@ const path=require('node:path');
 
 const ROOT=path.resolve(__dirname,'..');
 const OUTPUT=path.join(ROOT,'artifacts','ui-regression');
-const STATES=(process.env.MYAVATAR_UI_STATES||'compact,chat,rivet,chat-rivet,menu,picker,running,approval,complete,offline,limited')
+const STATES=(process.env.MYAVATAR_UI_STATES||'compact,listening,thinking,speaking,chat,rivet,chat-rivet,menu,picker,running,approval,blocked,complete,cancelled,offline,limited,limited-approval,speaking-running,wide-diff')
   .split(',').map(value=>value.trim()).filter(Boolean);
 
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
