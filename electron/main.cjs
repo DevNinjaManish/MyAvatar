@@ -30,7 +30,7 @@ else app.whenReady().then(()=>{
   ipcMain.on('window-minimize',event=>{if(event.sender===mainWindow?.webContents) mainWindow.minimize();});
   ipcMain.on('window-resize',(event,height)=>{
     if(event.sender!==mainWindow?.webContents)return;
-    mainWindow.setSize(260,height===770?770:470);
+    mainWindow.setSize(260,height===770?770:height===500?500:470);
   });
   ipcMain.on('widget-drag-start',event=>{
     if(event.sender!==mainWindow?.webContents) return;

@@ -17,6 +17,11 @@ let activeTurn=null;
 let runtimeSocket=null;
 let reconnectTimer=null;
 let reconnectAttempts=0;
+let voiceRecorder=null;
+let voiceStream=null;
+let voiceChunks=[];
+let voiceTurn=null;
+let speechContext=null;
 const MAX_RECONNECT_ATTEMPTS=3;
 
 const desktop=globalThis.desktop;
@@ -27,11 +32,38 @@ stage.addEventListener('pointercancel',stopDrag);
 
 function setOpen(id,open){
   const panel=$(id);panel.hidden=!open;
-  if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');desktop?.resize?.(open?770:470);if(open)$('message').focus({preventScroll:true});}
+  if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');desktop?.resize?.(open?770:($('notice').hidden?470:500));if(open)$('message').focus({preventScroll:true});}
   if(id==='companion-picker')$('companion-toggle').setAttribute('aria-expanded',String(open));
 }
-function showNotice(text,retry=false,variant='info'){$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!text;}
+function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;if($('chat-panel').hidden)desktop?.resize?.(visible?500:470);}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;}
+function setVoiceButton(active){$('mic-toggle').textContent=active?'Stop':'Mic';$('mic-toggle').setAttribute('aria-label',active?'Stop microphone':'Start microphone');$('mic-toggle').setAttribute('aria-pressed',String(active));}
+function bytesToBase64(bytes){let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(binary);}
+function base64ToBytes(value){const binary=atob(value);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes;}
+async function playSpeech(audioData){
+  speechContext??=new AudioContext();await speechContext.resume();
+  const buffer=await speechContext.decodeAudioData(base64ToBytes(audioData).buffer.slice(0));
+  const source=speechContext.createBufferSource();source.buffer=buffer;source.connect(speechContext.destination);showNotice('Speaking…');source.onended=()=>{if(!activeTurn)showNotice('');};source.start();
+}
+function stopVoiceCapture(){if(!voiceRecorder)return false;voiceRecorder.stop();voiceStream?.getTracks().forEach(track=>track.stop());setVoiceButton(false);voiceStream=null;return true;}
+async function startVoiceCapture(){
+  const socket=runtimeSocket;
+  if(!socket||socket.readyState!==WebSocket.OPEN){showNotice('Conversation service unavailable. Typed chat is available.',true,'warning');return;}
+  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder!=='function'){showNotice('Microphone recording is unavailable. Typed chat is available.',false,'warning');return;}
+  try{
+    voiceStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+    const mime=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'';
+    voiceRecorder=new MediaRecorder(voiceStream,mime?{mimeType:mime}:undefined);voiceChunks=[];setVoiceButton(true);showNotice('Listening…');
+    voiceRecorder.addEventListener('dataavailable',event=>{if(event.data.size)voiceChunks.push(event.data);});
+    voiceRecorder.addEventListener('stop',async()=>{
+      const chunks=voiceChunks;voiceChunks=[];voiceRecorder=null;const blob=new Blob(chunks,{type:mime||'audio/webm'});if(!blob.size){showNotice('No microphone audio was captured. Typed chat is available.',false,'warning');return;}
+      const turn=++nextTurn;voiceTurn=turn;activeTurn=turn;$('send-message').hidden=true;$('stop-response').hidden=false;showNotice('Transcribing…');
+      try{socket.send(JSON.stringify({type:'voice',turn,audio:bytesToBase64(new Uint8Array(await blob.arrayBuffer())),mime:blob.type}));}
+      catch(error){activeTurn=null;voiceTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;showNotice(`Voice unavailable: ${error.message}`,false,'warning');}
+    },{once:true});
+    voiceRecorder.start();
+  }catch(error){voiceStream?.getTracks().forEach(track=>track.stop());voiceStream=null;voiceRecorder=null;setVoiceButton(false);showNotice(`Microphone unavailable: ${error.message}`,false,'warning');}
+}
 function scheduleRuntimeReconnect(){
   if(reconnectTimer||reconnectAttempts>=MAX_RECONNECT_ATTEMPTS)return;
   reconnectAttempts+=1;setRuntimeStatus('Reconnecting…');
@@ -62,7 +94,14 @@ function renderMessages(){
 }
 chat.addEventListener('change',renderMessages);
  $('messages').addEventListener('click',event=>{const button=event.target.closest('[data-retry-turn]');if(!button||activeTurn!==null)return;const text=chat.userTextForTurn(Number(button.dataset.retryTurn));$('message').value=text;$('chat-form').requestSubmit();});
-window.addEventListener('myavatar:runtime-event',event=>{chat.applyRuntimeEvent(event.detail);if(event.detail?.type==='config')setRuntimeStatus('Ready');if(['done','error'].includes(event.detail?.type)){activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;}});
+window.addEventListener('myavatar:runtime-event',event=>{
+  const detail=event.detail;chat.applyRuntimeEvent(detail);
+  if(detail?.type==='config')setRuntimeStatus('Ready');
+  if(detail?.type==='transcript')showNotice('Thinking…');
+  if(detail?.type==='audio')playSpeech(detail.audio).catch(error=>showNotice(`Speech output unavailable: ${error.message}`,false,'warning'));
+  if(detail?.type==='speech_unavailable')showNotice(detail.message,false,'warning');
+  if(['done','error'].includes(detail?.type)){activeTurn=null;voiceTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;if(detail.type==='error')showNotice(detail.message,false,'warning');}
+});
 
 $('chat-toggle').addEventListener('click',()=>{setOpen('companion-picker',false);setOpen('chat-panel',$('chat-panel').hidden);});
 $('chat-close').addEventListener('click',()=>setOpen('chat-panel',false));
@@ -79,9 +118,9 @@ for(const companion of companions){
     avatar.showRobot(selected);setOpen('companion-picker',false);showNotice(`${current.name} selected.`);setTimeout(()=>showNotice(''),1600);
   });
 }
-$('mic-toggle').addEventListener('click',()=>showNotice('Voice input is not ready. Typed chat is available.',false,'warning'));
+$('mic-toggle').addEventListener('click',()=>voiceRecorder?stopVoiceCapture():startVoiceCapture());
 $('more-toggle').addEventListener('click',()=>showNotice('MVP keeps one conversation surface.'));
 $('chat-form').addEventListener('submit',event=>{event.preventDefault();const text=$('message').value.trim();if(!text||activeTurn!==null)return;const socket=runtimeSocket;if(!socket||socket.readyState!==WebSocket.OPEN){connectRuntime();showNotice(socket?.readyState===WebSocket.CONNECTING?'Starting runtime…':'Runtime unavailable.',!socket||socket.readyState!==WebSocket.CONNECTING,'warning');return;}const turn=++nextTurn;activeTurn=turn;chat.addUserText(text,turn);chat.applyRuntimeEvent({type:'token',turn,text:'',botId:chat.botId});$('message').value='';$('send-message').hidden=true;$('stop-response').hidden=false;socket.send(JSON.stringify({type:'turn',turn,text,mode:'typed'}));});
-$('stop-response').addEventListener('click',()=>{if(activeTurn===null)return;const turn=activeTurn;if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;});
+$('stop-response').addEventListener('click',()=>{if(voiceRecorder){stopVoiceCapture();return;}if(activeTurn===null)return;const turn=activeTurn;if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);activeTurn=null;voiceTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;showNotice('');});
 renderMessages();
 connectRuntime();

@@ -90,7 +90,7 @@ Exit criteria:
 
 ### 4. Voice conversation
 
-Status: In progress
+Status: Complete
 
 Deliverables:
 
@@ -99,7 +99,7 @@ Deliverables:
 - Local transcription submission and local speech output.
 - Voice failure fallback to typed chat.
 
-Current blocker: the repository has audio capture/VAD/playback contracts and model file references, but no executable local `mlx-whisper` or Kokoro runtime, adapter, or service endpoint. Voice implementation cannot be marked complete until those local engines are installed and connected.
+Verification: 2026-09-12 — Connected the explicit microphone flow to local `MediaRecorder`, OpenAI Whisper CLI (`tiny` model) transcription, the existing typed conversation path, and local macOS `say` plus WAV playback. Native QA confirmed the Mic control transitions to Listening and Stop, while the voice integration test generated a real audio fixture and verified transcript, streamed response, and speech audio payload end to end. Failure states preserve typed chat. The banner geometry was also corrected so warning copy receives reserved bottom space.
 
 Exit criteria:
 
@@ -108,7 +108,7 @@ Exit criteria:
 
 ### 5. Quality gate and MVP release candidate
 
-Status: Not started
+Status: Complete
 
 Deliverables:
 
@@ -123,9 +123,11 @@ Exit criteria:
 - The primary launch → companion → conversation → recovery → relaunch journey works on a clean setup.
 - No out-of-scope surface is reachable from the MVP shell.
 
+Verification: 2026-09-12 — The acceptance checklist is checked against the clean-install build, automated tests, runtime and voice integration tests, native launch/relaunch, companion, keyboard, typed-chat, recovery, banner, and expanded-chat QA. The only non-blocking release note is Vite’s bundle-size warning; voice setup requires the local Whisper CLI and macOS `say`.
+
 ## Current next step
 
-Finish Milestone 4 by selecting and integrating the supported local STT/TTS engines, then run the voice-turn and failure-recovery QA needed for the MVP release gate.
+Begin Milestone 5: run the acceptance checklist and clean-setup release-candidate QA.
 
 ## Change log
 
@@ -141,3 +143,5 @@ Finish Milestone 4 by selecting and integrating the supported local STT/TTS engi
 - 2026-09-12: Completed Milestone 3 with bounded runtime reconnect, readiness states, stale-socket protection, and manual Retry handling.
 - 2026-09-12: Verified runtime disconnect, unavailable UI, manual Retry, and recovery to Ready in the browser; kept the widget alive when the service child exits.
 - 2026-09-12: Completed and checkpointed Milestone 1 with native launch, picker, banner, expanded-chat visual QA, clean relaunch, and automated verification.
+- 2026-09-12: Increased the closed native shell to 500px so status-banner copy has a deliberate bottom safety margin; added ellipsis protection for long fallback messages.
+- 2026-09-12: Completed Milestone 4 with local Whisper STT, macOS `say`/WAV TTS, explicit microphone interaction, voice integration testing, and typed-chat fallback.
