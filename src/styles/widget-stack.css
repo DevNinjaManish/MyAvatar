@@ -147,6 +147,7 @@ body.widget.widget-wide-open #widget-code-wing { display: flex !important; }
 body.widget #widget-creative-workspace { overflow-y: auto !important; scrollbar-gutter: stable !important; }
 
 body.widget #widget-menu {
+  display: block !important;
   top: var(--widget-shell-menu-top) !important;
   right: var(--widget-shell-pad) !important;
   left: auto !important;
