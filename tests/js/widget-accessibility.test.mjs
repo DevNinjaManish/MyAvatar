@@ -14,11 +14,11 @@ test('widget semantics expose visible controls to assistive tech',()=>{
 
 test('accessibility controller owns focus return, Escape, and class-driven chat visibility',()=>{
   const code=readFileSync(new URL('../../src/widget/accessibility-controller.js',import.meta.url),'utf8');
-  assert.match(code,/bodyClass:'widget-chat-open'/);
+  assert.match(code,/className:'widget-chat-open'/);
   assert.match(code,/event\.key!==['"]Escape['"]/);
-  assert.match(code,/opener\.focus\(\)/);
+  assert.match(code,/opener\.focus\(\{preventScroll:true\}\)/);
   assert.match(code,/panel\.setAttribute\('aria-hidden'/);
-  assert.match(code,/attributeFilter:\['class'\]/);
+  assert.match(code,/observer\.observe\(doc\.body,\{attributes:true,attributeFilter:\['class'\]\}\)/);
 });
 
 test('compact chat and picker controls meet minimum target sizing',()=>{
