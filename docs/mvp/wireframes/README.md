@@ -18,6 +18,6 @@ Planned set: launch/ready, companion picker, closed chat, open chat, responding/
 - [02 — Companion picker](02-companion-picker.md)
 - [03 — Closed and open chat](03-chat-closed-open.md)
 - [04 — Conversation states](04-conversation-states.md)
-- [05 — Optional microphone states](05-audio-states.md)
+- [05 — Voice chat states](05-audio-states.md)
 - [06 — Recovery, quit, and relaunch](06-recovery-relaunch.md)
 - [07 — Focus and geometry contract](07-focus-and-geometry.md)

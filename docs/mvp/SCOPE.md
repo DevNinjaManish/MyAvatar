@@ -18,7 +18,7 @@
 ### Conversation
 
 - Typed text input and send.
-- Optional microphone input behind explicit permission and a clear disabled state when unavailable.
+- Voice chat through the local microphone and speech output, behind explicit permission and clear unavailable states.
 - Streaming or complete assistant response shown as readable text.
 - Stop response, clear conversation, and close/reopen chat.
 - Stable loading, success, interruption, and error states.
@@ -28,7 +28,7 @@
 
 - A local backend connection with a per-launch authenticated channel.
 - One supported local model configuration documented in setup.
-- Text-only degradation when speech or another optional engine is unavailable.
+- Typed chat remains available as the fallback when microphone, speech recognition, or speech output is unavailable.
 - Bounded reconnect behavior with a user-visible retry path.
 
 ### Documentation and QA
@@ -52,8 +52,9 @@
 2. Choose companion → picker opens → selection updates name, art, and accent → picker closes.
 3. Open chat → input is visible → type message → send → response appears.
 4. Start response → press Stop → response visibly becomes interrupted and controls return to Ready.
-5. Runtime unavailable → widget explains the problem → Retry reconnects or remains safely unavailable.
-6. Quit and relaunch → one widget appears without a second window or full-screen surface.
+5. Start voice chat → speak → local recognition sends the turn → spoken response plays in the widget.
+6. Runtime or microphone unavailable → widget explains the problem → Retry or typed chat remains available.
+7. Quit and relaunch → one widget appears without a second window or full-screen surface.
 
 ## Product constraints
 

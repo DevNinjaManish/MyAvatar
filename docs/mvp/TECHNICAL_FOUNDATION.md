@@ -17,7 +17,7 @@ Renderer
   ├─ companion picker
   ├─ chat store and message view
   ├─ typed input flow
-  └─ optional microphone adapter
+  └─ microphone and playback adapters
 
 Conversation service (next slice)
   ├─ authenticated WebSocket session
@@ -31,7 +31,7 @@ Conversation service (next slice)
 - Main process owns window geometry, lifecycle, permission boundaries, and allowed local bridges.
 - Local service owns model orchestration and conversation state, never UI layout.
 - Shared contracts use explicit typed events with session, companion, request, and turn identity.
-- Optional audio cannot prevent typed chat from working.
+- Voice is a first-class MVP path, but audio failure cannot prevent typed chat from working.
 
 ## State model
 
@@ -40,7 +40,7 @@ The MVP needs separate, small state machines for:
 - `app`: starting, ready, unavailable, stopping;
 - `chat`: closed, open, sending, responding, interrupted, failed;
 - `companion`: selected identity and selection transition;
-- `audio`: unavailable, permission-needed, ready, listening, stopped.
+- `audio`: unavailable, permission-needed, ready, listening, speaking, stopped.
 
 No visual label may be derived from an arbitrary backend string. Each state maps to an authored label and a documented recovery action.
 
@@ -52,7 +52,7 @@ During implementation:
 - Put wireframes under `docs/mvp/wireframes/`.
 - Put approved design references under `docs/mvp/design/`.
 - Do not reintroduce deleted prototype surfaces without an explicit scope decision.
-- Build one vertical slice at a time: shell, typed chat, service contract, then optional audio.
+- Build one vertical slice at a time: shell, local conversation service, typed chat, then voice input/output on the same contract.
 
 ## Definition of done for planning
 

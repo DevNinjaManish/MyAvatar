@@ -29,7 +29,7 @@ config.json        small local model and default-companion configuration
 models/            ignored local model assets with a checked-in README
 src/app/           renderer entry point and MVP interaction wiring
 src/avatar/        avatar rendering primitives
-src/audio/         small audio contracts reserved for the optional voice slice
+src/audio/         microphone, voice activity, and playback contracts
 src/conversation/  chat state and event contracts
 src/styles/        the single MVP stylesheet
 electron/          one native widget window and minimal preload bridge

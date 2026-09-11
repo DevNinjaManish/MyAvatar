@@ -1,6 +1,6 @@
 # Wireframe 05 — Optional microphone states
 
-The microphone is secondary to typed chat and must never block it.
+Voice chat is a first-class MVP path. Typed chat remains available whenever audio is unavailable and must never be blocked by microphone permissions or speech failures.
 
 ```text
 Permission needed       Listening              Muted / unavailable
