@@ -22,7 +22,9 @@ test('approval and blocked steps stay visually distinct', () => {
 });
 
 test('workspace model is safe with missing task data', () => {
-  assert.deepEqual(rivetWorkspaceModel(),{phase:'IDLE',status:'idle',steps:[]});
+  assert.deepEqual(rivetWorkspaceModel(),{
+    phase:'IDLE',status:'idle',toolSummary:'',observation:'',refs:[],steps:[],
+  });
 });
 
 test('task presentation exposes contextual actions', () => {
