@@ -12,7 +12,9 @@ const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, m
  * reserved left column, so opening one cannot move the companion on the right.
  */
 function widgetLayout(anchor, view, area) {
-  const expanded = Boolean(view.tools || view.wide || view.calendar || view.menu);
+  // Menus live entirely inside the companion column. Only specialist surfaces
+  // need the reserved left rail and the wider native hit-test frame.
+  const expanded = Boolean(view.tools || view.wide || view.calendar);
   const width = Math.min(expanded ? WIDTH : COMPACT_WIDTH, area.width);
   const height = Math.min(expanded || view.chat ? UTILITY_HEIGHT : COMPACT_HEIGHT, area.height);
   const x = clamp(anchor.x + (expanded ? 0 : WIDTH - COMPACT_WIDTH), area.x, area.x + area.width - width);

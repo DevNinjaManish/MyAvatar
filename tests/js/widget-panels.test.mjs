@@ -60,6 +60,7 @@ test('only disclosure preferences are persisted, never task or project content',
 });
 test('the closed companion owns only its visible right column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:COMPACT_HEIGHT}));
 test('chat-only mode keeps the bot visible in the narrow right column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{chat:true},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:UTILITY_HEIGHT}));
+test('More options stays inside the compact companion frame',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{menu:true},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:COMPACT_HEIGHT}));
 test('closed chat is non-interactive even if a compositor briefly retains its layer',()=>{
   const stack=readFileSync(new URL('../../src/styles/widget-stack.css',import.meta.url),'utf8');
   assert.match(stack,/body\.widget:not\(\.widget-chat-open\) #widget-chat \{ pointer-events: none !important; visibility: hidden !important; \}/);
