@@ -24,6 +24,23 @@ class BotBehaviorTests(unittest.TestCase):
             self.assertIn('do not add a second competing suggestion', prompt)
             self.assertIn('end every reply with an offer to help', prompt)
 
+    def test_every_bot_has_acknowledgement_recovery_and_response_rhythm(self):
+        for bot_id, behavior in BEHAVIORS.items():
+            self.assertTrue(behavior.acknowledgement_hint, bot_id)
+            self.assertTrue(behavior.recovery_hint, bot_id)
+            self.assertTrue(behavior.response_rhythm, bot_id)
+            prompt = behavior_prompt(bot_id)
+            self.assertIn(behavior.acknowledgement_hint, prompt)
+            self.assertIn(behavior.recovery_hint, prompt)
+            self.assertIn(behavior.response_rhythm, prompt)
+
+    def test_nova_is_primary_companion_and_avoids_assistant_filler(self):
+        nova = BEHAVIORS['nova']
+        self.assertEqual(nova.role, 'primary personal companion')
+        self.assertIn('Lead with the useful answer', nova.response_rhythm)
+        self.assertIn('assistant-like filler', nova.response_rhythm)
+        self.assertIn('warm and practical', nova.recovery_hint)
+
     def test_next_step_policy_is_role_specific(self):
         instructions = {bot: next_step_policy(bot)['instruction'] for bot in BEHAVIORS}
         self.assertIn('urgency', instructions['butler'])
@@ -46,6 +63,12 @@ class BotBehaviorTests(unittest.TestCase):
         self.assertIn('active marketing objective', continuity['pixel'])
         self.assertIn('active design brief', continuity['luma'])
         self.assertIn('must not expand coding authority', continuity['robot'])
+
+    def test_policy_exports_shared_behavior_dimensions(self):
+        policy = next_step_policy('nova')
+        self.assertIn('acknowledgement', policy)
+        self.assertIn('recovery', policy)
+        self.assertIn('rhythm', policy)
 
     def test_profile_application_appends_behavior_without_mutating_repo_defaults(self):
         config_path = Path('config.json')
