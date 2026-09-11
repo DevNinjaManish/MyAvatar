@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {inputLevel} from '../../src/audio/engine.js';
-import {clampMicLevel,presenceStateFromEvent,thinkingProfile} from '../../src/avatar/presence-orchestrator.js';
+import {clampMicLevel,motionTuning,presenceStateFromEvent,thinkingProfile,transitionPhase} from '../../src/avatar/presence-orchestrator.js';
 
 test('microphone energy is finite bounded and independent from playback amplitude',()=>{
   assert.equal(inputLevel(new Float32Array([0,0,0])),0);
@@ -33,4 +33,27 @@ test('all five bots have distinct authored thinking profiles where intended',()=
   assert.equal(thinkingProfile('pixel'),'pixel');
   assert.equal(thinkingProfile('luma'),'luma');
   assert.equal(thinkingProfile('../unknown'),'nova');
+});
+
+test('shared lifecycle adds attention onset and post-speech settling without inventing new backend states',()=>{
+  assert.equal(transitionPhase('IDLE','LISTENING'),'attentive');
+  assert.equal(transitionPhase('SPEAKING','IDLE'),'settling');
+  assert.equal(transitionPhase('LISTENING','THINKING'),'active');
+  assert.equal(transitionPhase('THINKING','SPEAKING'),'active');
+});
+
+test('motion tuning is personality-specific and Nova settles warmly rather than snapping idle',()=>{
+  const nova=motionTuning('nova');
+  const sterling=motionTuning('butler');
+  const pixel=motionTuning('pixel');
+  const luma=motionTuning('luma');
+  const rivet=motionTuning('robot');
+  assert.equal(nova.motion,'warm');
+  assert.equal(sterling.motion,'composed');
+  assert.equal(pixel.motion,'snappy');
+  assert.equal(luma.motion,'calm');
+  assert.equal(rivet.motion,'mechanical');
+  assert.ok(nova.settleMs>pixel.settleMs);
+  assert.ok(nova.listenScale>sterling.listenScale);
+  assert.ok(pixel.attentionMs<nova.attentionMs);
 });
