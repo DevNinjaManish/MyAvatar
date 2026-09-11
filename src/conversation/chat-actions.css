@@ -1,1 +1,1 @@
-.message-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.message-action{min-height:28px;padding:4px 8px;border-radius:8px}
+.message-actions{display:flex;gap:var(--ds-space-2);flex-wrap:wrap;margin-top:7px}.message-action{min-height:var(--ds-control-sm);padding:var(--ds-space-1) var(--ds-space-3);border-radius:var(--ds-radius-sm)}
