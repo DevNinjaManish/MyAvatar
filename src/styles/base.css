@@ -181,8 +181,9 @@ body.widget[data-bot] #stage::before {
 body.widget #widget-drag {
   display:flex;
   position:absolute;
-  top:11px;
-  left:calc(50% - 24px);
+  top:28px;
+  right:calc(var(--widget-shell-pad) + var(--widget-shell-column-width) / 2 - 24px);
+  left:auto;
   width:48px;
   height:20px;
   z-index:2;
