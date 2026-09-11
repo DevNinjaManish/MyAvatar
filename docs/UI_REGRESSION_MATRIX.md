@@ -85,6 +85,10 @@ Fixture mode uses fixed Rivet artwork, fixed project/task copy, deterministic CP
 
 Screenshot review should concentrate on shell position, clipping, overlap, visual hierarchy, contextual task actions, and state consistency. Behavioral correctness remains covered by the JavaScript state tests.
 
-## Future baseline comparison
+## CI visual review gate
 
-The current harness produces deterministic captures for human review. The next stage can add approved baseline images and pixel-diff thresholds once the current visual design is considered stable enough to avoid intentional polish changes creating excessive baseline churn.
+Every `main` push and pull request now captures the same deterministic fixture set after JavaScript tests, Python tests, and the production build. GitHub Actions uploads the PNG set as a short-lived `ui-regression-<run number>` artifact for seven days.
+
+This is intentionally a **review gate**, not a fake pixel-perfect pass/fail signal. The current design is still being polished, so committing binary baselines and failing CI on arbitrary pixel thresholds would create noisy churn. The stable contracts are enforced by state/geometry/accessibility tests; the uploaded screenshots make clipping, overlap, density, hierarchy, and state contradictions inspectable without starting local models.
+
+When the visual design is explicitly frozen, the next step is to approve a baseline set and add a measured diff threshold. Until then, a green CI run means logic/build contracts passed and the canonical visual captures were successfully generated; it does not mean a human has approved every pixel.
