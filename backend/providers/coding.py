@@ -79,14 +79,14 @@ def _agent_request(messages: list[dict[str, str]]) -> tuple[str, Path] | None:
     return None
 
 
-async def inspect(messages: list[dict[str, str]], config: dict[str, Any]) -> str:
-    """Inspect supplied context, expanding it through Rivet's safe tool loop when marked."""
+async def inspect(messages: list[dict[str, str]], config: dict[str, Any], *, on_activity=None) -> str:
+    """Inspect context, streaming bounded read-only tool activity when available."""
     agent = _agent_request(messages)
     if agent is None:
         return await _chat(messages, config)
 
     request, root = agent
-    result = await run_coding_agent(request, config, _chat, root=root)
+    result = await run_coding_agent(request, config, _chat, root=root, on_activity=on_activity)
     plan = result['plan']
     tools = result.get('tools') or []
     if tools:
