@@ -119,6 +119,13 @@ body.widget #widget-chat {
   z-index: 30 !important;
 }
 body.widget.widget-chat-open #widget-chat { display: flex !important; }
+/* Chat-only mode stays in the visible right column instead of reserving the
+ * hidden specialist rail. Specialist surfaces still use the full stack. */
+body.widget.widget-chat-open:not(.widget-panels-open):not(.widget-calendar-open):not(.widget-wide-open) #widget-chat {
+  top: var(--widget-shell-platform-top) !important;
+  bottom: auto !important;
+  height: calc(var(--widget-shell-platform-height) + var(--widget-shell-tools-height) - 8px) !important;
+}
 
 /* Specialists occupy the reserved left rail. They never alter companion/chat geometry. */
 body.widget #widget-coding-panels,

@@ -12,7 +12,7 @@ const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, m
  * reserved left column, so opening one cannot move the companion on the right.
  */
 function widgetLayout(anchor, view, area) {
-  const expanded = Boolean(view.chat || view.tools || view.wide || view.calendar || view.menu);
+  const expanded = Boolean(view.tools || view.wide || view.calendar || view.menu);
   const width = Math.min(expanded ? WIDTH : COMPACT_WIDTH, area.width);
   const height = Math.min(expanded ? UTILITY_HEIGHT : COMPACT_HEIGHT, area.height);
   const x = clamp(anchor.x + (expanded ? 0 : WIDTH - COMPACT_WIDTH), area.x, area.x + area.width - width);

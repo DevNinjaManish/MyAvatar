@@ -59,7 +59,7 @@ test('only disclosure preferences are persisted, never task or project content',
   assert.deepEqual(saved,{expanded:['task']});
 });
 test('the closed companion owns only its visible right column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:COMPACT_HEIGHT}));
-test('chat uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
+test('chat-only mode stays in the visible compact column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{chat:true},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:COMPACT_HEIGHT}));
 test('coding uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
 test('calendar leaves room for month controls and event entries within the display',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,Math.min(CALENDAR_HEIGHT,area.height)));
 test('chat+tools size is clamped to the work area',()=>{
@@ -73,7 +73,7 @@ test('specialists never expand or offset the native companion frame',()=>{
 test('specialist states expand from the same right-edge anchor',()=>{
   const anchor={x:40,y:100};
   const closed=widgetLayout(anchor,{},area).bounds;
-  for(const view of [{calendar:true,wide:true},{tools:true,wide:true},{chat:true},{chat:true,tools:true,wide:true}]){const open=widgetLayout(anchor,view,area).bounds;assert.equal(open.x+open.width,closed.x+closed.width);assert.equal(open.width,WIDTH);}
+  for(const view of [{calendar:true,wide:true},{tools:true,wide:true},{chat:true},{chat:true,tools:true,wide:true}]){const open=widgetLayout(anchor,view,area).bounds;assert.equal(open.x+open.width,closed.x+closed.width);assert.equal(open.width,view.chat&&!view.tools&&!view.wide&&!view.calendar?COMPACT_WIDTH:WIDTH);}
 });
 test('opening and closing a stack leaves the anchor unchanged',()=>{
   const anchor={x:1100,y:24};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
