@@ -76,12 +76,17 @@ export function mountRivetWorkspace(win, doc) {
     toggle.addEventListener('click', () => { const open = toggle.getAttribute('aria-expanded') !== 'true'; toggle.setAttribute('aria-expanded', String(open)); body.hidden = !open; win.__myavatarWidgetAccessibility?.sync?.(); });
   }
 
+  let activityTrail = [];
+  let currentModel = rivetWorkspaceModel();
+  const mergeRefs = refs => [...new Set([...(currentModel.refs || []), ...(Array.isArray(refs) ? refs : [])])].filter(Boolean).slice(0, 8);
+
   const renderEvidence = model => {
-    const visible = !!(model.toolSummary || model.observation || model.refs.length);
+    const visible = !!(model.toolSummary || model.observation || model.refs.length || activityTrail.length);
     evidence.hidden = !visible;
     if (!visible) { evidence.replaceChildren(); return; }
     const fragment = doc.createDocumentFragment();
-    if (model.toolSummary) { const activity = doc.createElement('div'); activity.className = 'rivet-evidence-activity'; activity.textContent = model.toolSummary; fragment.append(activity); }
+    const activeLabel = activityTrail.at(-1)?.label || model.toolSummary;
+    if (activeLabel) { const activity = doc.createElement('div'); activity.className = 'rivet-evidence-activity'; activity.textContent = activeLabel; fragment.append(activity); }
     if (model.refs.length) {
       const files = doc.createElement('div'); files.className = 'rivet-evidence-files';
       const label = doc.createElement('span'); label.className = 'rivet-evidence-label'; label.textContent = `Evidence · ${model.refs.length} file${model.refs.length === 1 ? '' : 's'}`;
@@ -89,23 +94,39 @@ export function mountRivetWorkspace(win, doc) {
       model.refs.forEach(path => { const item = doc.createElement('code'); item.textContent = path; list.append(item); });
       files.append(label, list); fragment.append(files);
     }
+    if (activityTrail.length > 1) {
+      const history = doc.createElement('div'); history.className = 'rivet-activity-history';
+      const label = doc.createElement('span'); label.className = 'rivet-evidence-label'; label.textContent = 'Session activity'; history.append(label);
+      activityTrail.slice(-6).forEach(item => { const row = doc.createElement('div'); row.className = 'rivet-activity-row'; row.textContent = item.label; history.append(row); });
+      fragment.append(history);
+    }
     if (model.observation) { const observation = doc.createElement('p'); observation.className = 'rivet-evidence-observation'; observation.textContent = model.observation; fragment.append(observation); }
     evidence.replaceChildren(fragment);
   };
 
   const render = detail => {
-    const model = rivetWorkspaceModel(detail); renderEvidence(model);
-    if (!model.steps.length) {
-      timeline.innerHTML = '<div class="rivet-timeline-empty">Ready when you are.</div>'; timeline.dataset.phase = model.phase; timeline.dataset.status = model.status; return;
+    currentModel = rivetWorkspaceModel(detail); renderEvidence(currentModel);
+    if (!currentModel.steps.length) {
+      timeline.innerHTML = '<div class="rivet-timeline-empty">Ready when you are.</div>'; timeline.dataset.phase = currentModel.phase; timeline.dataset.status = currentModel.status; return;
     }
-    timeline.replaceChildren(...model.steps.map(step => {
+    timeline.replaceChildren(...currentModel.steps.map(step => {
       const row = doc.createElement('div'); row.className = 'rivet-step'; row.dataset.status = step.status;
       const glyph = doc.createElement('span'); glyph.className = 'rivet-step-glyph'; glyph.setAttribute('aria-hidden', 'true'); glyph.textContent = step.glyph;
       const label = doc.createElement('span'); label.className = 'rivet-step-label'; label.textContent = step.label; row.append(glyph, label); return row;
     }));
-    timeline.dataset.phase = model.phase; timeline.dataset.status = model.status;
+    timeline.dataset.phase = currentModel.phase; timeline.dataset.status = currentModel.status;
   };
 
-  const onTask = event => render(event?.detail || {}); win.addEventListener('myavatar:agent-task', onTask);
-  return {dispose() { win.removeEventListener('myavatar:agent-task', onTask); }};
+  const onTask = event => render(event?.detail || {});
+  const onActivity = event => {
+    const detail = event?.detail || {};
+    const label = typeof detail.label === 'string' ? detail.label.trim().slice(0, 160) : '';
+    if (!label) return;
+    if (activityTrail.at(-1)?.label !== label) activityTrail = [...activityTrail, {label, kind:detail.kind || 'activity'}].slice(-8);
+    currentModel = {...currentModel, refs:mergeRefs(detail.refs)};
+    renderEvidence(currentModel);
+  };
+  win.addEventListener('myavatar:agent-task', onTask);
+  win.addEventListener('myavatar:rivet-activity', onActivity);
+  return {dispose() { win.removeEventListener('myavatar:agent-task', onTask); win.removeEventListener('myavatar:rivet-activity', onActivity); }};
 }
