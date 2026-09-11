@@ -30,9 +30,6 @@ export function noteClientMessage(data,win){
   try{
     const message=JSON.parse(data);
     if(message?.type==='turn'){
-      // Voice capture stays allocated in live mode, but its gate must close for
-      // every outgoing turn, including typed turns. This prevents background
-      // audio from starting a second turn while the first is still processing.
       suspendActiveLiveCapture();
       turnPlayback.beginTurn(message.turn);
     }else if(message?.type==='stop')turnPlayback.cancelTurn();
@@ -44,9 +41,6 @@ export function validApprovalDecision(detail){
   return Boolean(detail&&typeof detail.requestId==='string'&&detail.requestId.length>0&&detail.requestId.length<=128&&APPROVAL_DECISIONS.has(detail.decision));
 }
 
-/** Install before widget-runtime.js creates the socket. It filters obsolete runtime events
- * and coordinates turn/audio freshness without deriving authority from prose.
- */
 export function installRuntimeEventGuard(win=window){
   if(win.__myavatarRuntimeGuardInstalled)return;
   const NativeWebSocket=win.WebSocket;
@@ -55,7 +49,7 @@ export function installRuntimeEventGuard(win=window){
   win.WebSocket=new Proxy(NativeWebSocket,{
     construct(Target,args,newTarget){
       const socket=Reflect.construct(Target,args,newTarget===win.WebSocket?Target:newTarget);
-      const gate=new RuntimeEventGate();
+      let gate=new RuntimeEventGate();
       const nativeSend=socket.send.bind(socket);
       socket.send=data=>{noteClientMessage(data,win);return nativeSend(data);};
       const decide=event=>{
@@ -75,10 +69,10 @@ export function installRuntimeEventGuard(win=window){
         if(payload.type==='action_request')event.stopImmediatePropagation();
       },{capture:true});
       socket.addEventListener('close',()=>{
-        win.removeEventListener('myavatar:approval-decision',decide);
+        gate=new RuntimeEventGate();
         turnPlayback.cancelTurn();
         win.dispatchEvent(new CustomEvent('myavatar:socket-close'));
-      },{once:true});
+      });
       return socket;
     }
   });
