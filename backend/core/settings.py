@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.core.bot_behavior import behavior_prompt
+from backend.core.voice_personality import apply_voice_personality
 
 log = logging.getLogger('avatar.settings')
 SCHEMA_VERSION = 1
@@ -135,6 +136,8 @@ The legacy High identifier is mapped to Balanced for older callers.
         sections[section] = {**copy.deepcopy(defaults[section]), **copy.deepcopy(overrides)}
     sections['conversation'].update(persona=bot, system=identity['system'] + behavior_prompt(bot))
     sections['tts']['voice'] = identity['voice']
+    audio = config.setdefault('audio', copy.deepcopy(defaults['audio']))
+    apply_voice_personality(bot_id=bot, conversation=sections['conversation'], tts=sections['tts'], audio=audio)
     config.update(sections)
     config['performanceProfile'] = name
 
