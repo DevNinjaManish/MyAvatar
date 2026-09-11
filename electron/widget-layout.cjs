@@ -14,7 +14,7 @@ const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, m
 function widgetLayout(anchor, view, area) {
   const expanded = Boolean(view.tools || view.wide || view.calendar || view.menu);
   const width = Math.min(expanded ? WIDTH : COMPACT_WIDTH, area.width);
-  const height = Math.min(expanded ? UTILITY_HEIGHT : COMPACT_HEIGHT, area.height);
+  const height = Math.min(expanded || view.chat ? UTILITY_HEIGHT : COMPACT_HEIGHT, area.height);
   const x = clamp(anchor.x + (expanded ? 0 : WIDTH - COMPACT_WIDTH), area.x, area.x + area.width - width);
   const y = clamp(anchor.y, area.y, area.y + area.height - height);
 
