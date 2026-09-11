@@ -19,12 +19,17 @@ test('socket bridge preserves WebSocket constants and exposes latest socket',()=
   assert.equal(win.__myAvatarSocket,socket);assert.equal(win.WebSocket.OPEN,1);assert.equal(socket.url,'ws://local');
 });
 
-test('startup messages are replayed when legacy onmessage attaches late',async()=>{
+test('startup messages dispatch exactly once when legacy onmessage attaches late',async()=>{
   FakeSocket.instances=[];const win=makeWin();installSocketBridge(win);const socket=new win.WebSocket('ws://local');
-  const native=FakeSocket.instances[0];native.open();native.message('config');native.message('ready');
-  const received=[];socket.onmessage=event=>received.push(event.data);
+  const native=FakeSocket.instances[0];const observed=[];const received=[];
+  socket.addEventListener('message',event=>observed.push(event.data));
+  native.open();native.message('config');native.message('ready');
+  assert.deepEqual(observed,[]);
+  socket.onmessage=event=>received.push(event.data);
   await new Promise(resolve=>setTimeout(resolve,0));
-  assert.deepEqual(received,['config','ready']);socket.close();
+  assert.deepEqual(observed,['config','ready']);
+  assert.deepEqual(received,['config','ready']);
+  socket.close();
 });
 
 test('socket bridge reconnects after an unexpected close',async()=>{
