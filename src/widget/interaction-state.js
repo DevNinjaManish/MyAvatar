@@ -1,3 +1,5 @@
+import {botPresenceProfile,botStateLabel} from './bot-presence-profile.js';
+
 const ACTIVE_VOICE = new Set(['listening','thinking','speaking','preparing']);
 const ACTIVE_TASK = new Set(['UNDERSTANDING','CONTEXT','PLANNING','WORKING','VERIFYING']);
 
@@ -6,33 +8,30 @@ export function interactionPresentation({voiceState='ready', readiness={}, task=
   const overall = readiness?.overall || 'unknown';
   const phase = task?.phase || '';
   const taskStatus = task?.status || '';
+  const profile = botPresenceProfile(botId);
 
-  // Hard connectivity failure always wins: the companion cannot act while offline.
   if (socketClosed || overall === 'unavailable') {
-    return {state:'offline', label:'Offline', tone:'error', busy:false, runtime:'OFFLINE'};
+    return {state:'offline', label:profile.offline, tone:'error', busy:false, runtime:'OFFLINE', profile};
   }
-  // User-actionable task states must not be hidden by a degraded background service.
   if (task && botId === 'robot' && phase === 'NEEDS_APPROVAL') {
-    return {state:'awaiting-approval', label:'Awaiting approval', tone:'warning', busy:false, runtime:'APPROVAL'};
+    return {state:'awaiting-approval', label:'Awaiting approval', tone:'warning', busy:false, runtime:'APPROVAL', profile};
   }
-  // Voice is the most immediate foreground interaction while the companion is online.
   if (ACTIVE_VOICE.has(voice)) {
-    const labels = {listening:'Listening', thinking:'Thinking', speaking:'Speaking', preparing:'Preparing'};
-    return {state:voice, label:labels[voice], tone:'active', busy:true, runtime:labels[voice].toUpperCase()};
+    return {state:voice, label:botStateLabel(botId,voice), tone:'active', busy:true, runtime:voice.toUpperCase(), profile};
   }
   if (task && botId === 'robot' && ACTIVE_TASK.has(phase) && taskStatus === 'active') {
-    return {state:'working', label:'Rivet working', tone:'active', busy:true, runtime:'WORKING'};
+    return {state:'working', label:'Rivet working', tone:'active', busy:true, runtime:'WORKING', profile};
   }
   if (task && botId === 'robot' && (phase === 'BLOCKED' || taskStatus === 'blocked')) {
-    return {state:'task-blocked', label:'Needs attention', tone:'error', busy:false, runtime:'ATTENTION'};
+    return {state:'task-blocked', label:'Needs attention', tone:'error', busy:false, runtime:'ATTENTION', profile};
   }
   if (overall === 'degraded') {
-    return {state:'limited', label:'Ready · limited', tone:'warning', busy:false, runtime:'LIMITED'};
+    return {state:'limited', label:profile.limited, tone:'warning', busy:false, runtime:'LIMITED', profile};
   }
   if (overall === 'preparing' || overall === 'pending') {
-    return {state:'preparing', label:'Preparing', tone:'active', busy:true, runtime:'STARTING'};
+    return {state:'preparing', label:profile.preparing, tone:'active', busy:true, runtime:'STARTING', profile};
   }
-  return {state:'ready', label:'Ready', tone:'ready', busy:false, runtime:'LOCAL'};
+  return {state:'ready', label:profile.ready, tone:'ready', busy:false, runtime:'LOCAL', profile};
 }
 
 export function mountInteractionState(win=window, doc=document) {
@@ -53,12 +52,17 @@ export function mountInteractionState(win=window, doc=document) {
     });
     last = model;
     doc.body.dataset.interactionState = model.state;
+    doc.body.dataset.presenceMotion = model.profile.motion;
     const tools = $('widget-tools');
-    if (tools) tools.dataset.interactionState = model.state;
+    if (tools) {
+      tools.dataset.interactionState = model.state;
+      tools.dataset.presenceMotion = model.profile.motion;
+    }
     const status = $('widget-status');
     if (status) {
       if (status.textContent !== model.label) status.textContent = model.label;
       status.dataset.tone = model.tone;
+      status.setAttribute('aria-label',`${model.profile.name}: ${model.label}`);
     }
     const toolbar = doc.querySelector('.widget-toolbar');
     if (toolbar) toolbar.setAttribute('aria-busy', String(model.busy));
