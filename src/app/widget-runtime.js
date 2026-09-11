@@ -254,7 +254,7 @@ function renderCreativeWorkspace(botId){
   : [['Brief','Clarify the screen or product moment'],['Key decision','Choose the clearest hierarchy'],['Critique','Review spacing, contrast, and emphasis'],['Output','Design notes and visual prompts appear in chat']];
  for(const [label,value] of rows){const row=document.createElement('div');row.className='widget-specialist-row';const key=document.createElement('span');key.textContent=label;const text=document.createElement('strong');text.textContent=value;row.append(key,text);content.append(row);}
 }
-$('widget-creative-toggle').onclick=()=>{const panel=$('widget-creative-workspace'),opening=panel.hidden;renderCreativeWorkspace(config?.conversation?.persona);panel.hidden=!opening;document.body.classList.toggle('widget-creative-open',opening);syncSpecialistState('creative',opening);requestCreativeLayout(opening);};
+ $('widget-creative-toggle').onclick=()=>{const panel=$('widget-creative-workspace'),opening=panel.hidden;if(opening)window.closeAttachedWorkspace?.();renderCreativeWorkspace(config?.conversation?.persona);panel.hidden=!opening;document.body.classList.toggle('widget-creative-open',opening);syncSpecialistState('creative',opening);requestCreativeLayout(opening);};
 $('widget-creative-close').onclick=()=>{$('widget-creative-workspace').hidden=true;document.body.classList.remove('widget-creative-open','widget-creative-context-open');syncSpecialistState('creative',false);requestCreativeLayout(false);};
 function openSettings(){closeWidgetMenu(false);if(document.body.classList.contains('widget')){window.desktop?.mode('full');setTimeout(()=>$('settings').showModal(),180);}else $('settings').showModal();}
 $('settings-toggle').onclick=openSettings;

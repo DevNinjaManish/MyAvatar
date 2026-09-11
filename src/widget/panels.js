@@ -665,7 +665,9 @@ export function mountWidgetPanels(doc, desktop) {
   render();
   void syncProjectState();
   win.openAttachedWorkspace = id => dispatch({type: 'open-wide', id});
-  win.closeAttachedWorkspace = () => dispatch({type: 'close-wide'});
+  // A specialist switch must close the complete coding surface, not only its
+  // optional wide wing; otherwise two native/layout surfaces remain active.
+  win.closeAttachedWorkspace = () => dispatch({type: 'close-tools'});
   win.closeCodingWorkspace = () => dispatch({type: 'close-tools'});
   return {dispose() { abort.abort(); observer.disconnect(); unsubscribe?.(); }};
 }
