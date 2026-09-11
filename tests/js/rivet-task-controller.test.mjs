@@ -8,10 +8,16 @@ import {
   markTaskFailed,
   markTaskCancelled,
   taskSteps,
+  rivetStepLabel,
 } from '../../src/widget/rivet-task-controller.js';
 
 test('unsupported natural-language tasks do not invent a fallback command', () => {
   assert.deepEqual(planRivetBrief('Make the robot eyes look nicer'), []);
+});
+
+test('Rivet approval labels describe actions instead of internal step IDs',()=>{
+  assert.equal(rivetStepLabel('gitCommit'),'Commit the approved changes');
+  assert.equal(rivetStepLabel('unknown'),'Run a bounded local step');
 });
 
 test('supported briefs map only to explicit bounded local steps', () => {

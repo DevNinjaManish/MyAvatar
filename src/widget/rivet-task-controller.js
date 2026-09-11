@@ -1,6 +1,9 @@
 const COMMAND_KINDS = new Set(['build', 'test', 'testJs', 'testPy', 'gitCommit']);
 const QUERY_KINDS = new Set(['gitStatus', 'gitDiff']);
 const VERIFY_KINDS = new Set(['build', 'test', 'testJs', 'testPy']);
+const STEP_LABELS = Object.freeze({build:'Build the project',test:'Run the configured tests',testJs:'Run JavaScript tests',testPy:'Run Python tests',gitStatus:'Read Git status',gitDiff:'Review the Git diff',gitCommit:'Commit the approved changes'});
+
+export function rivetStepLabel(kind){return STEP_LABELS[kind]||'Run a bounded local step';}
 
 export function planRivetBrief(value) {
   const brief = typeof value === 'string' ? value.trim() : '';
@@ -54,7 +57,7 @@ export function markTaskCancelled(task) {
 export function taskSteps(task) {
   return task.plan.map((step, index) => ({
     id: `step-${index + 1}`,
-    label: ({build:'Build project',test:'Run tests',testJs:'Run JavaScript tests',testPy:'Run Python tests',gitStatus:'Read Git status',gitDiff:'Read Git diff',gitCommit:'Commit approved changes'})[step.kind] || 'Local step',
+    label: rivetStepLabel(step.kind),
     status: index < task.cursor ? 'complete' : index === task.cursor && task.awaitingApproval ? 'waiting' : index === task.cursor && task.status === 'active' ? 'active' : task.failed && index === task.cursor ? 'blocked' : 'pending',
   }));
 }
@@ -139,7 +142,7 @@ export function mountRivetTaskController(win, doc, desktop) {
         running = false;
         showApproval(true);
         setStatus('Awaiting approval', 'warning');
-        report(`Approval required: ${step.kind}.`, 'warning');
+        report(`Approval required: ${rivetStepLabel(step.kind)}.`, 'warning');
         publish({blocker:'Approve this local action to continue.'});
         syncButtons();
         return;
