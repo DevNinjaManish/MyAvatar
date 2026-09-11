@@ -47,6 +47,19 @@ body.widget #widget-code-wing {
   min-width: 0 !important;
 }
 
+/* Canonical drag-holder geometry: it follows the right companion column in
+ * both compact and specialist-expanded native frames. */
+body.widget #widget-drag {
+  display: flex !important;
+  position: fixed !important;
+  top: 28px !important;
+  right: calc(var(--widget-shell-pad) + var(--widget-shell-column-width) / 2 - 24px) !important;
+  left: auto !important;
+  width: 48px !important;
+  height: 20px !important;
+  z-index: 50 !important;
+}
+
 body.widget main {
   top: var(--widget-shell-platform-top) !important;
   right: var(--widget-shell-pad) !important;

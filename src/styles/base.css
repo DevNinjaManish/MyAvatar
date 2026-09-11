@@ -178,19 +178,7 @@ body.widget[data-bot=pixel] #stage { --widget-stage-center:#483247; --widget-sta
 body.widget[data-bot=luma] #stage { --widget-stage-center:#3a3d68; --widget-stage-edge:#1d2038 }
 body.widget[data-bot] #stage::before {
   background:radial-gradient(circle at var(--avatar-light-x,50%) var(--avatar-light-y,44%),#d8fff32b 0%,var(--widget-stage-center,#354044) 45%,var(--widget-stage-edge,#1b2528) 78%)}
-body.widget #widget-drag {
-  display:flex;
-  position:fixed;
-  top:28px;
-  right:calc(var(--widget-shell-pad) + var(--widget-shell-column-width) / 2 - 24px);
-  left:auto;
-  width:48px;
-  height:20px;
-  z-index:2;
-  align-items:center;
-  justify-content:center;
-  cursor:grab;
-  touch-action:none}
+body.widget #widget-drag { display:flex; align-items:center; justify-content:center; cursor:grab; touch-action:none; user-select:none }
 #widget-drag span { width:22px; height:3px; border-radius:4px; background:#ffffff45 }
 body.dragging #stage,body.dragging #widget-drag { cursor:grabbing }
 body.widget #widget-tools { display:flex; flex-direction:column; align-items:center; gap:8px }
