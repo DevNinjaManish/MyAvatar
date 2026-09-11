@@ -6,6 +6,7 @@ installSocketBridge(window);
 installRuntimeEventGuard(window);
 installDualSpeakerEqualizers();
 await import('./widget-runtime.js');
+import '../styles/design-tokens.css';
 import '../styles/widget-cockpit.css';
 import '../styles/widget-panels.css';
 import '../styles/widget-polish.css';
