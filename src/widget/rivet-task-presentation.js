@@ -31,11 +31,12 @@ export function mountRivetTaskPresentation(win, doc) {
   const retry = $('widget-task-retry');
   const discuss = $('widget-brief-to-chat');
   const trusted = $('widget-trusted-mode');
+  const brief = $('widget-brief');
   const quickActions = root.querySelector('.quick-actions');
+  const quickButtons = quickActions ? [...quickActions.querySelectorAll('[data-quick-task]')] : [];
 
   if (quickActions) {
-    const buttons = [...quickActions.querySelectorAll('[data-quick-task]')];
-    buttons.forEach((button, index) => {
+    quickButtons.forEach((button, index) => {
       button.hidden = index > 1;
     });
     const label = quickActions.querySelector('.quick-actions-label');
@@ -60,16 +61,21 @@ export function mountRivetTaskPresentation(win, doc) {
 
   const apply = detail => {
     const state = rivetTaskPresentation(detail);
+    const locked = state.working || state.awaitingApproval;
     root.dataset.taskTone = state.tone;
     root.dataset.taskPhase = state.phase;
+    root.setAttribute('aria-busy', String(state.working));
     if (cancel) {
       cancel.hidden = !state.showStop;
       cancel.textContent = state.awaitingApproval ? 'Cancel' : 'Stop';
     }
     if (viewChanges) viewChanges.hidden = !state.showViewChanges;
     if (retry) retry.hidden = !state.showRetry;
-    if (run) run.hidden = state.working || state.awaitingApproval;
-    if (discuss) discuss.hidden = state.working || state.awaitingApproval;
+    if (run) run.hidden = locked;
+    if (discuss) discuss.hidden = locked;
+    quickButtons.forEach(button => { button.disabled = locked; });
+    if (trusted) trusted.disabled = locked;
+    if (brief) brief.readOnly = locked;
   };
 
   const onTask = event => apply(event?.detail || {});
