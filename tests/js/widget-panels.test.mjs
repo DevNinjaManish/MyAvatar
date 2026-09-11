@@ -195,7 +195,7 @@ test('the platform decorative rail stays below the bot selector text',()=>{
 });
 test('the drag holder stays above the right companion column',()=>{
   const base=readFileSync(new URL('../../src/styles/base.css',import.meta.url),'utf8');
-  assert.match(base,/body\.widget #widget-drag \{[\s\S]*top:28px;[\s\S]*right:calc\(var\(--widget-shell-pad\) \+ var\(--widget-shell-column-width\) \/ 2 - 24px\);/);
+  assert.match(base,/body\.widget #widget-drag \{[\s\S]*position:fixed;[\s\S]*top:28px;[\s\S]*right:calc\(var\(--widget-shell-pad\) \+ var\(--widget-shell-column-width\) \/ 2 - 24px\);/);
 });
 test('bot changes clear every attached widget surface before rendering the next companion',()=>{
   const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');

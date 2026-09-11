@@ -180,7 +180,7 @@ body.widget[data-bot] #stage::before {
   background:radial-gradient(circle at var(--avatar-light-x,50%) var(--avatar-light-y,44%),#d8fff32b 0%,var(--widget-stage-center,#354044) 45%,var(--widget-stage-edge,#1b2528) 78%)}
 body.widget #widget-drag {
   display:flex;
-  position:absolute;
+  position:fixed;
   top:28px;
   right:calc(var(--widget-shell-pad) + var(--widget-shell-column-width) / 2 - 24px);
   left:auto;
