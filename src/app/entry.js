@@ -14,82 +14,84 @@ import '../workspace/companion-workspace.css';
 import '../workspace/agent-task.css';
 import '../workspace/system-cockpit.css';
 import '../avatar/readiness-presence.css';
+import {assertRuntimeDomContract,renderBootFailure} from './dom-contract.js';
 
 const fixtureMode=new URLSearchParams(window.location.search).has('fixture');
+
+function recordModuleFailure(name,error){
+  const message=String(error?.message||error||'Unknown module error');
+  console.error(`[MyAvatar] ${name} failed to mount`,error);
+  window.__myavatarModuleHealth ||= {failures:[]};
+  window.__myavatarModuleHealth.failures.push({name,message});
+  document.body.dataset.degraded='true';
+  window.dispatchEvent(new CustomEvent('myavatar:module-failure',{detail:{name,message}}));
+}
+
+async function loadOptionalModules(){
+  const specs=[
+    ['widget-panels',()=>import('../widget/panels.js'),'mountWidgetPanels',(m)=>[document,window.desktop]],
+    ['specialist-state',()=>import('../widget/specialist-state.js'),'mountSpecialistState',(m)=>[window,document]],
+    ['agent-ux-guard',()=>import('../widget/agent-ux-guard.js'),'mountAgentUxGuard',(m)=>[window,document]],
+    ['rivet-task-controller',()=>import('../widget/rivet-task-controller.js'),'mountRivetTaskController',(m)=>[window,document,window.desktop]],
+    ['rivet-workspace',()=>import('../widget/rivet-workspace.js'),'mountRivetWorkspace',(m)=>[window,document]],
+    ['rivet-task-presentation',()=>import('../widget/rivet-task-presentation.js'),'mountRivetTaskPresentation',(m)=>[window,document]],
+    ['interaction-state',()=>import('../widget/interaction-state.js'),'mountInteractionState',(m)=>[window,document]],
+    ['widget-accessibility',()=>import('../widget/accessibility-controller.js'),'mountWidgetAccessibility',(m)=>[window,document]],
+    ['readiness-ui',()=>import('../conversation/readiness-ui.js'),'mountReadinessUI',(m)=>[window,document]],
+    ['capture-lifecycle',()=>import('../audio/lifecycle.js'),'installCaptureLifecycleGuards',(m)=>[window,document]],
+    ['canonical-chat',()=>import('../conversation/chat-ui.js'),'mountCanonicalChat',(m)=>[window,document]],
+    ['coding-edits',()=>import('../conversation/coding-edits.js'),'mountCodingEdits',(m)=>[window,document]],
+    ['latency-ui',()=>import('../conversation/latency-ui.js'),'mountLatencyUI',(m)=>[window,document]],
+    ['interaction-intelligence',()=>import('../conversation/interaction-intelligence.js'),'mountInteractionIntelligence',(m)=>[window,document]],
+    ['idle-presence',()=>import('../avatar/idle-presence.js'),'mountIdlePresence',(m)=>[window,document]],
+    ['presence-orchestrator',()=>import('../avatar/presence-orchestrator.js'),'mountPresenceOrchestrator',(m)=>[window,document]],
+    ['readiness-presence',()=>import('../avatar/readiness-presence.js'),'mountReadinessPresence',(m)=>[window,document]],
+    ['unified-workspace',()=>import('../workspace/unified-workspace.js'),'mountUnifiedWorkspace',(m)=>[window,document]],
+    ['system-cockpit',()=>import('../workspace/system-cockpit.js'),'mountSystemCockpit',(m)=>[window,document]],
+  ];
+
+  const settled=await Promise.allSettled(specs.map(([,loader])=>loader()));
+  window.__myavatarModuleHealth={failures:[]};
+
+  for(let index=0;index<specs.length;index++){
+    const [name,,exportName,argsFor]=specs[index];
+    const result=settled[index];
+    if(result.status==='rejected'){
+      recordModuleFailure(name,result.reason);
+      continue;
+    }
+    try{
+      const mount=result.value?.[exportName];
+      if(typeof mount!=='function')throw new Error(`Missing export ${exportName}`);
+      mount(...argsFor(result.value));
+    }catch(error){
+      recordModuleFailure(name,error);
+    }
+  }
+}
 
 if(fixtureMode){
   const {mountUiFixture}=await import('./ui-fixture.js');
   mountUiFixture(window,document);
 }else{
-  // Install socket capture and runtime guards before widget-runtime.js creates the WebSocket.
-  const [{installSocketBridge},{installRuntimeEventGuard},{installDualSpeakerEqualizers}]=await Promise.all([
-    import('../conversation/socket-bridge.js'),
-    import('../conversation/runtime-events.js'),
-    import('../avatar/dual-speaker-patch.js'),
-  ]);
-  installSocketBridge(window);
-  installRuntimeEventGuard(window);
-  installDualSpeakerEqualizers();
-  await import('./widget-runtime.js');
+  let coreReady=false;
+  try{
+    assertRuntimeDomContract(document);
+    const bridgeModules=await Promise.all([
+      import('../conversation/socket-bridge.js'),
+      import('../conversation/runtime-events.js'),
+      import('../avatar/dual-speaker-patch.js'),
+    ]);
+    const [{installSocketBridge},{installRuntimeEventGuard},{installDualSpeakerEqualizers}]=bridgeModules;
+    installSocketBridge(window);
+    installRuntimeEventGuard(window);
+    installDualSpeakerEqualizers();
+    await import('./widget-runtime.js');
+    coreReady=true;
+  }catch(error){
+    renderBootFailure(document,error);
+    console.error('[MyAvatar] core renderer startup failed',error);
+  }
 
-  const [
-    {mountWidgetPanels},
-    {mountSpecialistState},
-    {mountAgentUxGuard},
-    {mountRivetTaskController},
-    {mountRivetWorkspace},
-    {mountRivetTaskPresentation},
-    {mountInteractionState},
-    {mountWidgetAccessibility},
-    {mountReadinessUI},
-    {installCaptureLifecycleGuards},
-    {mountCanonicalChat},
-    {mountCodingEdits},
-    {mountLatencyUI},
-    {mountInteractionIntelligence},
-    {mountIdlePresence},
-    {mountPresenceOrchestrator},
-    {mountReadinessPresence},
-    {mountUnifiedWorkspace},
-    {mountSystemCockpit},
-  ]=await Promise.all([
-    import('../widget/panels.js'),
-    import('../widget/specialist-state.js'),
-    import('../widget/agent-ux-guard.js'),
-    import('../widget/rivet-task-controller.js'),
-    import('../widget/rivet-workspace.js'),
-    import('../widget/rivet-task-presentation.js'),
-    import('../widget/interaction-state.js'),
-    import('../widget/accessibility-controller.js'),
-    import('../conversation/readiness-ui.js'),
-    import('../audio/lifecycle.js'),
-    import('../conversation/chat-ui.js'),
-    import('../conversation/coding-edits.js'),
-    import('../conversation/latency-ui.js'),
-    import('../conversation/interaction-intelligence.js'),
-    import('../avatar/idle-presence.js'),
-    import('../avatar/presence-orchestrator.js'),
-    import('../avatar/readiness-presence.js'),
-    import('../workspace/unified-workspace.js'),
-    import('../workspace/system-cockpit.js'),
-  ]);
-  mountSpecialistState(window,document);
-  mountWidgetPanels(document,window.desktop);
-  mountRivetTaskController(window,document,window.desktop);
-  mountAgentUxGuard(window,document);
-  mountRivetWorkspace(window,document);
-  mountRivetTaskPresentation(window,document);
-  mountReadinessUI(window,document);
-  mountInteractionState(window,document);
-  mountWidgetAccessibility(window,document);
-  installCaptureLifecycleGuards(window,document);
-  mountCanonicalChat(window,document);
-  mountCodingEdits(window,document);
-  mountLatencyUI(window,document);
-  mountInteractionIntelligence(window,document);
-  mountIdlePresence(window,document);
-  mountPresenceOrchestrator(window,document);
-  mountReadinessPresence(window,document);
-  mountUnifiedWorkspace(window,document);
-  mountSystemCockpit(window,document);
+  if(coreReady)await loadOptionalModules();
 }
