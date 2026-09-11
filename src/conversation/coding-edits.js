@@ -59,6 +59,7 @@ export function mountCodingEdits(win=window,doc=document){
   mountWorkspaceControl(win,doc);const socket=win.__myAvatarSocket;if(!socket)return;
   socket.addEventListener('message',raw=>{let event;try{event=JSON.parse(raw.data);}catch{return;}
     if(event.type==='agent_state')forwardAgentState(win,event);
+    if(event.type==='coding_activity')dispatchActivity(win,{kind:event.kind||'tool',label:String(event.label||'').slice(0,160),refs:(event.refs||[]).filter(path=>typeof path==='string').slice(0,8),tool:typeof event.tool==='string'?event.tool.slice(0,80):''});
     if(event.type==='coding_context')dispatchActivity(win,{kind:'context',label:`Gathered ${event.paths?.length||0} context file${event.paths?.length===1?'':'s'}`,refs:(event.paths||[]).slice(0,8)});
     if(event.type==='coding_patch'){
       const refs=(event.transaction?.files||[]).map(file=>file.path).filter(Boolean).slice(0,8);
