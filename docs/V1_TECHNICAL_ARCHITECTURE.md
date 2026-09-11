@@ -25,6 +25,21 @@ Local orchestrator service
 - Providers implement models, voice, vision, calendar, Git, files, images, and system context behind explicit interfaces.
 - Action broker is the only path from bot intent to consequential local action.
 
+## AI harness boundary
+
+MyAvatar needs the capabilities commonly called an AI harness, but V1 does not
+adopt a heavyweight external harness framework. The local orchestrator is the
+product-owned harness boundary: it assembles bot instructions and permitted
+context, selects a provider and performance profile, manages streaming and
+interruption, routes tools and delegation through permissions, and records
+typed runtime events for QA.
+
+The provider registry keeps model/runtime implementations replaceable without
+coupling bots, memory, or the UI to Ollama. Harness behavior should remain
+small, explicit, and testable. Add abstractions only when a concrete V1 need
+appears, such as a second provider, retrieval, tool execution, or specialist
+delegation.
+
 ## Event model
 
 All systems communicate through typed events containing session, bot, request, task, and turn identity. Important event families include:

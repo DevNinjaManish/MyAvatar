@@ -104,6 +104,20 @@ The initial setup target is under approximately 10 GB. V1 supports 8 GB Macs as 
 
 The model layer is provider-agnostic. Ollama may be the first adapter, but the bot framework, memory, UI, and capabilities must support swapping model runtimes later.
 
+### AI harness approach
+
+MyAvatar requires an AI harness in the functional sense: a controlled layer for
+provider selection, prompt and context assembly, memory, permissions, tools,
+delegation, streaming, cancellation, fallback, and QA. For V1 this harness is
+owned by the local orchestrator and shared runtime contracts rather than by a
+large third-party framework. This keeps the local-first product behavior
+explicit, preserves the MVP WebSocket path, and avoids framework complexity
+before there is a second provider or a broader tool/delegation surface.
+
+The harness boundary may grow as concrete requirements arrive, but it must not
+become a hidden bypass around bot identity, user permissions, interruption, or
+typed runtime events.
+
 ### Rivit scope
 
 Rivit remains a simple coding agent in V1: project and Git understanding, file inspection, explanations, suggested changes, prepared patches or commands, and narrowly approved safe checks. Destructive or unrestricted autonomous terminal work is deferred.

@@ -11,7 +11,7 @@ const avatar=new Avatar(stage);
 const chat=new ChatStore();
 installSocketBridge(window);
 installRuntimeEventGuard(window);
-let selected='rivet';
+let selected='nova';
 let nextTurn=0;
 let activeTurn=null;
 let runtimeSocket=null;

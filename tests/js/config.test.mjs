@@ -8,7 +8,7 @@ const expectedBots=['rivet','nova','sterling','pixel','luma'];
 
 test('companion configuration is complete and unique',()=>{
   assert.deepEqual(companions.map(companion=>companion.id),expectedBots);
-  assert.equal(config.defaultCompanion,'rivet');
+  assert.equal(config.defaultCompanion,'nova');
   const names=new Set();
   for(const companion of companions){const {id}=companion;
     assert.match(id,/^[a-z][a-z0-9_-]*$/);assert.ok(companion.name);assert.ok(companion.asset);

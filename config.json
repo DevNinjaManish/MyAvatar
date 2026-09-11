@@ -16,5 +16,5 @@
       "voices": "models/voices-v1.0.bin"
     }
   },
-  "defaultCompanion": "rivet"
+  "defaultCompanion": "nova"
 }

@@ -3,18 +3,36 @@ import {promises as fs} from 'node:fs';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {tmpdir} from 'node:os';
+import {arch, totalmem, cpus} from 'node:os';
 import {join} from 'node:path';
 import {WebSocketServer} from 'ws';
+import {ProviderRegistry} from '../src/runtime/providers.js';
+import {detectPerformanceProfile, hardwareSummary, PERFORMANCE_PROFILES} from '../src/runtime/profiles.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
-const model='qwen3.5:0.8b';
+const requestedProfile=process.env.MYAVATAR_PERFORMANCE_PROFILE||'auto';
+const performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:requestedProfile});
+const model=process.env.MYAVATAR_CONVERSATION_MODEL||'qwen3.5:0.8b';
 const ollamaUrl='http://127.0.0.1:11434/api/chat';
 const exec=promisify(execFile);
 const whisperBinary=process.env.MYAVATAR_WHISPER_BIN||'whisper';
 const whisperModel=process.env.MYAVATAR_WHISPER_MODEL||'tiny';
 const sayBinary='/usr/bin/say';
 const ffmpegBinary=process.env.MYAVATAR_FFMPEG_BIN||'ffmpeg';
+const providerRegistry=new ProviderRegistry();
+providerRegistry.register('conversation','ollama',Object.freeze({
+  name:'ollama',
+  async stream({text,signal,onToken}){
+    const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal,
+      body:JSON.stringify({model,stream:true,think:false,options:{num_predict:performanceProfile===PERFORMANCE_PROFILES.FAST?192:256},messages:[{role:'user',content:text}]})});
+    if(!response.ok)throw Error(`Local model returned HTTP ${response.status}.`);
+    const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';
+    while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split('\n');buffer=lines.pop()||'';for(const line of lines){if(!line.trim())continue;const part=JSON.parse(line);const tokenText=part.message?.content||'';if(tokenText)onToken(tokenText);}}
+    if(buffer.trim()){const part=JSON.parse(buffer);const tokenText=part.message?.content||'';if(tokenText)onToken(tokenText);}
+  }
+}));
+const conversationProvider=providerRegistry.get('conversation','ollama');
 
 async function transcribeVoice(audio,mime='audio/webm'){
   const dir=await fs.mkdtemp(join(tmpdir(),'myavatar-voice-'));
@@ -46,14 +64,14 @@ const server=new WebSocketServer({host:'127.0.0.1',port});
 server.on('connection',(socket,request)=>{
   if(new URL(request.url,'ws://127.0.0.1').searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
   const sessionId=randomUUID();let sequence=0;let stopped=new Set();
-  const send=(event)=>socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:'rivet',...event}));
-  send({type:'config',config:{conversation:{persona:'rivet'},bots:{rivet:{name:'Rivet'}}}});
+  const send=(event)=>socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:'nova',...event}));
+  send({type:'config',config:{conversation:{persona:'nova',provider:conversationProvider.name,profile:performanceProfile},bots:{nova:{name:'Nova'}}},runtime:{provider:conversationProvider.name,profile:performanceProfile,hardware:hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length})}});
   const answer=async(turn,text,{speak=false}={})=>{
-    const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(30000),body:JSON.stringify({model,stream:true,think:false,options:{num_predict:256},messages:[{role:'user',content:text}]})});
-    if(!response.ok)throw Error(`Local model returned HTTP ${response.status}.`);
-    const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';let spokenText='';
-    while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split('\n');buffer=lines.pop()||'';for(const line of lines){if(stopped.has(turn)){reader.cancel();break;}if(!line.trim())continue;const part=JSON.parse(line);const tokenText=part.message?.content||'';if(tokenText){spokenText+=tokenText;send({type:'token',turn,text:tokenText});}}if(stopped.has(turn))break;}
-    if(buffer.trim()&&!stopped.has(turn)){const part=JSON.parse(buffer);const tokenText=part.message?.content||'';if(tokenText){spokenText+=tokenText;send({type:'token',turn,text:tokenText});}}
+    let spokenText='';
+    await conversationProvider.stream({text,signal:AbortSignal.timeout(30000),onToken(tokenText){
+      if(stopped.has(turn))return;
+      spokenText+=tokenText;send({type:'token',turn,text:tokenText});
+    }});
     if(stopped.has(turn)){stopped.delete(turn);return;}
     if(speak){
       try{send({type:'audio',turn,audio:await synthesizeSpeech(spokenText),mime:'audio/wav'});}
