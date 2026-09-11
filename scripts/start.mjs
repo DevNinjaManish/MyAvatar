@@ -10,7 +10,7 @@ if(!existsSync(resolve(root,'.venv/bin/python')))throw Error('Run setup commands
 const children=[];
 let stopping=false;
 function stop(){if(stopping)return;stopping=true;children.forEach(c=>{if(c&&!c.killed)c.kill('SIGTERM');});setTimeout(()=>process.exit(),300).unref();}
-function run(cmd,args,extra={}){const c=spawn(cmd,args,{cwd:root,stdio:'inherit',env:{...process.env,MYAVATAR_TOKEN:token,HF_HUB_OFFLINE:"1",MYAVATAR_WARMUP:process.env.MYAVATAR_WARMUP||"0",VITE_API_TOKEN:token,...extra}});children.push(c);c.on('error',error=>{console.error(`[MyAvatar] Failed to start ${cmd}:`,error.message);stop();});return c;}
+function run(cmd,args,extra={}){const c=spawn(cmd,args,{cwd:root,stdio:'inherit',env:{...process.env,MYAVATAR_TOKEN:token,HF_HUB_OFFLINE:"1",MYAVATAR_WARMUP:"0",VITE_API_TOKEN:token,...extra}});children.push(c);c.on('error',error=>{console.error(`[MyAvatar] Failed to start ${cmd}:`,error.message);stop();});return c;}
 process.on('SIGINT',stop);process.on('SIGTERM',stop);
 const backend=run('.venv/bin/python',['-m','uvicorn','backend.core.app:app','--host','127.0.0.1','--port','8765']);
 const vite=run('node',['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5173','--strictPort']);
@@ -29,5 +29,5 @@ async function wait(url){
 }
 try{
   await Promise.all([wait('http://127.0.0.1:5173'),wait('http://127.0.0.1:8765/health')]);
-  if(!stopping){const desktop=run(electronPath,[root]);desktop.on('exit',()=>stop());}
+  if(!stopping){const desktop=run(electronPath,['--enable-logging=stderr',root],{ELECTRON_ENABLE_LOGGING:'1',ELECTRON_ENABLE_STACK_DUMPING:'1'});desktop.on('exit',()=>stop());}
 }catch(e){console.error(e);stop();}
