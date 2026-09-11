@@ -34,7 +34,7 @@ class CodingAgentTest(unittest.TestCase):
             (root/'hello.py').write_text('print("hi")\n',encoding='utf-8')
             files=choose_context('hello',root=root)
             messages=build_change_plan_prompt('review hello',files)
-            self.assertTrue(messages[0]['content'].startswith(AGENT_MARKER))
+            self.assertTrue(messages[2]['content'].startswith(AGENT_MARKER))
             request, resolved=_agent_request(messages)
             self.assertEqual(request,'review hello')
             self.assertEqual(resolved,root.resolve())
@@ -43,10 +43,11 @@ class CodingAgentTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
             (root/'hello.py').write_text('def hello():\n    return "hi"\n',encoding='utf-8')
+            final='Plan\n```diff\n--- a/hello.py\n+++ b/hello.py\n@@ -1,2 +1,2 @@\n def hello():\n-    return "hi"\n+    return "hello"\n```'
             replies=iter([
                 '{"action":"repository.search","args":{"query":"hello"}}',
                 '{"action":"repository.read","args":{"paths":["hello.py"]}}',
-                '{"final":"Plan\n```diff\n--- a/hello.py\n+++ b/hello.py\n@@ -1,2 +1,2 @@\n def hello():\n-    return \\\"hi\\\"\n+    return \\\"hello\\\"\n```"}',
+                json.dumps({'final':final}),
             ])
             async def inspect(messages, config):
                 return next(replies)
