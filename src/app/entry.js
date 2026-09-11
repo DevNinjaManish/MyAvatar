@@ -27,47 +27,87 @@ function recordModuleFailure(name,error){
   window.dispatchEvent(new CustomEvent('myavatar:module-failure',{detail:{name,message}}));
 }
 
-async function loadOptionalModules(){
-  const specs=[
-    ['widget-panels',()=>import('../widget/panels.js'),'mountWidgetPanels',(m)=>[document,window.desktop]],
-    ['specialist-state',()=>import('../widget/specialist-state.js'),'mountSpecialistState',(m)=>[window,document]],
-    ['agent-ux-guard',()=>import('../widget/agent-ux-guard.js'),'mountAgentUxGuard',(m)=>[window,document]],
-    ['rivet-task-controller',()=>import('../widget/rivet-task-controller.js'),'mountRivetTaskController',(m)=>[window,document,window.desktop]],
-    ['rivet-workspace',()=>import('../widget/rivet-workspace.js'),'mountRivetWorkspace',(m)=>[window,document]],
-    ['rivet-task-presentation',()=>import('../widget/rivet-task-presentation.js'),'mountRivetTaskPresentation',(m)=>[window,document]],
-    ['interaction-state',()=>import('../widget/interaction-state.js'),'mountInteractionState',(m)=>[window,document]],
-    ['widget-accessibility',()=>import('../widget/accessibility-controller.js'),'mountWidgetAccessibility',(m)=>[window,document]],
-    ['readiness-ui',()=>import('../conversation/readiness-ui.js'),'mountReadinessUI',(m)=>[window,document]],
-    ['capture-lifecycle',()=>import('../audio/lifecycle.js'),'installCaptureLifecycleGuards',(m)=>[window,document]],
-    ['canonical-chat',()=>import('../conversation/chat-ui.js'),'mountCanonicalChat',(m)=>[window,document]],
-    ['coding-edits',()=>import('../conversation/coding-edits.js'),'mountCodingEdits',(m)=>[window,document]],
-    ['latency-ui',()=>import('../conversation/latency-ui.js'),'mountLatencyUI',(m)=>[window,document]],
-    ['interaction-intelligence',()=>import('../conversation/interaction-intelligence.js'),'mountInteractionIntelligence',(m)=>[window,document]],
-    ['idle-presence',()=>import('../avatar/idle-presence.js'),'mountIdlePresence',(m)=>[window,document]],
-    ['presence-orchestrator',()=>import('../avatar/presence-orchestrator.js'),'mountPresenceOrchestrator',(m)=>[window,document]],
-    ['readiness-presence',()=>import('../avatar/readiness-presence.js'),'mountReadinessPresence',(m)=>[window,document]],
-    ['unified-workspace',()=>import('../workspace/unified-workspace.js'),'mountUnifiedWorkspace',(m)=>[window,document]],
-    ['system-cockpit',()=>import('../workspace/system-cockpit.js'),'mountSystemCockpit',(m)=>[window,document]],
-  ];
+function safeMount(name,mount){
+  try{mount();}
+  catch(error){recordModuleFailure(name,error);}
+}
 
-  const settled=await Promise.allSettled(specs.map(([,loader])=>loader()));
+function moduleExport(result,name,exportName){
+  if(result.status==='rejected'){
+    recordModuleFailure(name,result.reason);
+    return null;
+  }
+  const value=result.value?.[exportName];
+  if(typeof value!=='function'){
+    recordModuleFailure(name,new Error(`Missing export ${exportName}`));
+    return null;
+  }
+  return value;
+}
+
+async function loadOptionalModules(){
+  const settled=await Promise.allSettled([
+    import('../widget/panels.js'),
+    import('../widget/specialist-state.js'),
+    import('../widget/agent-ux-guard.js'),
+    import('../widget/rivet-task-controller.js'),
+    import('../widget/rivet-workspace.js'),
+    import('../widget/rivet-task-presentation.js'),
+    import('../conversation/readiness-ui.js'),
+    import('../widget/interaction-state.js'),
+    import('../widget/accessibility-controller.js'),
+    import('../audio/lifecycle.js'),
+    import('../conversation/chat-ui.js'),
+    import('../conversation/coding-edits.js'),
+    import('../conversation/latency-ui.js'),
+    import('../conversation/interaction-intelligence.js'),
+    import('../avatar/idle-presence.js'),
+    import('../avatar/presence-orchestrator.js'),
+    import('../avatar/readiness-presence.js'),
+    import('../workspace/unified-workspace.js'),
+    import('../workspace/system-cockpit.js'),
+  ]);
   window.__myavatarModuleHealth={failures:[]};
 
-  for(let index=0;index<specs.length;index++){
-    const [name,,exportName,argsFor]=specs[index];
-    const result=settled[index];
-    if(result.status==='rejected'){
-      recordModuleFailure(name,result.reason);
-      continue;
-    }
-    try{
-      const mount=result.value?.[exportName];
-      if(typeof mount!=='function')throw new Error(`Missing export ${exportName}`);
-      mount(...argsFor(result.value));
-    }catch(error){
-      recordModuleFailure(name,error);
-    }
-  }
+  const mountWidgetPanels=moduleExport(settled[0],'widget-panels','mountWidgetPanels');
+  const mountSpecialistState=moduleExport(settled[1],'specialist-state','mountSpecialistState');
+  const mountAgentUxGuard=moduleExport(settled[2],'agent-ux-guard','mountAgentUxGuard');
+  const mountRivetTaskController=moduleExport(settled[3],'rivet-task-controller','mountRivetTaskController');
+  const mountRivetWorkspace=moduleExport(settled[4],'rivet-workspace','mountRivetWorkspace');
+  const mountRivetTaskPresentation=moduleExport(settled[5],'rivet-task-presentation','mountRivetTaskPresentation');
+  const mountReadinessUI=moduleExport(settled[6],'readiness-ui','mountReadinessUI');
+  const mountInteractionState=moduleExport(settled[7],'interaction-state','mountInteractionState');
+  const mountWidgetAccessibility=moduleExport(settled[8],'widget-accessibility','mountWidgetAccessibility');
+  const installCaptureLifecycleGuards=moduleExport(settled[9],'capture-lifecycle','installCaptureLifecycleGuards');
+  const mountCanonicalChat=moduleExport(settled[10],'canonical-chat','mountCanonicalChat');
+  const mountCodingEdits=moduleExport(settled[11],'coding-edits','mountCodingEdits');
+  const mountLatencyUI=moduleExport(settled[12],'latency-ui','mountLatencyUI');
+  const mountInteractionIntelligence=moduleExport(settled[13],'interaction-intelligence','mountInteractionIntelligence');
+  const mountIdlePresence=moduleExport(settled[14],'idle-presence','mountIdlePresence');
+  const mountPresenceOrchestrator=moduleExport(settled[15],'presence-orchestrator','mountPresenceOrchestrator');
+  const mountReadinessPresence=moduleExport(settled[16],'readiness-presence','mountReadinessPresence');
+  const mountUnifiedWorkspace=moduleExport(settled[17],'unified-workspace','mountUnifiedWorkspace');
+  const mountSystemCockpit=moduleExport(settled[18],'system-cockpit','mountSystemCockpit');
+
+  if(mountSpecialistState)safeMount('specialist-state',()=>mountSpecialistState(window,document));
+  if(mountWidgetPanels)safeMount('widget-panels',()=>mountWidgetPanels(document,window.desktop));
+  if(mountRivetTaskController)safeMount('rivet-task-controller',()=>mountRivetTaskController(window,document,window.desktop));
+  if(mountAgentUxGuard)safeMount('agent-ux-guard',()=>mountAgentUxGuard(window,document));
+  if(mountRivetWorkspace)safeMount('rivet-workspace',()=>mountRivetWorkspace(window,document));
+  if(mountRivetTaskPresentation)safeMount('rivet-task-presentation',()=>mountRivetTaskPresentation(window,document));
+  if(mountReadinessUI)safeMount('readiness-ui',()=>mountReadinessUI(window,document));
+  if(mountInteractionState)safeMount('interaction-state',()=>mountInteractionState(window,document));
+  if(mountWidgetAccessibility)safeMount('widget-accessibility',()=>mountWidgetAccessibility(window,document));
+  if(installCaptureLifecycleGuards)safeMount('capture-lifecycle',()=>installCaptureLifecycleGuards(window,document));
+  if(mountCanonicalChat)safeMount('canonical-chat',()=>mountCanonicalChat(window,document));
+  if(mountCodingEdits)safeMount('coding-edits',()=>mountCodingEdits(window,document));
+  if(mountLatencyUI)safeMount('latency-ui',()=>mountLatencyUI(window,document));
+  if(mountInteractionIntelligence)safeMount('interaction-intelligence',()=>mountInteractionIntelligence(window,document));
+  if(mountIdlePresence)safeMount('idle-presence',()=>mountIdlePresence(window,document));
+  if(mountPresenceOrchestrator)safeMount('presence-orchestrator',()=>mountPresenceOrchestrator(window,document));
+  if(mountReadinessPresence)safeMount('readiness-presence',()=>mountReadinessPresence(window,document));
+  if(mountUnifiedWorkspace)safeMount('unified-workspace',()=>mountUnifiedWorkspace(window,document));
+  if(mountSystemCockpit)safeMount('system-cockpit',()=>mountSystemCockpit(window,document));
 }
 
 if(fixtureMode){
