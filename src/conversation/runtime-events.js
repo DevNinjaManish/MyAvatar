@@ -4,11 +4,9 @@ import {suspendActiveLiveCapture} from '../audio/engine.js';
 export const RUNTIME_EVENT_VERSION=1;
 const BOT_TRANSITION_TYPES=new Set(['config']);
 const APPROVAL_DECISIONS=new Set(['allow_once','deny']);
-const STARTUP_TRACE_TYPES=new Set(['config','coding_workspace','preparing','ready','setup_error']);
 
 export class RuntimeEventGate{
-  constructor(){this.reset();}
-  reset(){this.sessionId=null;this.sequence=0;this.botId=null;this.typed=false;return this;}
+  constructor(){this.sessionId=null;this.sequence=0;this.botId=null;this.typed=false;}
   accept(event){
     if(!event||typeof event!=='object')return false;
     const typed=Number.isInteger(event.runtimeVersion)&&typeof event.sessionId==='string'&&Number.isInteger(event.sequence)&&typeof event.botId==='string';
@@ -32,6 +30,9 @@ export function noteClientMessage(data,win){
   try{
     const message=JSON.parse(data);
     if(message?.type==='turn'){
+      // Voice capture stays allocated in live mode, but its gate must close for
+      // every outgoing turn, including typed turns. This prevents background
+      // audio from starting a second turn while the first is still processing.
       suspendActiveLiveCapture();
       turnPlayback.beginTurn(message.turn);
     }else if(message?.type==='stop')turnPlayback.cancelTurn();
@@ -43,6 +44,9 @@ export function validApprovalDecision(detail){
   return Boolean(detail&&typeof detail.requestId==='string'&&detail.requestId.length>0&&detail.requestId.length<=128&&APPROVAL_DECISIONS.has(detail.decision));
 }
 
+/** Install before widget-runtime.js creates the socket. It filters obsolete runtime events
+ * and coordinates turn/audio freshness without deriving authority from prose.
+ */
 export function installRuntimeEventGuard(win=window){
   if(win.__myavatarRuntimeGuardInstalled)return;
   const NativeWebSocket=win.WebSocket;
@@ -59,13 +63,10 @@ export function installRuntimeEventGuard(win=window){
         socket.send(JSON.stringify({type:'action_decision',requestId:event.detail.requestId,decision:event.detail.decision}));
       };
       win.addEventListener('myavatar:approval-decision',decide);
-      socket.addEventListener('open',()=>console.info('[MyAvatar runtime] socket open'));
       socket.addEventListener('message',event=>{
         let payload;
         try{payload=JSON.parse(event.data);}catch{return;}
-        const accepted=gate.accept(payload);
-        if(STARTUP_TRACE_TYPES.has(payload?.type))console.info(`[MyAvatar runtime] ${accepted?'accepted':'rejected'} ${payload.type} seq=${payload.sequence??'legacy'} session=${payload.sessionId||'legacy'}`);
-        if(!accepted){event.stopImmediatePropagation();return;}
+        if(!gate.accept(payload)){event.stopImmediatePropagation();return;}
         turnPlayback.noteServerEvent(payload);
         win.dispatchEvent(new CustomEvent('myavatar:runtime-event',{detail:payload}));
         if(payload.readiness&&typeof payload.readiness==='object'){
@@ -74,11 +75,10 @@ export function installRuntimeEventGuard(win=window){
         if(payload.type==='action_request')event.stopImmediatePropagation();
       },{capture:true});
       socket.addEventListener('close',()=>{
-        console.info('[MyAvatar runtime] socket closed');
-        gate.reset();
+        win.removeEventListener('myavatar:approval-decision',decide);
         turnPlayback.cancelTurn();
         win.dispatchEvent(new CustomEvent('myavatar:socket-close'));
-      });
+      },{once:true});
       return socket;
     }
   });

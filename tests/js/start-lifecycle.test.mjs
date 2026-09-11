@@ -9,20 +9,9 @@ test('startup resolves the Python environment from the repository root',()=>{
   assert.doesNotMatch(source,/existsSync\('\.venv\/bin\/python'\)/);
 });
 
-test('desktop launch does not force eager model warmup',()=>{
-  assert.match(source,/MYAVATAR_WARMUP:"0"/);
-  assert.doesNotMatch(source,/MYAVATAR_WARMUP:"1"/);
-});
-
 test('closing Electron tears down the local service stack',()=>{
-  assert.match(source,/const desktop=run\(electronPath,\['--enable-logging=stderr',root\]/);
+  assert.match(source,/const desktop=run\(electronPath,\[root\]\)/);
   assert.match(source,/desktop\.on\('exit',\(\)=>stop\(\)\)/);
-});
-
-test('renderer startup diagnostics are surfaced through Electron stderr',()=>{
-  assert.match(source,/--enable-logging=stderr/);
-  assert.match(source,/ELECTRON_ENABLE_LOGGING:'1'/);
-  assert.match(source,/ELECTRON_ENABLE_STACK_DUMPING:'1'/);
 });
 
 test('child spawn errors tear down sibling processes instead of crashing dirty',()=>{

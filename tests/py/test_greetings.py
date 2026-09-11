@@ -72,7 +72,7 @@ class GreetingLifecycle(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         self.executor.shutdown(wait=True)
 
-    async def make(self, generate, *, guard=None, timeout_seconds=8.0):
+    async def make(self, generate, *, guard=None):
         async def send(kind, **data):
             self.sent.append((kind, data))
         return GreetingCoordinator(
@@ -81,7 +81,6 @@ class GreetingLifecycle(unittest.IsolatedAsyncioTestCase):
             send=send,
             save_preferences=lambda cfg: self.saved.append(dict(cfg.get('_greetingIndexes', {}))) or True,
             startup_guard=guard or StartupGreetingGuard(),
-            timeout_seconds=timeout_seconds,
         )
 
     async def wait_idle(self, coordinator):
@@ -182,36 +181,6 @@ class GreetingLifecycle(unittest.IsolatedAsyncioTestCase):
         await self.wait_idle(coordinator)
         self.assertEqual(self.sent, [])
         self.assertEqual(cfg['_greetingIndexes'], {})
-        await coordinator.close()
-
-    async def test_stuck_greeting_times_out_without_sending_or_advancing_rotation(self):
-        def stuck(text, cfg):
-            time.sleep(.2)
-            return b'RIFF'
-        coordinator = await self.make(stuck, timeout_seconds=.03)
-        cfg = config('nova')
-        coordinator.request(cfg, reason='startup', hour=10)
-        await self.wait_idle(coordinator)
-        self.assertEqual(self.sent, [])
-        self.assertEqual(cfg['_greetingIndexes'], {})
-        await coordinator.close()
-
-    async def test_automatic_greeting_does_not_consume_runtime_tts_executor(self):
-        blocker = asyncio.Event()
-        external_started = False
-        original_submit = self.executor.submit
-
-        def tracking_submit(*args, **kwargs):
-            nonlocal external_started
-            external_started = True
-            return original_submit(*args, **kwargs)
-
-        self.executor.submit = tracking_submit
-        coordinator = await self.make(lambda text, cfg: b'RIFF')
-        cfg = config('nova')
-        coordinator.request(cfg, reason='startup', hour=10)
-        await self.wait_idle(coordinator)
-        self.assertFalse(external_started)
         await coordinator.close()
 
 

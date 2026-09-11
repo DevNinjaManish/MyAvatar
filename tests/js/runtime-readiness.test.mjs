@@ -28,12 +28,6 @@ test('rejects a different session after the socket session is established',()=>{
   assert.equal(gate.accept(event('config',1,{sessionId:'old'})),false);
 });
 
-test('reset accepts the fresh config session created by a reconnect',()=>{
-  const gate=new RuntimeEventGate();gate.accept(event('config',1));gate.accept(event('ready',2));gate.reset();
-  assert.equal(gate.accept(event('config',1,{sessionId:'s2'})),true);
-  assert.equal(gate.accept(event('ready',2,{sessionId:'s2'})),true);
-});
-
 test('config is the only bot transition and old bot output is rejected',()=>{
   const gate=new RuntimeEventGate();gate.accept(event('config',1));
   assert.equal(gate.accept(event('config',2,{botId:'luma'})),true);

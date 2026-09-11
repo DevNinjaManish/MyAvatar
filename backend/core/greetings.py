@@ -1,10 +1,9 @@
 """Cancellable, identity-safe authored greetings.
 
-Greeting synthesis is intentionally low priority and isolated from normal voice
-output. Cancelling or timing out a greeting cannot force-stop a native TTS call
-already running in its worker, but its result is invalidated and never sent.
-User turns, bot switches and shutdown therefore win without allowing a stuck
-automatic greeting to monopolize the normal TTS worker.
+Greeting synthesis is intentionally low priority. Cancelling a greeting cannot
+force-stop a native TTS call already running in its worker, but its result is
+invalidated and never sent. User turns, bot switches and shutdown therefore win
+without claiming native inference was forcibly terminated.
 """
 from __future__ import annotations
 
@@ -14,12 +13,10 @@ import copy
 import logging
 import secrets
 import time
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable
 
 log = logging.getLogger('avatar.greetings')
-DEFAULT_GREETING_TIMEOUT_SECONDS = 8.0
 
 GREETING_LINES = {
     'nova': {
@@ -129,21 +126,16 @@ DEFAULT_STARTUP_GUARD = StartupGreetingGuard()
 class GreetingCoordinator:
     def __init__(self, *, generate: Callable[[str, dict], bytes], executor,
                  send: Callable[..., Awaitable[None]], save_preferences: Callable[[dict], bool],
-                 enabled: bool = True, startup_guard: StartupGreetingGuard | None = None,
-                 timeout_seconds: float = DEFAULT_GREETING_TIMEOUT_SECONDS):
+                 enabled: bool = True, startup_guard: StartupGreetingGuard | None = None):
         self.generate = generate
-        # Keep automatic speech isolated from the primary TTS executor supplied by
-        # the runtime. A native greeting call that stalls must not block user turns.
-        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='myavatar-greeting')
+        self.executor = executor
         self.send = send
         self.save_preferences = save_preferences
         self.enabled = enabled
         self.startup_guard = startup_guard or DEFAULT_STARTUP_GUARD
-        self.timeout_seconds = max(0.1, float(timeout_seconds))
         self._generation = 0
         self._task: asyncio.Task | None = None
         self._startup_requested = False
-        self._closed = False
 
     @property
     def pending(self) -> bool:
@@ -156,7 +148,7 @@ class GreetingCoordinator:
             task.cancel()
 
     def request(self, config: dict, *, reason: str, hour: int | None = None) -> str | None:
-        if self._closed or not self.enabled or reason not in {'startup', 'bot_switch', 'onboarding', 'idle_return'}:
+        if not self.enabled or reason not in {'startup', 'bot_switch', 'onboarding', 'idle_return'}:
             return None
         bot_id = config.get('conversation', {}).get('persona')
         if not isinstance(bot_id, str) or bot_id not in config.get('bots', {}):
@@ -181,8 +173,7 @@ class GreetingCoordinator:
                 if not still_current():
                     return
                 loop = asyncio.get_running_loop()
-                future = loop.run_in_executor(self.executor, self.generate, text, tts_config)
-                wav = await asyncio.wait_for(asyncio.shield(future), timeout=self.timeout_seconds)
+                wav = await loop.run_in_executor(self.executor, self.generate, text, tts_config)
                 if not still_current():
                     return
                 await self.send('greeting', operation_id=operation_id, text=text,
@@ -192,8 +183,6 @@ class GreetingCoordinator:
                 indexes = config.setdefault('_greetingIndexes', {})
                 indexes[bot_id] = rotation_index + 1
                 self.save_preferences(config)
-            except asyncio.TimeoutError:
-                log.warning('Greeting synthesis timed out after %.1fs; continuing without automatic speech.', self.timeout_seconds)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
@@ -207,9 +196,6 @@ class GreetingCoordinator:
         return operation_id
 
     async def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
         task = self._task
         self.cancel()
         if task is not None:
@@ -217,4 +203,3 @@ class GreetingCoordinator:
                 await task
             except asyncio.CancelledError:
                 pass
-        self.executor.shutdown(wait=False, cancel_futures=True)
