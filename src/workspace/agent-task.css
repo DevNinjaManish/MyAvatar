@@ -49,6 +49,9 @@ body.widget .rivet-evidence-label {display:block;margin-bottom:5px;color:var(--d
 body.widget .rivet-evidence-list {display:flex;flex-wrap:wrap;gap:4px}
 body.widget .rivet-evidence-list code {max-width:100%;overflow:hidden;padding:3px 6px;border:1px solid var(--ds-border-subtle);border-radius:6px;background:var(--ds-surface-subtle);color:var(--ds-text-secondary);font-size:9px;text-overflow:ellipsis;white-space:nowrap}
 body.widget .rivet-evidence-observation {margin:0;color:var(--ds-text-secondary);font-size:var(--ds-text-xs);line-height:1.45;overflow-wrap:anywhere}
+body.widget .rivet-activity-history {display:grid;gap:3px;padding-top:2px}
+body.widget .rivet-activity-row {position:relative;overflow:hidden;padding-left:12px;color:var(--ds-text-secondary);font-size:var(--ds-text-2xs);line-height:1.35;text-overflow:ellipsis;white-space:nowrap}
+body.widget .rivet-activity-row::before {content:'·';position:absolute;left:2px;color:var(--accent)}
 
 body.widget .rivet-details {margin:var(--ds-space-4) 0 2px;border-top:1px solid var(--ds-border-subtle);padding-top:var(--ds-space-3)}
 body.widget .rivet-details-toggle {display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--ds-space-3);align-items:center;width:100%;min-height:34px;padding:7px 3px;border:0;background:transparent;text-align:left}
