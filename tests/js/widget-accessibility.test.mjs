@@ -26,7 +26,9 @@ test('compact chat and picker controls meet minimum target sizing',()=>{
   assert.match(css,/widget-chat-actions button\{min-height:var\(--ds-control-sm\)/);
   assert.match(css,/#widget-chat-close\{width:var\(--ds-control-sm\);height:var\(--ds-control-sm\)/);
   assert.match(css,/#library-close\{width:var\(--ds-control-sm\);height:var\(--ds-control-sm\)/);
-  assert.match(css,/\.bot-card\{[^}]*min-height:36px/);
+  const target=css.match(/\.bot-card\{[^}]*min-height:(\d+)px/);
+  assert.ok(target, 'bot card must define a minimum target height');
+  assert.ok(Number(target[1])>=36,`bot card target shrank below 36px: ${target[1]}px`);
 });
 
 test('accessibility controller mounts after interaction state',()=>{
