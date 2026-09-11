@@ -15,5 +15,6 @@ data/
 *.key
 
 assets/source/
+artifacts/ui-regression/
 .myavatar-icon.iconset
 MyAvatar.app
