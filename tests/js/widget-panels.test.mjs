@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {initialPanelState, reducePanelState, readPanelPreferences, savePanelPreferences, PANEL_IDS} from '../../src/widget/panel-model.js';
 import {agentPlanSteps,agentStepObservation,agentStepVerification} from '../../src/widget/panels.js';
 import layoutAPI from '../../electron/widget-layout.cjs';
-const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_HEIGHT,UTILITY_HEIGHT,CALENDAR_HEIGHT}=layoutAPI;
+const {widgetLayout,validPanelsRequest,WIDTH,COMPACT_WIDTH,COMPACT_HEIGHT,UTILITY_HEIGHT,CALENDAR_HEIGHT}=layoutAPI;
 const area={x:0,y:24,width:1440,height:820};
 
 test('panels start closed with only Task expanded',()=>assert.deepEqual(initialPanelState(),{open:false,expanded:['task'],wide:null}));
@@ -58,7 +58,7 @@ test('only disclosure preferences are persisted, never task or project content',
   let saved;savePanelPreferences({setItem:(_key,value)=>saved=JSON.parse(value)},{...initialPanelState(),brief:'secret',project:'/private'});
   assert.deepEqual(saved,{expanded:['task']});
 });
-test('the companion uses one stable native frame from launch',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:area.x+area.width-WIDTH,y:24,width:WIDTH,height:UTILITY_HEIGHT}));
+test('the closed companion owns only its visible right column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:COMPACT_HEIGHT}));
 test('chat uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{chat:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
 test('coding uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
 test('calendar leaves room for month controls and event entries within the display',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,Math.min(CALENDAR_HEIGHT,area.height)));
@@ -70,14 +70,14 @@ test('specialists never expand or offset the native companion frame',()=>{
   const result=widgetLayout({x:1170,y:100},{tools:true,wide:true},area);
   assert.equal(result.side,'none');assert.equal(result.bounds.x,area.x+area.width-WIDTH);assert.equal(result.bounds.width,WIDTH);assert.equal(result.offset,0);assert.equal(result.wingWidth,0);
 });
-test('all specialist states retain identical native bounds',()=>{
+test('specialist states expand from the same right-edge anchor',()=>{
   const anchor={x:40,y:100};
   const closed=widgetLayout(anchor,{},area).bounds;
-  for(const view of [{calendar:true,wide:true},{tools:true,wide:true},{chat:true},{chat:true,tools:true,wide:true}])assert.deepEqual(widgetLayout(anchor,view,area).bounds,closed);
+  for(const view of [{calendar:true,wide:true},{tools:true,wide:true},{chat:true},{chat:true,tools:true,wide:true}]){const open=widgetLayout(anchor,view,area).bounds;assert.equal(open.x+open.width,closed.x+closed.width);assert.equal(open.width,WIDTH);}
 });
 test('opening and closing a stack leaves the anchor unchanged',()=>{
   const anchor={x:1100,y:24};widgetLayout(anchor,{chat:true,tools:true,wide:true},area);
-  assert.deepEqual(widgetLayout(anchor,{},area).bounds,{x:area.x+area.width-WIDTH,y:anchor.y,width:WIDTH,height:UTILITY_HEIGHT});
+  assert.deepEqual(widgetLayout(anchor,{},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:anchor.y,width:COMPACT_WIDTH,height:COMPACT_HEIGHT});
 });
 test('negative display coordinates are supported',()=>{
   const monitor={x:-1920,y:-100,width:1920,height:1080};

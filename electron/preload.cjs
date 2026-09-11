@@ -2,6 +2,7 @@ const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('desktop',{
   mode: mode=>ipcRenderer.invoke('window-mode',mode),
   widgetChat: expanded=>ipcRenderer.invoke('widget-chat',Boolean(expanded)),
+  widgetMenu: open=>ipcRenderer.invoke('widget-menu',Boolean(open)),
   widgetPanels: view=>ipcRenderer.invoke('widget-panels',view),
   widgetCalendar: view=>ipcRenderer.invoke('widget-calendar',view),
   widgetSpecialist: open=>ipcRenderer.invoke('widget-specialist',Boolean(open)),

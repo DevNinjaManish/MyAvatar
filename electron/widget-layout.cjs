@@ -1,7 +1,7 @@
 'use strict';
 // The companion always owns one fixed native window. The right column is the
 // companion; specialists use a permanently reserved left column.
-const WIDTH = 640, COMPACT_HEIGHT = 430, UTILITY_HEIGHT = 820;
+const WIDTH = 640, COMPACT_WIDTH = 260, COMPACT_HEIGHT = 470, UTILITY_HEIGHT = 820;
 const CHAT_HEIGHT = UTILITY_HEIGHT, TOOLS_HEIGHT = UTILITY_HEIGHT;
 const COMBINED_HEIGHT = UTILITY_HEIGHT, CALENDAR_HEIGHT = UTILITY_HEIGHT;
 const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, max)));
@@ -12,18 +12,11 @@ const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, m
  * reserved left column, so opening one cannot move the companion on the right.
  */
 function widgetLayout(anchor, view, area) {
-  const compactWidth = Math.min(WIDTH, area.width);
-  const width = compactWidth;
-  // Keep the native frame at its full working height from launch. Opening a
-  // chat or specialist then only changes an in-window layer, never bounds.
-  const height = Math.min(UTILITY_HEIGHT, area.height);
-  const x = clamp(anchor.x, area.x, area.x + area.width - width);
-
-  // Reserve the full utility height even while compact. This keeps the
-  // platform's screen coordinate stable when a utility panel opens; only
-  // content below it grows.
-  const reservedHeight = Math.min(UTILITY_HEIGHT, area.height);
-  const y = clamp(anchor.y, area.y, area.y + area.height - reservedHeight);
+  const expanded = Boolean(view.chat || view.tools || view.wide || view.calendar || view.menu);
+  const width = Math.min(expanded ? WIDTH : COMPACT_WIDTH, area.width);
+  const height = Math.min(expanded ? UTILITY_HEIGHT : COMPACT_HEIGHT, area.height);
+  const x = clamp(anchor.x + (expanded ? 0 : WIDTH - COMPACT_WIDTH), area.x, area.x + area.width - width);
+  const y = clamp(anchor.y, area.y, area.y + area.height - height);
 
   return {
     bounds: {
@@ -33,7 +26,7 @@ function widgetLayout(anchor, view, area) {
       height: Math.round(height),
     },
     side: 'none',
-    offset: 0,
+    offset: expanded ? 0 : COMPACT_WIDTH - WIDTH,
     wingWidth: 0,
   };
 }
@@ -43,4 +36,4 @@ function validPanelsRequest(value) {
     && typeof value.open === 'boolean' && typeof value.wide === 'boolean'
     && (!value.wide || value.open);
 }
-module.exports = {widgetLayout, validPanelsRequest, WIDTH, COMPACT_HEIGHT, UTILITY_HEIGHT, CALENDAR_HEIGHT};
+module.exports = {widgetLayout, validPanelsRequest, WIDTH, COMPACT_WIDTH, COMPACT_HEIGHT, UTILITY_HEIGHT, CALENDAR_HEIGHT};
