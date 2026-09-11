@@ -1,17 +1,38 @@
 const SURFACES=[
   {id:'bot-library',opener:'widget-picker-toggle',close:'library-close',focus:'library-close'},
   {id:'widget-menu',opener:'widget-more',close:'menu-close',focus:'menu-close'},
-  {id:'widget-chat',opener:'widget-chat-toggle',close:'widget-chat-close',focus:'widget-text',bodyClass:'widget-chat-open'},
+  {id:'widget-chat',opener:'widget-chat-toggle',close:'widget-chat-close',focus:'widget-text',className:'widget-chat-open'},
   {id:'widget-coding-panels',opener:'widget-specialist-toggle',close:'widget-panels-close',focus:'widget-panels-title'},
   {id:'widget-mini-calendar',opener:'widget-specialist-toggle',close:'widget-mini-calendar-close',focus:'widget-mini-calendar-title'},
   {id:'widget-creative-workspace',opener:'widget-specialist-toggle',close:'widget-creative-close',focus:'widget-creative-title'},
   {id:'widget-code-wing',opener:'widget-open-diff',close:'widget-wing-close',focus:'widget-wing-title'},
 ];
 
-const surfaceVisible=(doc,surface)=>{
+const SUBDISCLOSURES=[
+  {button:'widget-quality',panel:'widget-quality-panel'},
+  {button:'widget-system-hud-toggle',panel:'widget-system-hud'},
+  {button:'widget-rivet-details-toggle',panel:'widget-rivet-details-body'},
+];
+
+const NAV_GROUPS=[
+  {root:'widget-menu',selector:'button:not([hidden]):not(:disabled), input:not([hidden]):not(:disabled)'},
+  {root:'bot-library',selector:'.bot-card:not([hidden]):not(:disabled), #library-close:not([hidden]):not(:disabled)'},
+];
+
+export function linearFocusIndex(key,index,count){
+  if(!Number.isInteger(count)||count<1||!Number.isInteger(index)||index<0||index>=count)return null;
+  if(key==='Home')return 0;
+  if(key==='End')return count-1;
+  if(key==='ArrowDown'||key==='ArrowRight')return (index+1)%count;
+  if(key==='ArrowUp'||key==='ArrowLeft')return (index-1+count)%count;
+  return null;
+}
+
+const isVisible=(doc,surface)=>{
   const node=doc.getElementById(surface.id);
   if(!node)return false;
-  return surface.bodyClass?doc.body.classList.contains(surface.bodyClass):!node.hidden;
+  if(surface.className)return doc.body.classList.contains(surface.className);
+  return !node.hidden;
 };
 const focusable=node=>node&&!node.hidden&&!node.disabled&&typeof node.focus==='function';
 
@@ -23,7 +44,7 @@ export function mountWidgetAccessibility(win=window,doc=document){
     const panel=doc.getElementById(surface.id);
     if(!panel)return;
     const opener=doc.getElementById(surface.opener);
-    const visible=surfaceVisible(doc,surface);
+    const visible=isVisible(doc,surface);
     if(opener?.hasAttribute('aria-expanded'))opener.setAttribute('aria-expanded',String(visible));
     panel.setAttribute('aria-hidden',String(!visible));
     const previous=state.get(surface.id);
@@ -31,25 +52,52 @@ export function mountWidgetAccessibility(win=window,doc=document){
     state.set(surface.id,visible);
     if(visible){
       const target=doc.getElementById(surface.focus)||panel.querySelector('button,input,textarea,select,[tabindex]:not([tabindex="-1"])');
-      queueMicrotask(()=>focusable(target)&&target.focus());
+      queueMicrotask(()=>focusable(target)&&target.focus({preventScroll:true}));
     }else if(previous===true&&focusable(opener)){
-      queueMicrotask(()=>opener.focus());
+      queueMicrotask(()=>opener.focus({preventScroll:true}));
     }
   };
 
-  const syncAll=()=>SURFACES.forEach(syncSurface);
+  const syncDisclosure=item=>{
+    const button=doc.getElementById(item.button),panel=doc.getElementById(item.panel);
+    if(!button||!panel)return;
+    button.setAttribute('aria-controls',item.panel);
+    button.setAttribute('aria-expanded',String(!panel.hidden));
+  };
+  const syncAll=()=>{SURFACES.forEach(syncSurface);SUBDISCLOSURES.forEach(syncDisclosure);};
+
   const observer=new MutationObserver(records=>{
-    if(records.some(record=>record.type==='attributes'&&['hidden','class'].includes(record.attributeName)))syncAll();
+    if(records.some(record=>record.type==='attributes'&&(record.attributeName==='hidden'||record.attributeName==='class')))syncAll();
   });
   SURFACES.forEach(surface=>{
     const node=doc.getElementById(surface.id);
-    if(node)observer.observe(node,{attributes:true,attributeFilter:['hidden']});
+    if(node&&!surface.className)observer.observe(node,{attributes:true,attributeFilter:['hidden']});
+  });
+  SUBDISCLOSURES.forEach(item=>{
+    const panel=doc.getElementById(item.panel);
+    if(panel)observer.observe(panel,{attributes:true,attributeFilter:['hidden']});
   });
   observer.observe(doc.body,{attributes:true,attributeFilter:['class']});
 
+  const moveWithinGroup=event=>{
+    if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return false;
+    const group=NAV_GROUPS.find(item=>doc.getElementById(item.root)?.contains(event.target));
+    if(!group)return false;
+    const root=doc.getElementById(group.root);
+    const items=[...root.querySelectorAll(group.selector)].filter(node=>!node.closest('[hidden]'));
+    const index=items.indexOf(event.target);
+    if(index<0)return false;
+    const target=linearFocusIndex(event.key,index,items.length);
+    if(target===null)return false;
+    event.preventDefault();
+    items[target]?.focus({preventScroll:true});
+    return true;
+  };
+
   const onKeydown=event=>{
+    if(moveWithinGroup(event))return;
     if(event.key!=='Escape')return;
-    const surface=[...SURFACES].reverse().find(item=>surfaceVisible(doc,item));
+    const surface=[...SURFACES].reverse().find(item=>isVisible(doc,item));
     if(!surface)return;
     const close=doc.getElementById(surface.close);
     if(close&&!close.hidden&&!close.disabled){
