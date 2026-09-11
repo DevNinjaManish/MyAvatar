@@ -4,6 +4,7 @@ import {suspendActiveLiveCapture} from '../audio/engine.js';
 export const RUNTIME_EVENT_VERSION=1;
 const BOT_TRANSITION_TYPES=new Set(['config']);
 const APPROVAL_DECISIONS=new Set(['allow_once','deny']);
+const STARTUP_TRACE_TYPES=new Set(['config','coding_workspace','preparing','ready','setup_error']);
 
 export class RuntimeEventGate{
   constructor(){this.reset();}
@@ -58,10 +59,13 @@ export function installRuntimeEventGuard(win=window){
         socket.send(JSON.stringify({type:'action_decision',requestId:event.detail.requestId,decision:event.detail.decision}));
       };
       win.addEventListener('myavatar:approval-decision',decide);
+      socket.addEventListener('open',()=>console.info('[MyAvatar runtime] socket open'));
       socket.addEventListener('message',event=>{
         let payload;
         try{payload=JSON.parse(event.data);}catch{return;}
-        if(!gate.accept(payload)){event.stopImmediatePropagation();return;}
+        const accepted=gate.accept(payload);
+        if(STARTUP_TRACE_TYPES.has(payload?.type))console.info(`[MyAvatar runtime] ${accepted?'accepted':'rejected'} ${payload.type} seq=${payload.sequence??'legacy'} session=${payload.sessionId||'legacy'}`);
+        if(!accepted){event.stopImmediatePropagation();return;}
         turnPlayback.noteServerEvent(payload);
         win.dispatchEvent(new CustomEvent('myavatar:runtime-event',{detail:payload}));
         if(payload.readiness&&typeof payload.readiness==='object'){
@@ -70,6 +74,7 @@ export function installRuntimeEventGuard(win=window){
         if(payload.type==='action_request')event.stopImmediatePropagation();
       },{capture:true});
       socket.addEventListener('close',()=>{
+        console.info('[MyAvatar runtime] socket closed');
         gate.reset();
         turnPlayback.cancelTurn();
         win.dispatchEvent(new CustomEvent('myavatar:socket-close'));
