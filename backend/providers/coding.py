@@ -1,9 +1,14 @@
-"""Small Ollama-backed coding specialist for read-only inspection tasks."""
+"""Small Ollama-backed coding specialist with bounded local tool orchestration."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import httpx
+
+from backend.core.coding_agent import run_coding_agent
+from backend.core.workspace import AGENT_MARKER
 
 
 async def check_ready(config: dict[str, Any]) -> None:
@@ -25,8 +30,8 @@ async def check_ready(config: dict[str, Any]) -> None:
         response.raise_for_status()
 
 
-async def inspect(messages: list[dict[str, str]], config: dict[str, Any]) -> str:
-    """Ask the local coding model to inspect supplied repository context."""
+async def _chat(messages: list[dict[str, str]], config: dict[str, Any]) -> str:
+    """Perform one raw local coding-model chat turn."""
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(
             config['url'] + '/api/chat',
@@ -51,3 +56,40 @@ async def inspect(messages: list[dict[str, str]], config: dict[str, Any]) -> str
         if not isinstance(answer, str) or not answer.strip():
             raise RuntimeError('The coding model returned an empty reply.')
         return answer.strip()
+
+
+def _agent_request(messages: list[dict[str, str]]) -> tuple[str, Path] | None:
+    """Extract trusted orchestration metadata authored by the local backend."""
+    for message in messages[:3]:
+        content = message.get('content', '') if isinstance(message, dict) else ''
+        if not isinstance(content, str) or not content.startswith(AGENT_MARKER):
+            continue
+        try:
+            payload = json.loads(content[len(AGENT_MARKER):])
+        except json.JSONDecodeError:
+            return None
+        request = payload.get('request')
+        root = payload.get('root')
+        if not isinstance(request, str) or not request.strip() or not isinstance(root, str) or not root.strip():
+            return None
+        resolved = Path(root).expanduser().resolve()
+        if not resolved.is_dir():
+            return None
+        return request.strip(), resolved
+    return None
+
+
+async def inspect(messages: list[dict[str, str]], config: dict[str, Any]) -> str:
+    """Inspect supplied context, expanding it through Rivet's safe tool loop when marked."""
+    agent = _agent_request(messages)
+    if agent is None:
+        return await _chat(messages, config)
+
+    request, root = agent
+    result = await run_coding_agent(request, config, _chat, root=root)
+    plan = result['plan']
+    tools = result.get('tools') or []
+    if tools:
+        trail = ' -> '.join(tools)
+        return f"{plan}\n\nInspection trail: {trail}"
+    return plan
