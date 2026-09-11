@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -28,9 +32,8 @@ jobs:
           uv venv --python 3.11
           uv pip install --python .venv/bin/python -r requirements.lock
       - name: Run JavaScript tests
-        run: npm test
+        run: npm run test:js
       - name: Run Python tests
-        run: .venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+        run: npm run test:py
       - name: Production build
         run: npm run build
-
