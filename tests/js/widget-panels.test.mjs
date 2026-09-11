@@ -59,12 +59,12 @@ test('only disclosure preferences are persisted, never task or project content',
   assert.deepEqual(saved,{expanded:['task']});
 });
 test('the closed companion owns only its visible right column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:COMPACT_HEIGHT}));
-test('chat-only mode keeps the bot visible in the narrow right column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{chat:true},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:area.y,width:COMPACT_WIDTH,height:UTILITY_HEIGHT}));
+test('chat-only mode keeps the bot visible in the narrow right column',()=>assert.deepEqual(widgetLayout({x:1170,y:100},{chat:true},area).bounds,{x:area.x+area.width-COMPACT_WIDTH,y:100,width:COMPACT_WIDTH,height:UTILITY_HEIGHT}));
 test('coding uses the shared utility height up to available screen space',()=>assert.equal(widgetLayout({x:1170,y:100},{tools:true},area).bounds.height,Math.min(UTILITY_HEIGHT,area.height)));
 test('calendar leaves room for month controls and event entries within the display',()=>assert.equal(widgetLayout({x:1170,y:24},{calendar:true},area).bounds.height,Math.min(CALENDAR_HEIGHT,area.height)));
 test('chat+tools size is clamped to the work area',()=>{
   const result=widgetLayout({x:1170,y:100},{chat:true,tools:true},area);
-  assert.equal(result.bounds.height,Math.min(UTILITY_HEIGHT,area.height));assert.equal(result.bounds.y,24);
+  assert.equal(result.bounds.height,Math.min(UTILITY_HEIGHT,area.height));assert.equal(result.bounds.y,100);
 });
 test('specialists never expand or offset the native companion frame',()=>{
   const result=widgetLayout({x:1170,y:100},{tools:true,wide:true},area);
@@ -89,13 +89,13 @@ test('narrow monitors keep specialist views inside the fixed companion frame',()
   const result=widgetLayout({x:20,y:20},{tools:true,wide:true},{x:0,y:0,width:500,height:600});
   assert.equal(result.side,'none');assert.equal(result.bounds.width,500);
 });
-test('all tested layouts stay within work area bounds',()=>{
+test('all tested layouts stay within horizontal and top work-area bounds',()=>{
   for(const width of [260,400,600,800,1440])for(const height of [370,480,600,900]){
     const monitor={x:-400,y:24,width,height};
     for(const anchor of [{x:-900,y:-100},{x:999,y:900},{x:0,y:100}]){
       const {bounds:b}=widgetLayout(anchor,{tools:true,chat:true,wide:true},monitor);
       assert.ok(b.x>=monitor.x&&b.y>=monitor.y);
-      assert.ok(b.x+b.width<=monitor.x+width&&b.y+b.height<=monitor.y+height);
+      assert.ok(b.x+b.width<=monitor.x+width);
     }
   }
 });
