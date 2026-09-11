@@ -23,3 +23,8 @@ test('child spawn errors tear down sibling processes instead of crashing dirty',
 test('shutdown only signals live child processes',()=>{
   assert.match(source,/if\(c&&!c\.killed\)c\.kill\('SIGTERM'\)/);
 });
+
+test('desktop launch does not require eager model warmup',()=>{
+  assert.match(source,/MYAVATAR_WARMUP:process\.env\.MYAVATAR_WARMUP\|\|"0"/);
+  assert.doesNotMatch(source,/MYAVATAR_WARMUP:"1"/);
+});
