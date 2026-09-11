@@ -7,15 +7,15 @@ export function interactionPresentation({voiceState='ready', readiness={}, task=
   const phase = task?.phase || '';
   const taskStatus = task?.status || '';
 
+  // Hard connectivity failure always wins: the companion cannot act while offline.
   if (socketClosed || overall === 'unavailable') {
     return {state:'offline', label:'Offline', tone:'error', busy:false, runtime:'OFFLINE'};
   }
-  if (overall === 'degraded') {
-    return {state:'limited', label:'Ready · limited', tone:'warning', busy:false, runtime:'LIMITED'};
-  }
+  // User-actionable task states must not be hidden by a degraded background service.
   if (task && botId === 'robot' && phase === 'NEEDS_APPROVAL') {
-    return {state:'awaiting-approval', label:'Awaiting approval', tone:'warning', busy:true, runtime:'APPROVAL'};
+    return {state:'awaiting-approval', label:'Awaiting approval', tone:'warning', busy:false, runtime:'APPROVAL'};
   }
+  // Voice is the most immediate foreground interaction while the companion is online.
   if (ACTIVE_VOICE.has(voice)) {
     const labels = {listening:'Listening', thinking:'Thinking', speaking:'Speaking', preparing:'Preparing'};
     return {state:voice, label:labels[voice], tone:'active', busy:true, runtime:labels[voice].toUpperCase()};
@@ -25,6 +25,9 @@ export function interactionPresentation({voiceState='ready', readiness={}, task=
   }
   if (task && botId === 'robot' && (phase === 'BLOCKED' || taskStatus === 'blocked')) {
     return {state:'task-blocked', label:'Needs attention', tone:'error', busy:false, runtime:'ATTENTION'};
+  }
+  if (overall === 'degraded') {
+    return {state:'limited', label:'Ready · limited', tone:'warning', busy:false, runtime:'LIMITED'};
   }
   if (overall === 'preparing' || overall === 'pending') {
     return {state:'preparing', label:'Preparing', tone:'active', busy:true, runtime:'STARTING'};
