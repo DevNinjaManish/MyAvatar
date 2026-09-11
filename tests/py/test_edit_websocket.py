@@ -25,8 +25,7 @@ class EditWebSocketTests(unittest.TestCase):
 
     def test_patch_preview_approval_apply_and_rollback(self):
         async def ready(_config):return None
-        async def inspect(_messages,_config,on_activity=None):
-            if on_activity:await on_activity({'type':'tool','label':'Inspected demo.py','refs':['demo.py'],'tool':'repository'})
+        async def inspect(_messages,_config):
             return 'I would update demo.py.\n```diff\n--- a/demo.py\n+++ b/demo.py\n@@ -1 +1 @@\n-old = 1\n+old = 2\n```'
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);target=root/'demo.py';target.write_text('old = 1\n',encoding='utf-8')
@@ -58,8 +57,7 @@ class EditWebSocketTests(unittest.TestCase):
 
     def test_reject_and_duplicate_approval_do_not_write(self):
         async def ready(_config):return None
-        async def inspect(_messages,_config,on_activity=None):
-            if on_activity:await on_activity({'type':'tool','label':'Inspected demo.py','refs':['demo.py'],'tool':'repository'})
+        async def inspect(_messages,_config):
             return '```diff\n--- a/demo.py\n+++ b/demo.py\n@@ -1 +1 @@\n-old = 1\n+old = 2\n```'
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);target=root/'demo.py';target.write_text('old = 1\n',encoding='utf-8')

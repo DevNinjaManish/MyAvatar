@@ -107,7 +107,7 @@ async def ws(socket:WebSocket):
     if socket.headers.get('origin') not in ('http://127.0.0.1:5173','http://localhost:5173',None):await socket.close(code=1008);return
     await socket.accept();config=load_config();bot_id=config['conversation']['persona'];memory_enabled=config.get('memory',{}).get('enabled',False)
     history=load_history(bot_id) if memory_enabled else [];log.info(f'Loaded history for {bot_id}: {len(history)} turns');bot_histories={bot_id:history};task=None;verification_task=None;approvals={};runtime=RuntimeSession(bot_id);edits=CodingEditController(REPO_ROOT);agent_ref={'task':None}
-    async def send(event_type,turn=None,operation_id=None,**data):await socket.send_json(runtime.event(event_type,turn=turn,operation_id=operation_id,**data))
+    async def send(kind,turn=None,operation_id=None,**data):await socket.send_json(runtime.event(kind,turn=turn,operation_id=operation_id,**data))
     async def agent_update(agent_task,phase,turn=None):
         agent_task.set_phase(phase);await send('agent_state',turn,operation_id=agent_task.id,agentState=agent_task.public())
     def new_agent_task(goal, current_bot):
@@ -228,20 +228,7 @@ async def ws(socket:WebSocket):
             await send('state',turn,state='THINKING');files=choose_context(text,root=edits.root)
             if agent_task:
                 agent_task.set_context([item['path'] for item in files]).record_tool_activity(f'Gathered bounded context from {len(files)} file' + ('s.' if len(files)!=1 else '.')).record_observation('Repository context gathered from the selected workspace.');await agent_update(agent_task,AgentPhase.CONTEXT,turn);agent_task.update_step('context','complete').update_step('plan','active');await agent_update(agent_task,AgentPhase.PLANNING,turn)
-            async def on_inspection_activity(activity):
-                if not isinstance(activity,dict):return
-                label=str(activity.get('label','')).strip()[:160]
-                if not label:return
-                refs=activity.get('contextRefs') if isinstance(activity.get('contextRefs'),list) else activity.get('refs')
-                refs=[str(ref).strip() for ref in (refs or []) if isinstance(ref,str) and ref.strip()][:8]
-                kind=activity.get('type') if activity.get('type') in {'tool','final'} else 'tool'
-                tool=str(activity.get('tool','')).strip()[:80] if isinstance(activity.get('tool'),str) else ''
-                if agent_task:
-                    agent_task.record_tool_activity(label)
-                    if refs:agent_task.set_context(refs)
-                    await agent_update(agent_task,AgentPhase.PLANNING,turn)
-                await send('coding_activity',turn,operation_id=agent_task.id if agent_task else None,kind=kind,label=label,refs=refs,tool=tool)
-            await send('coding_context',turn,paths=[item['path'] for item in files],automatic=True,workspace=edits.workspace());messages=build_change_plan_prompt(text,files);answer=await inspect_code(messages,coding_config,on_activity=on_inspection_activity);await send('token',turn,text=answer);preview=edits.preview(answer)
+            await send('coding_context',turn,paths=[item['path'] for item in files],automatic=True,workspace=edits.workspace());messages=build_change_plan_prompt(text,files);answer=await inspect_code(messages,coding_config);await send('token',turn,text=answer);preview=edits.preview(answer)
             if preview is not None:
                 await send('coding_patch',turn,**preview)
                 if agent_task:agent_task.update_step('plan','complete').needs_approval('Approve the proposed change before any files are modified.').record_tool_activity('Prepared a safe patch proposal for approval.');await agent_update(agent_task,AgentPhase.NEEDS_APPROVAL,turn)

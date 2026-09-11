@@ -17,10 +17,7 @@ export function mountReadinessUI(win=window,doc=document){
     doc.body.dataset.runtimeReadiness=current.overall||'unknown';
     const text=summary(current);
     if($('status')&&$('status').textContent!==text)$('status').textContent=text;
-    // Before the canonical interaction controller mounts, readiness may provide
-    // the compact fallback label. Afterwards it owns capabilities only; the
-    // interaction controller owns the companion's visible status.
-    if(!win.__myavatarInteractionState&&$('widget-status')&&$('widget-status').textContent!==text)$('widget-status').textContent=text;
+    if($('widget-status')&&$('widget-status').textContent!==text)$('widget-status').textContent=text;
     const chatReady=!!caps.chat,listenReady=!!caps.listen;
     // Keep the hidden/full mic enabled when chat is available because existing
     // text submission still uses it as the general readiness gate. Voice clicks

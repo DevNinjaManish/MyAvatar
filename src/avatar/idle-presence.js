@@ -1,18 +1,8 @@
 const EMOJI={curious:'🤔',relaxed:'😌'};
-const BOT_IDLE={
-  nova:{emotion:'curious',idleMs:28000,minimumGapMs:52000,visibleMs:1900},
-  butler:{emotion:'relaxed',idleMs:38000,minimumGapMs:65000,visibleMs:1500},
-  pixel:{emotion:'curious',idleMs:24000,minimumGapMs:42000,visibleMs:1500},
-  luma:{emotion:'relaxed',idleMs:34000,minimumGapMs:60000,visibleMs:1800},
-  robot:{emotion:'relaxed',idleMs:30000,minimumGapMs:50000,visibleMs:1500},
-};
-
-export function idleTuning(botId='nova'){
-  return BOT_IDLE[botId]||BOT_IDLE.nova;
-}
+const BOT_IDLE={nova:'curious',butler:'relaxed',pixel:'curious',luma:'relaxed',robot:'relaxed'};
 
 export class IdlePresence{
-  constructor({idleMs=null,minimumGapMs=null,visibleMs=null}={}){
+  constructor({idleMs=30000,minimumGapMs=45000,visibleMs=1800}={}){
     this.idleMs=idleMs;this.minimumGapMs=minimumGapMs;this.visibleMs=visibleMs;
     this.lastActivity=0;this.lastReaction=-Infinity;this.botId='nova';this.state='IDLE';this.timer=null;
   }
@@ -22,24 +12,14 @@ export class IdlePresence{
     if(event?.type==='state'&&typeof event.state==='string')this.state=event.state;
     if(['transcript','token','audio','greeting','config'].includes(event?.type))this.activity(now);
   }
-  profile(){
-    const authored=idleTuning(this.botId);
-    return {
-      ...authored,
-      idleMs:this.idleMs??authored.idleMs,
-      minimumGapMs:this.minimumGapMs??authored.minimumGapMs,
-      visibleMs:this.visibleMs??authored.visibleMs,
-    };
-  }
   shouldReact(now=performance.now()){
-    const profile=this.profile();
-    return this.state==='IDLE'&&now-this.lastActivity>=profile.idleMs&&now-this.lastReaction>=profile.minimumGapMs;
+    return this.state==='IDLE'&&now-this.lastActivity>=this.idleMs&&now-this.lastReaction>=this.minimumGapMs;
   }
   reaction(now=performance.now()){
     if(!this.shouldReact(now))return null;
     this.lastReaction=now;
-    const profile=this.profile();
-    return {botId:this.botId,emotion:profile.emotion,emoji:EMOJI[profile.emotion],visibleMs:profile.visibleMs};
+    const emotion=BOT_IDLE[this.botId]||'relaxed';
+    return {botId:this.botId,emotion,emoji:EMOJI[emotion],visibleMs:this.visibleMs};
   }
 }
 

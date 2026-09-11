@@ -25,13 +25,13 @@ class RuntimeSession:
             raise ValueError('Runtime session requires a companion id.')
         self.bot_id = bot_id
 
-    def event(self, event_type: str, *, turn: int | None = None,
+    def event(self, kind: str, *, turn: int | None = None,
               operation_id: str | None = None, **data: Any) -> dict[str, Any]:
-        if not isinstance(event_type, str) or not event_type:
+        if not isinstance(kind, str) or not kind:
             raise ValueError('Runtime event requires a type.')
         self.sequence += 1
         event: dict[str, Any] = {
-            'type': event_type,
+            'type': kind,
             'runtimeVersion': RUNTIME_EVENT_VERSION,
             'sessionId': self.session_id,
             'sequence': self.sequence,

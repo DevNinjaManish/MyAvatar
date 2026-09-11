@@ -3,8 +3,6 @@ import soundfile as sf
 from pathlib import Path
 import numpy as np
 
-from backend.core.voice_personality import voice_personality
-
 VOICE_SPEED_MULTIPLIER={
     'am_michael':0.98,
     'bm_george':0.95,
@@ -15,9 +13,8 @@ VOICE_SPEED_MULTIPLIER={
 
 def speech_speed_for_voice(config):
     base=float(config.get('speed',1.0))
-    voice_multiplier=VOICE_SPEED_MULTIPLIER.get(config.get('voice'),1.0)
-    persona_multiplier=voice_personality(str(config.get('persona','nova'))).speed_multiplier
-    return max(0.82,min(1.22,base*voice_multiplier*persona_multiplier))
+    multiplier=VOICE_SPEED_MULTIPLIER.get(config.get('voice'),1.0)
+    return max(0.82,min(1.22,base*multiplier))
 
 
 class Speech:

@@ -121,9 +121,7 @@ test('markup has unique IDs, five persistent controls and separate Stop',()=>{
   const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
   assert.equal(new Set(ids).size,ids.length);
-  const toolbarMatch=html.match(/<div class="widget-toolbar"[^>]*>([\s\S]*?)<\/div>/);
-  assert.ok(toolbarMatch);
-  const toolbar=toolbarMatch[1];
+  const toolbar=html.match(/<div class="widget-toolbar">([\s\S]*?)<\/div>/)[1];
   assert.deepEqual([...toolbar.matchAll(/<button id="([^"]+)"/g)].map(match=>match[1]),['widget-mic','widget-chat-toggle','widget-specialist-toggle','widget-more']);
   assert.ok(html.includes('id="widget-coding-tools"')&&html.includes('id="widget-calendar-toggle"')&&html.includes('id="widget-creative-toggle"'));
   assert.ok(html.includes('id="widget-creative-workspace"')&&html.includes('id="widget-creative-content"'));
@@ -157,11 +155,9 @@ test('specialists assign scrolling to their content rather than nested panel she
   assert.match(stack,/#widget-creative-workspace \{ overflow-y: auto !important; scrollbar-gutter: stable !important;/);
 });
 test('each companion picker card uses its own accent when selected',()=>{
-  const css=readFileSync(new URL('../../src/styles/widget-components.css',import.meta.url),'utf8');
-  const base=readFileSync(new URL('../../src/styles/base.css',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../../src/styles/base.css',import.meta.url),'utf8');
   assert.ok(css.includes('var(--bot-card-accent,#a5e2ce)'));
   for(const accent of ['#79d8ef','#f0a8d0','#d1b26f','#c9ff55','#9fe7ff'])assert.ok(css.includes(`--bot-card-accent:${accent}`));
-  assert.doesNotMatch(base,/\.bot-card/);
 });
 test('the visible specialist icon follows calendar coding and creative panel state',()=>{
   const runtime=readFileSync(new URL('../../src/app/widget-runtime.js',import.meta.url),'utf8');

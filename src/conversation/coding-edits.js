@@ -9,8 +9,6 @@ let verificationStatus=null;
 
 function card(doc,className){const node=doc.createElement('div');node.className=`coding-edit-card ${className||''}`.trim();return node;}
 function appendToChats(doc,factory){for(const target of [doc.getElementById('messages'),doc.getElementById('widget-messages')].filter(Boolean)){const node=factory();target.append(node);if(target.id==='widget-messages')target.scrollTop=target.scrollHeight;}}
-function dispatchActivity(win,detail){win.dispatchEvent(new win.CustomEvent('myavatar:rivet-activity',{detail}));}
-function forwardAgentState(win,event){if(event?.agentState&&typeof event.agentState==='object')win.dispatchEvent(new win.CustomEvent('myavatar:agent-task',{detail:event.agentState}));}
 
 function makePatchCard(win,doc,event){
   const tx=event.transaction;const repair=tx.repairRound===1;if(repair)repairTransactions.add(tx.id);
@@ -58,25 +56,10 @@ function mountWorkspaceControl(win,doc){
 export function mountCodingEdits(win=window,doc=document){
   mountWorkspaceControl(win,doc);const socket=win.__myAvatarSocket;if(!socket)return;
   socket.addEventListener('message',raw=>{let event;try{event=JSON.parse(raw.data);}catch{return;}
-    if(event.type==='agent_state')forwardAgentState(win,event);
-    if(event.type==='coding_activity')dispatchActivity(win,{kind:event.kind||'tool',label:String(event.label||'').slice(0,160),refs:(event.refs||[]).filter(path=>typeof path==='string').slice(0,8),tool:typeof event.tool==='string'?event.tool.slice(0,80):''});
-    if(event.type==='coding_context')dispatchActivity(win,{kind:'context',label:`Gathered ${event.paths?.length||0} context file${event.paths?.length===1?'':'s'}`,refs:(event.paths||[]).slice(0,8)});
-    if(event.type==='coding_patch'){
-      const refs=(event.transaction?.files||[]).map(file=>file.path).filter(Boolean).slice(0,8);
-      dispatchActivity(win,{kind:'patch',label:'Patch ready for approval',refs,transactionId:event.transaction?.id||''});
-      appendToChats(doc,()=>makePatchCard(win,doc,event));
-    }
-    if(event.type==='coding_edit_result'){
-      const status=event.verification?.status;
-      dispatchActivity(win,{kind:'result',label:status==='passed'?'Verification passed':status==='failed'?'Verification found issues':event.message||'Coding change updated'});
-      appendToChats(doc,()=>makeResultCard(win,doc,event));
-    }
-    if(event.type==='coding_verification'){
-      verificationStatus=event.status;
-      dispatchActivity(win,{kind:'verification',label:event.status==='running'?'Running safe verification':event.status==='cancelled'?'Verification cancelled':event.message||'Verification updated'});
-      appendToChats(doc,()=>makeVerificationStatus(doc,event));
-    }
+    if(event.type==='coding_patch')appendToChats(doc,()=>makePatchCard(win,doc,event));
+    if(event.type==='coding_edit_result')appendToChats(doc,()=>makeResultCard(win,doc,event));
+    if(event.type==='coding_verification'){verificationStatus=event.status;appendToChats(doc,()=>makeVerificationStatus(doc,event));}
     if(event.type==='coding_workspace_picker')chooseWorkspace(win,doc).catch(()=>{});
-    if(event.type==='coding_workspace'){repairTransactions.clear();verificationStatus=null;dispatchActivity(win,{kind:'workspace',label:`Workspace: ${event.workspace?.name||'local project'}`});const status=doc.querySelector('.coding-workspace-status');if(status)status.textContent=`Using ${event.workspace?.name||'workspace'}`;}
+    if(event.type==='coding_workspace'){repairTransactions.clear();verificationStatus=null;const status=doc.querySelector('.coding-workspace-status');if(status)status.textContent=`Using ${event.workspace?.name||'workspace'}`;}
   });
 }

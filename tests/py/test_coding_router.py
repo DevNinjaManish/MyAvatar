@@ -24,9 +24,7 @@ class AutomaticCodingTurnTests(unittest.TestCase):
         async def ready(_config):
             return None
 
-        async def inspect(_messages, _config, on_activity=None):
-            if on_activity:
-                await on_activity({'type': 'tool', 'label': 'Inspected selected repository context.', 'refs': ['src/widget.js'], 'tool': 'repository'})
+        async def inspect(_messages, _config):
             return 'Change the animation state guard and add a regression test.'
 
         engine_readiness.reset(deferred=True)
@@ -42,7 +40,7 @@ class AutomaticCodingTurnTests(unittest.TestCase):
                 pass
             ws.send_json({'type': 'turn', 'turn': 21, 'text': 'Figure out why the widget animation code is broken'})
             events = []
-            for _ in range(20):
+            for _ in range(16):
                 event = ws.receive_json()
                 events.append(event)
                 if event['type'] in ('done', 'error'):
@@ -52,7 +50,6 @@ class AutomaticCodingTurnTests(unittest.TestCase):
             self.assertIn('transcript', kinds)
             self.assertIn('coding_preparing', kinds)
             self.assertIn('coding_context', kinds)
-            self.assertIn('coding_activity', kinds)
             self.assertIn('token', kinds)
             self.assertIn('audio', kinds)
             context = next(event for event in events if event['type'] == 'coding_context')

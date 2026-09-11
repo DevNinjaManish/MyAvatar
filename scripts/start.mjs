@@ -6,14 +6,14 @@ import {fileURLToPath} from 'node:url';
 import electronPath from 'electron';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const token=randomBytes(24).toString('hex');
-if(!existsSync(resolve(root,'.venv/bin/python')))throw Error('Run setup commands in README first.');
+if(!existsSync('.venv/bin/python'))throw Error('Run setup commands in README first.');
 const children=[];
-let stopping=false;
-function stop(){if(stopping)return;stopping=true;children.forEach(c=>{if(c&&!c.killed)c.kill('SIGTERM');});setTimeout(()=>process.exit(),300).unref();}
-function run(cmd,args,extra={}){const c=spawn(cmd,args,{cwd:root,stdio:'inherit',env:{...process.env,MYAVATAR_TOKEN:token,HF_HUB_OFFLINE:"1",MYAVATAR_WARMUP:"0",VITE_API_TOKEN:token,...extra}});children.push(c);c.on('error',error=>{console.error(`[MyAvatar] Failed to start ${cmd}:`,error.message);stop();});return c;}
+function run(cmd,args,extra={}){const c=spawn(cmd,args,{cwd:root,stdio:'inherit',env:{...process.env,MYAVATAR_TOKEN:token,HF_HUB_OFFLINE:"1",MYAVATAR_WARMUP:"1",VITE_API_TOKEN:token,...extra}});children.push(c);return c;}
+let stopping=false;function stop(){if(stopping)return;stopping=true;children.forEach(c=>c.kill('SIGTERM'));setTimeout(()=>process.exit(),300).unref();}
 process.on('SIGINT',stop);process.on('SIGTERM',stop);
 const backend=run('.venv/bin/python',['-m','uvicorn','backend.core.app:app','--host','127.0.0.1','--port','8765']);
 const vite=run('node',['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5173','--strictPort']);
+// The UI can be closed and re-opened without destroying the local services.
 backend.on('exit',()=>stop());
 vite.on('exit',()=>stop());
 async function wait(url){
@@ -27,7 +27,4 @@ async function wait(url){
   }
   throw Error(`Startup timed out while waiting for ${url}`);
 }
-try{
-  await Promise.all([wait('http://127.0.0.1:5173'),wait('http://127.0.0.1:8765/health')]);
-  if(!stopping){const desktop=run(electronPath,[root]);desktop.on('exit',()=>stop());}
-}catch(e){console.error(e);stop();}
+try{await Promise.all([wait('http://127.0.0.1:5173'),wait('http://127.0.0.1:8765/health')]);if(!stopping)run(electronPath,[root]);}catch(e){console.error(e);stop();}
