@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {workspaceProfile,workspaceActivity,agentTaskSummary,companionWorkspaceState,rivetWorkspaceState,rivetPatchSummary,rivetActionAvailability} from '../../src/workspace/unified-workspace.js';
 
 test('all five companions map to one shared workspace profile model',()=>{
@@ -32,6 +33,11 @@ test('Nova workspace uses only session focus, conversation output, and available
   assert.deepEqual(state.modules.map(([label])=>label),['Practical next action','Active plan','Useful output','Planning context']);
   assert.match(state.modules[2][1],/Draft in progress/);
   assert.equal(state.calendar.events.length,1);
+});
+
+test('Nova workspace marks whether a current goal is active',()=>{
+  const source=readFileSync(new URL('../../src/workspace/unified-workspace.js',import.meta.url),'utf8');
+  assert.match(source,/shell\.dataset\.focusActive=String\(Boolean\(focusText\(\)/);
 });
 
 test('Sterling workspace isolates priorities and does not invent decisions or schedule data',()=>{
