@@ -14,6 +14,12 @@ test('closing Electron tears down the local service stack',()=>{
   assert.match(source,/desktop\.on\('exit',\(\)=>stop\(\)\)/);
 });
 
+test('child spawn errors tear down sibling processes instead of crashing dirty',()=>{
+  assert.match(source,/c\.on\('error',error=>\{/);
+  assert.match(source,/Failed to start \$\{cmd\}/);
+  assert.match(source,/stop\(\);\}\);return c;/);
+});
+
 test('shutdown only signals live child processes',()=>{
   assert.match(source,/if\(c&&!c\.killed\)c\.kill\('SIGTERM'\)/);
 });
