@@ -17,7 +17,8 @@ test('Rivet workspace exposes bounded investigation evidence',()=>{
 test('Rivet evidence UI is compact and text-safe',()=>{
   const code=readFileSync(new URL('../../src/widget/rivet-workspace.js',import.meta.url),'utf8');
   const css=readFileSync(new URL('../../src/workspace/agent-task.css',import.meta.url),'utf8');
-  assert.match(code,/textContent = model\.toolSummary/);
+  assert.match(code,/activityTrail\.at\(-1\)\?\.label \|\| model\.toolSummary/);
+  assert.match(code,/activity\.textContent = activeLabel/);
   assert.match(code,/item\.textContent = path/);
   assert.match(code,/aria-label', 'Rivet investigation evidence'/);
   assert.match(css,/\.rivet-evidence-list code/);
