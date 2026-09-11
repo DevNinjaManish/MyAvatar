@@ -505,7 +505,7 @@ function setWidgetChat(open,focus=true){
  $('widget-chat-toggle').setAttribute('aria-expanded',String(shouldOpen));
  $('widget-chat-toggle').setAttribute('aria-label',shouldOpen?'Close chat':'Open chat');
  $('widget-chat-toggle').title=shouldOpen?'Close chat':'Open chat';
- if(shouldOpen){widgetUnread=0;syncWidgetUnread();}
+ if(shouldOpen){widgetUnread=0;syncWidgetUnread();syncWidgetStatus();}
  window.desktop?.widgetChat(shouldOpen);
  if(focus){if(shouldOpen)$('widget-text').focus();else $('widget-chat-toggle').focus();}
 }
