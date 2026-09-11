@@ -40,6 +40,12 @@ test('Nova workspace marks whether a current goal is active',()=>{
   assert.match(source,/shell\.dataset\.focusActive=String\(Boolean\(focusText\(\)/);
 });
 
+test('Nova workspace gives active focus and planning context a restrained visual emphasis',()=>{
+  const css=readFileSync(new URL('../../src/workspace/unified-workspace.css',import.meta.url),'utf8');
+  assert.match(css,/data-focus-active=true\].*uws-focus\{box-shadow/);
+  assert.match(css,/data-bot=nova\].*uws-modules>div:last-child/);
+});
+
 test('Sterling workspace isolates priorities and does not invent decisions or schedule data',()=>{
   const state=companionWorkspaceState('butler',{focus:'Finish the launch brief',messages:[],calendar:{available:false}});
   assert.equal(state.focusLabel,'Current priority');
