@@ -44,8 +44,30 @@ body.widget .system-rail-item i{position:absolute;left:6px;right:6px;bottom:3px;
 body.widget .system-rail-item i b{display:block;width:0;height:100%;border-radius:inherit;background:color-mix(in srgb,var(--accent) 72%,#ffffff33);transition:width .3s ease}
 body.widget .system-rail-runtime{justify-content:center;padding-inline:5px;color:#aebabc;font-weight:650;white-space:nowrap;border-left:1px solid #ffffff0d}
 body.widget .system-rail-runtime .system-rail-icon{font-size:6px}
-body.widget .system-rail-runtime[data-state=preparing],body.widget .system-rail-runtime[data-state=degraded]{color:#e0c487}
-body.widget .system-rail-runtime[data-state=unavailable]{color:#f3aca0}
+body.widget .system-rail-runtime[data-state=preparing],body.widget .system-rail-runtime[data-state=degraded],body.widget .system-rail-runtime[data-state=limited],body.widget .system-rail-runtime[data-state=awaiting-approval]{color:#e0c487}
+body.widget .system-rail-runtime[data-state=unavailable],body.widget .system-rail-runtime[data-state=offline],body.widget .system-rail-runtime[data-state=task-blocked]{color:#f3aca0}
+body.widget .system-rail-runtime[data-state=listening],body.widget .system-rail-runtime[data-state=thinking],body.widget .system-rail-runtime[data-state=speaking],body.widget .system-rail-runtime[data-state=working]{color:var(--accent)}
+
+/* Canonical interaction states: one visual language across avatar, status and controls. */
+body.widget[data-interaction-state=listening] #widget-tools,
+body.widget[data-interaction-state=thinking] #widget-tools,
+body.widget[data-interaction-state=speaking] #widget-tools,
+body.widget[data-interaction-state=working] #widget-tools{border-color:color-mix(in srgb,var(--accent) 28%,#ffffff16)}
+body.widget[data-interaction-state=listening] #widget-tools::after,
+body.widget[data-interaction-state=thinking] #widget-tools::after,
+body.widget[data-interaction-state=speaking] #widget-tools::after,
+body.widget[data-interaction-state=working] #widget-tools::after{opacity:.78}
+body.widget #widget-status[data-tone=active]{color:var(--accent)}
+body.widget #widget-status[data-tone=warning]{color:#e0c487}
+body.widget #widget-status[data-tone=error]{color:#f3aca0}
+body.widget[data-interaction-state=offline] .widget-toolbar,
+body.widget[data-interaction-state=limited] .widget-toolbar{border-color:#ffffff0d;background:#0d1418c7}
+body.widget[data-interaction-state=offline] #widget-mic{background:#ffffff05;border-color:#ffffff0c;color:#77868a;box-shadow:none}
+body.widget[data-interaction-state=awaiting-approval] #widget-specialist-toggle{border-color:#e0c48755;color:#e0c487;background:#e0c48710}
+body.widget[data-interaction-state=task-blocked] #widget-specialist-toggle{border-color:#f3aca055;color:#f3aca0;background:#f3aca010}
+body.widget[data-interaction-state=speaking] #stage::before{background:radial-gradient(ellipse at 50% 62%,color-mix(in srgb,var(--accent) 30%,transparent),transparent 68%)}
+body.widget[data-interaction-state=listening] #stage::before{background:radial-gradient(ellipse at 50% 62%,color-mix(in srgb,var(--accent) 24%,transparent),transparent 68%)}
+body.widget[data-interaction-state=offline] #stage::before{opacity:.34;filter:saturate(.25)}
 
 body.widget.widget-chat-open #widget-chat{border-color:#ffffff16;background:#11191df4;box-shadow:0 12px 28px #0005,inset 0 1px #ffffff07}
 #widget-menu .menu-control-row{display:flex;align-items:center;justify-content:space-between;min-height:39px;padding:5px 10px;border-radius:8px;color:var(--ink);font-size:12px}
