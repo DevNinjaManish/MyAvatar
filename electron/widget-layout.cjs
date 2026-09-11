@@ -14,16 +14,11 @@ const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, m
 function widgetLayout(anchor, view, area) {
   const compactWidth = Math.min(WIDTH, area.width);
   const width = compactWidth;
-  // Keep the native frame at its full working height from launch. Opening a
-  // chat or specialist then only changes an in-window layer, never bounds.
-  const height = Math.min(UTILITY_HEIGHT, area.height);
+  const utilityOpen = Boolean(view?.chat || view?.tools || view?.calendar || view?.wide);
+  const height = Math.min(utilityOpen ? UTILITY_HEIGHT : COMPACT_HEIGHT, area.height);
   const x = clamp(anchor.x, area.x, area.x + area.width - width);
 
-  // Reserve the full utility height even while compact. This keeps the
-  // platform's screen coordinate stable when a utility panel opens; only
-  // content below it grows.
-  const reservedHeight = Math.min(UTILITY_HEIGHT, area.height);
-  const y = clamp(anchor.y, area.y, area.y + area.height - reservedHeight);
+  const y = clamp(anchor.y, area.y, area.y + area.height - height);
 
   return {
     bounds: {
