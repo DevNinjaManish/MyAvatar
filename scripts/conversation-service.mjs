@@ -18,6 +18,7 @@ import {SpeechSegments} from '../src/conversation/speech-segments.js';
 import {JsonWorker} from './json-worker.mjs';
 import {quickReply} from '../src/conversation/quick-replies.js';
 import {backchannelFor,shouldBackchannel} from '../src/conversation/backchannels.js';
+import {useFastVoiceModel} from '../src/conversation/voice-routing.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
@@ -26,6 +27,7 @@ const machine=hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:
 let profileSelection=['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(requestedProfile)?requestedProfile:'auto';
 let performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:profileSelection});
 const modelForProfile=()=>process.env.MYAVATAR_CONVERSATION_MODEL||(performanceProfile==='balanced'?'huihui_ai/qwen3.5-abliterated:4b':'huihui_ai/qwen3.5-abliterated:0.8b');
+const fastVoiceModel=()=>process.env.MYAVATAR_VOICE_FAST_MODEL||'huihui_ai/qwen3.5-abliterated:0.8b';
 const requestedProvider=process.env.MYAVATAR_CONVERSATION_PROVIDER||'ollama';
 const ollamaUrl='http://127.0.0.1:11434/api/chat';
 const exec=promisify(execFile);
@@ -60,10 +62,10 @@ providerRegistry.register('conversation','ollama',Object.freeze({
     if(!response.ok)return {available:false,reason:`Local model returned HTTP ${response.status}.`};
     return {available:true};
   },
-  async stream({text,signal,onToken,botId='nova',history=[]}){
+  async stream({text,signal,onToken,botId='nova',history=[],model=modelForProfile()}){
     const profile=voiceProfiles[botId]||voiceProfiles.nova;
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal,
-      body:JSON.stringify({model:modelForProfile(),stream:true,think:false,options:{num_predict:profileSettings(performanceProfile).maxTokens},messages:[{role:'system',content:profile.systemPrompt+' Answer the actual request directly. Usually use one to three short spoken sentences. Use ordinary conversational language, no emojis, stage directions, or uninvited flirting. Follow the user’s requested length. Be honest about your capabilities.'},...history,{role:'user',content:text}]})});
+      body:JSON.stringify({model,stream:true,think:false,options:{num_predict:profileSettings(performanceProfile).maxTokens},messages:[{role:'system',content:profile.systemPrompt+' Answer the actual request directly. For spoken requests, begin with one short natural sentence, ideally 4 to 12 words and ending in punctuation, before adding detail. Usually use one to three short spoken sentences. Use ordinary conversational language, no emojis, stage directions, or uninvited flirting. Follow the user’s requested length. Be honest about your capabilities.'},...history,{role:'user',content:text}]})});
     if(!response.ok)throw Error(`Local model returned HTTP ${response.status}.`);
     const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';
     while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split('\n');buffer=lines.pop()||'';for(const line of lines){if(!line.trim())continue;const part=JSON.parse(line);const tokenText=part.message?.content||'';if(tokenText)onToken(tokenText);}}
@@ -80,6 +82,10 @@ function warmConversation(){
   warmedModels.add(model);
   fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(60000),body:JSON.stringify({model,messages:[],stream:false,keep_alive:'10m'})})
     .then(async response=>{await response.body?.cancel();if(!response.ok)warmedModels.delete(model);}).catch(()=>warmedModels.delete(model));
+}
+function warmVoiceFastLane(bot){
+  const reply=quickReply('how are you',bot);
+  if(reply)quickSpeech(reply,bot).catch(()=>{});
 }
 function getAcknowledgement(bot,turn,text){
   const phrase=backchannelFor(bot,turn,text);const key=`${bot}:${phrase}`;
@@ -165,7 +171,7 @@ server.on('connection',(socket,request)=>{
     }
     if(socket.readyState===1)socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
   };
-  const sendConfig=()=>send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});
+  const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),voiceFastModel:fastVoiceModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
   recognizer.ready.then(sendConfig).catch(error=>{sendConfig();send({type:'speech_unavailable',message:`Local recognition unavailable: ${error.message}`});});
   const answer=async(turn,text,{speak=false}={})=>{
     let spokenText='';const bot=activeBot;const history=histories.get(bot)||[];
@@ -175,7 +181,7 @@ server.on('connection',(socket,request)=>{
       if(speak){const audio=await quickSpeech(quick,bot);if(stopped.has(turn))return;send({type:'audio',turn,audio,mime:'audio/wav',voice:bots[bot].voice});}
       histories.set(bot,[...history,{role:'user',content:text},{role:'assistant',content:quick}].slice(-12));send({type:'done',turn});return;
     }
-    const segments=new SpeechSegments();let speechChain=Promise.resolve();
+    const segments=new SpeechSegments({clauseThreshold:speak?62:88});let speechChain=Promise.resolve();
     const controller=new AbortController();activeControllers.set(turn,controller);
     const queueSpeech=sentence=>{speechChain=speechChain.then(async()=>{
       if(controller.signal.aborted||stopped.has(turn))return;
@@ -184,7 +190,8 @@ server.on('connection',(socket,request)=>{
       try{const audio=await synthesizeSpeech(clean,bot,emotion);if(!controller.signal.aborted&&!stopped.has(turn))send({type:'audio',turn,audio,mime:'audio/wav',voice:bots[bot].voice,emotion});}
       catch(error){if(!controller.signal.aborted)send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
     });};
-    try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:bot,history},onToken(tokenText){
+    const model=useFastVoiceModel(text,{speaking:speak})?fastVoiceModel():modelForProfile();
+    try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:bot,history,model},onToken(tokenText){
       if(stopped.has(turn))return;
       spokenText+=tokenText;send({type:'token',turn,text:tokenText});
       if(speak)for(const sentence of segments.push(tokenText))queueSpeech(sentence);
@@ -213,7 +220,7 @@ server.on('connection',(socket,request)=>{
     if(message.type==='greeting'){
       warmConversation();
       const text=bots[activeBot]?.voice?.greeting||'Hi, I’m ready.';
-      try{send({type:'greeting',text,audio:await synthesizeSpeech(text,activeBot,'happy'),mime:'audio/wav',voice:bots[activeBot]?.voice,emotion:'happy'});getAcknowledgement(activeBot,0,'Please help me think through this carefully').catch(()=>{});quickSpeech(quickReply('how are you',activeBot),activeBot).catch(()=>{});}
+      try{send({type:'greeting',text,audio:await synthesizeSpeech(text,activeBot,'happy'),mime:'audio/wav',voice:bots[activeBot]?.voice,emotion:'happy'});getAcknowledgement(activeBot,0,'Please help me think through this carefully').catch(()=>{});}
       catch{send({type:'greeting',text});}
       return;
     }

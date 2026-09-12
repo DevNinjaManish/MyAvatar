@@ -45,7 +45,10 @@ identity or voice mapping.
 Current conversation defaults are `huihui_ai/qwen3.5-abliterated:0.8b` for Fast and `huihui_ai/qwen3.5-abliterated:4b`
 for Balanced; `MYAVATAR_CONVERSATION_MODEL` overrides both. These models
 must be present in the local Ollama installation. The profile changes apply
-to subsequent requests.
+to subsequent requests. Brief social spoken turns may use the Fast model while
+Balanced is selected; `MYAVATAR_VOICE_FAST_MODEL` controls that low-latency
+lane. Requests that require explanation, planning, analysis, coding, or similar
+work remain on the selected profile model.
 
 Voice inference uses local open-source Faster-Whisper small (int8 CPU) for
 multilingual recognition and Kokoro for English/Hindi speech. It does not use

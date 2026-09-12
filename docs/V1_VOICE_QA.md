@@ -11,15 +11,17 @@ Implemented in this batch:
 - Stopped turns cannot deliver late audio. Pending sentence jobs skip cancelled
   turns; a synthesis already executing may finish internally before being discarded.
 - Listening resumes only after server completion and all audio settles.
-- Endpoint silence is 480 ms for ordinary speech and 420 ms for interruption, with
-  adaptive room-noise calibration and release hysteresis. This remains an energy-based detector, not semantic
-  understanding of whether a sentence is finished.
+- Endpoint silence adapts to the utterance: a brief turn releases after 360 ms
+  of silence, while longer speech retains a 480 ms pause window. Interruption
+  uses 420 ms. Room-noise calibration and release hysteresis remain active.
+  This is still an energy-based detector, not semantic understanding of whether
+  a sentence is finished.
 - Balanced uses local huihui_ai/qwen3.5-abliterated:4b; Fast uses huihui_ai/qwen3.5-abliterated:0.8b. An explicit model
   environment setting overrides both. Models must already be installed.
 
 Evidence:
 
-- 87 JavaScript tests, including ordered decoding, stale decode cancellation,
+- 97 JavaScript tests, including ordered decoding, stale decode cancellation,
   streamed sentence boundaries, and interruption onset with retained speech.
 - Production build passes (existing bundle-size warning remains).
 - Runtime smoke and recorded speech input integration passed.
@@ -49,10 +51,17 @@ persistent memory are not implemented. These are not implied by passing tests.
 - Recognition now exposes an explicit `Understanding…` state. Faster-Whisper uses a
   beam-one low-latency pass, multilingual VAD filtering, and a Hindi–English prompt.
 - TTS starts at a natural clause boundary on long first sentences instead of always
-  waiting for final sentence punctuation.
-- The direct spoken `How are you?` fixture was recognized exactly and returned
-  reply audio at 2,050 ms with zero filler. This excludes microphone endpointing
-  and uses a synthetic WAV; real-room latency can differ.
+  waiting for final sentence punctuation. Spoken generation is instructed to
+  lead with a short complete sentence, and uses a lower clause threshold so the
+  first WAV can begin sooner.
+- Short social spoken requests route to the warm local 0.8b model even when the
+  user has selected Balanced. Requests that imply explanation, planning, code,
+  analysis, or other work remain on the selected profile model. This preserves
+  Balanced quality where it matters without making everyday conversation pay for it.
+- The direct spoken `How are you?` fast lane is pre-rendered while the runtime
+  connects. Repeated synthetic runs returned first reply audio in 1,667–1,722 ms
+  with zero filler (previous measurement: 2,050 ms). This excludes microphone
+  endpointing and uses a synthetic WAV; real-room latency can differ.
 - Clear English recognition was exact at 1,414 ms in the isolated fixture. The
   Hindi fixture was normalized to the intended sentence at 2,070 ms. The
   deliberately difficult synthetic mixed-language fixture was rejected as

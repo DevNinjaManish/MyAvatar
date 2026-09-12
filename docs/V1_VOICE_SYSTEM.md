@@ -92,6 +92,12 @@ audio arrives or the turn stops. Recognition remains loaded between turns and
 low-confidence/repetitive output asks for clarification. Neither language
 detection nor the confidence heuristic guarantees correct code-switching.
 
+For latency, brief social voice turns use the warm Fast local model even in
+Balanced mode. Work-like requests retain the user-selected performance model.
+The endpoint is deliberately asymmetric: brief turns resolve after 360 ms of
+silence, while longer utterances keep a 480 ms window to avoid chopping a
+natural pause. This is a product rule, not an excuse to cut a speaker off.
+
 ## Nonverbal vocalizations
 
 Bots may use non-word vocalizations when they fit the moment and the character. Examples include:

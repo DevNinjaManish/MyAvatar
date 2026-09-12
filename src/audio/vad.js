@@ -1,11 +1,11 @@
 /** Adaptive, energy-based local turn detector. No model download or network required. */
 export class TurnDetector {
   constructor(sampleRate,{
-    threshold=.009,silenceMs=600,minSpeechMs=280,maxSpeechMs=20000,preRollMs=250,
+    threshold=.009,silenceMs=600,shortSilenceMs=null,shortTurnMs=850,minSpeechMs=280,maxSpeechMs=20000,preRollMs=250,
     onsetMs=140,onsetGraceMs=30,noiseMultiplier=2.2,noiseMargin=.0015,maxThreshold=.035,
     releaseRatio=.72,rejectCooldownMs=0
   }={}){
-    Object.assign(this,{sampleRate,threshold,silenceMs,minSpeechMs,maxSpeechMs,preRollMs,onsetMs,onsetGraceMs,noiseMultiplier,noiseMargin,maxThreshold,releaseRatio,rejectCooldownMs});
+    Object.assign(this,{sampleRate,threshold,silenceMs,shortSilenceMs,shortTurnMs,minSpeechMs,maxSpeechMs,preRollMs,onsetMs,onsetGraceMs,noiseMultiplier,noiseMargin,maxThreshold,releaseRatio,rejectCooldownMs});
     // Begin below the fixed floor, then learn the room while the user is quiet.
     // The estimate survives turn resets so a fan or air conditioner does not
     // repeatedly reopen the microphone gate.
@@ -62,13 +62,17 @@ export class TurnDetector {
       if(this.onset>=this.onsetMs){this.started=true;this.voiced=this.onsetVoiced;}
       else{while(this.samples>this.sampleRate*this.preRollMs/1000+frame.length){this.samples-=this.frames.shift().length;}return null;}
     }else if(voiced){this.voiced+=ms;this.quiet=0;}else this.quiet+=ms;
-    if(this.quiet<this.silenceMs&&this.samples/this.sampleRate*1000<this.maxSpeechMs)return null;
+    // A brief social reply should feel immediate. Longer utterances retain a
+    // more forgiving endpoint so normal mid-sentence pauses are not clipped.
+    const endpointMs=this.shortSilenceMs!==null&&this.voiced<this.shortTurnMs?this.shortSilenceMs:this.silenceMs;
+    if(this.quiet<endpointMs&&this.samples/this.sampleRate*1000<this.maxSpeechMs)return null;
     const valid=this.voiced>=this.minSpeechMs;
     // Retain 150 ms of trailing silence, discard most of the end-detection wait.
     const length=Math.max(0,this.samples-Math.floor(Math.max(0,this.quiet-150)*this.sampleRate/1000));
     const output=new Float32Array(length);let offset=0;
     if(valid)for(const part of this.frames){const n=Math.min(part.length,length-offset);if(n<=0)break;for(let i=0;i<n;i++)output[offset+i]=Number.isFinite(part[i])?part[i]:0;offset+=n;}
     this.lastDetectionDelayMs=this.quiet;
+    this.lastEndpointMs=endpointMs;
     if(!valid&&this.rejectCooldownMs>0)this.cooldownMs=this.rejectCooldownMs;
     this.reset();return valid?output:null;
   }
