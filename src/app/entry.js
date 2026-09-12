@@ -124,9 +124,9 @@ async function startVoiceCapture({automatic=false}={}){
   const socket=runtimeSocket;
   if(!socket||socket.readyState!==WebSocket.OPEN){if(!automatic)showNotice('Conversation service unavailable. Typed chat is available.',true,'warning');return false;}
   try{
-    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:480,shortSilenceMs:360,shortTurnMs:520,preRollMs:260,calibrationMs:0,releaseRatio:.68,onLiveSpeechFrame:streamLiveSpeech,onLiveSpeechRejected:rejectLiveSpeech,onBargeIn:()=>{
+    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:440,shortSilenceMs:300,shortTurnMs:520,preRollMs:260,calibrationMs:0,releaseRatio:.68,onLiveSpeechFrame:streamLiveSpeech,onLiveSpeechRejected:rejectLiveSpeech,onBargeIn:()=>{
       const turn=activeTurn??turnPlayback.activeTurn;if(turn!==null){runtimeSocket?.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);}stopSpeechPlayback();activeTurn=null;appState.set(STATES.LISTENING);setRuntimeStatus('Listening');
-    },bargeIn:{guardMs:260,threshold:.010,onsetMs:110,minSpeechMs:150,silenceMs:360,preRollMs:180,releaseRatio:.7}});
+    },bargeIn:{guardMs:400,threshold:.016,onsetMs:180,confirmMs:360,minSpeechMs:260,silenceMs:420,preRollMs:220,releaseRatio:.7}});
     if(!started||!audioEngine.setListening(true))throw Error('Microphone listening could not be started.');
     liveVoiceEnabled=true;setVoiceButton(true);appState.set(STATES.LISTENING);setRuntimeStatus('Listening');if(!automatic)showNotice('Listening…');return true;
   }catch(error){endActiveCapture();liveVoiceEnabled=false;setVoiceButton(false);showNotice(`Microphone unavailable: ${error.message}`,false,'warning');return false;}
@@ -214,6 +214,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
     else showNotice(`Runtime unavailable: ${health.reason||'provider health check failed.'}`,true,'warning');
   }
   if(detail?.type==='transcript')showNotice(`Heard: ${detail.text}`);
+  if(detail?.type==='partial_transcript'){setRuntimeStatus('Hearing…');showNotice(`Hearing: ${detail.text}`);}
   if(detail?.type==='recognizing'){setRuntimeStatus('Understanding…');showNotice('Understanding…');}
   if(detail?.type==='audio'){setRuntimeStatus('Speaking…');if(detail.emotion)avatar.setExpression(detail.emotion);playSpeech(detail.audio,detail.turn).catch(error=>{avatar.setExpression('relaxed');appState.set(STATES.IDLE);showNotice(`Speech output unavailable: ${error.message}`,false,'warning');});}
   if(detail?.type==='speech_unavailable'){recoverTurn('Voice unavailable');showNotice(detail.message,false,'warning');}

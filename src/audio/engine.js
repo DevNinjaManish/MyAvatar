@@ -101,6 +101,7 @@ export class AudioEngine{
     // Barge-in is a separate live detector, not a new microphone session. It
     // must never inherit startup calibration or it will ignore the interruption.
     const bargeSettings={...bargeBase,calibrationMs:0,threshold:barge.threshold??Math.max(.010,(settings.threshold??.0055)*2),onsetMs:barge.onsetMs??120,minSpeechMs:barge.minSpeechMs??180,silenceMs:barge.silenceMs??360,preRollMs:barge.preRollMs??180,rejectCooldownMs:0};
+    const bargeConfirmMs=barge.confirmMs??260;
     this.bargeDetector=new TurnDetector(this.ctx.sampleRate,bargeSettings);this.bargeInGuardMs=barge.guardMs??300;
     const started=await this.record(null,frame=>{
       if(!this.captureActive)return;
@@ -117,7 +118,10 @@ export class AudioEngine{
       }
       if(this.bargeCapturing||(this.playing&&Date.now()-this.playbackStartedAt>=this.bargeInGuardMs)){
         const utterance=this.bargeDetector?.push(frame);
-        if(!this.bargeCapturing&&this.bargeDetector?.started&&settings.onBargeIn){
+        // Do not cancel a reply at energy onset. A knock, keyboard clatter, or
+        // a short room-noise burst can cross onset; require sustained voiced
+        // audio before treating it as an intentional interruption.
+        if(!this.bargeCapturing&&this.bargeDetector?.voiced>=bargeConfirmMs&&settings.onBargeIn){
           const detector=this.bargeDetector;this.bargeCapturing=true;settings.onBargeIn();this.bargeDetector=detector;
         }
         if(utterance&&this._isCaptureCurrent(generation)){this.bargeCapturing=false;onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.bargeDetector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:true});}

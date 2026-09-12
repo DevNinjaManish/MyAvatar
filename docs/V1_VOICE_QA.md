@@ -11,9 +11,10 @@ Implemented in this batch:
 - Stopped turns cannot deliver late audio. Pending sentence jobs skip cancelled
   turns; a synthesis already executing may finish internally before being discarded.
 - Listening resumes only after server completion and all audio settles.
-- Endpoint silence adapts to the utterance: a brief turn releases after 360 ms
-  of silence, while longer speech retains a 480 ms pause window. Interruption
-  uses 420 ms. Room-noise calibration and release hysteresis remain active.
+- Endpoint silence adapts to the utterance: a brief turn releases after 300 ms
+  of silence, while longer speech retains a 440 ms pause window. Barge-in
+  requires 360 ms of sustained voiced audio after a 400 ms guard. Room-noise
+  calibration and release hysteresis remain active.
   This is still an energy-based detector, not semantic understanding of whether
   a sentence is finished.
 - Room-noise learning is continuous and non-blocking, so speech is accepted
@@ -32,8 +33,8 @@ Implemented in this batch:
   The 360 ms endpoint now applies only below 520 ms of voiced speech; full
   sentences retain the safer 480 ms pause window.
 - Live barge-in uses its own detector and never performs startup calibration.
-  It may interrupt after 260 ms of reply playback when it hears 110 ms of user
-  speech; the shorter guard is supported by the browser echo-cancellation path.
+  It may interrupt after 400 ms of reply playback only after 360 ms of sustained
+  voiced audio; short room-noise bursts cannot cancel a reply.
 - Fast uses local `huihui_ai/qwen3.5-abliterated:4b` for every reply; Balanced
   uses `huihui_ai/qwen3.5-abliterated:9b` for every reply. The selected model is
   warmed before the profile becomes active. The 0.8B model is not exposed.
