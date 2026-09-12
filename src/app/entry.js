@@ -46,6 +46,7 @@ let avatarScale=localStorage.getItem('myavatar-avatar-scale');
 let avatarGlow=localStorage.getItem('myavatar-avatar-glow')!=='off';
 let quietMode=localStorage.getItem('myavatar-quiet-mode')==='on';
 if(!Object.hasOwn(AVATAR_SCALES,avatarScale))avatarScale='normal';
+const presenceFallback={IDLE:'Ready',LISTENING:'Listening',THINKING:'Thinking',SPEAKING:'Speaking',WORKING:'Working',PAUSED:'Paused',SLEEPING:'Resting',ERROR:'Needs attention',RECOVERY:'Returning'};
 
 const desktop=globalThis.desktop;
 const stopDrag=()=>{document.body.classList.remove('dragging');avatar.setDragging(false);desktop?.stopDrag?.();};
@@ -61,6 +62,7 @@ function setOpen(id,open){
 }
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
+function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
 function setRuntimeReady(value){runtimeReady=Boolean(value);document.body.classList.toggle('runtime-ready',runtimeReady);stage.setAttribute('aria-busy',String(!runtimeReady));for(const id of ['mic-toggle','pause-toggle','send-message'])$(id).disabled=!runtimeReady;}
 function applyAppearanceUi(){
   document.documentElement.style.setProperty('--avatar-scale',AVATAR_SCALES[avatarScale]);document.body.dataset.avatarGlow=String(avatarGlow);document.body.classList.toggle('quiet-mode',quietMode);
@@ -74,6 +76,8 @@ function setAvatarGlow(value){avatarGlow=Boolean(value);localStorage.setItem('my
 function setQuietMode(value){quietMode=Boolean(value);localStorage.setItem('myavatar-quiet-mode',quietMode?'on':'off');applyAppearanceUi();}
 setRuntimeReady(false);
 applyAppearanceUi();
+appState.addEventListener('change',setPresenceLine);
+setPresenceLine();
 function applyProfileUi({profile='fast',selection='auto',hardware=null,settings=null}={}){
   activeProfile=profile;profileSelection=selection;
   document.body.dataset.performance=profile;
@@ -198,7 +202,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
   if(detail?.type==='config'){
     setRuntimeReady(true);
     const current=companionById[detail.botId];
-    if(current){selected=current.id;$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);$('message').value=chat.draft(current.id);$('pause-toggle').querySelector('[data-control-label]').textContent=paused?'Resume':'Pause';}
+    if(current){selected=current.id;$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);setPresenceLine();$('message').value=chat.draft(current.id);$('pause-toggle').querySelector('[data-control-label]').textContent=paused?'Resume':'Pause';}
     runtimeInfo=detail.runtime||runtimeInfo;
     applyProfileUi({profile:detail.runtime?.profile||activeProfile,selection:detail.runtime?.profileSelection||profileSelection,hardware:detail.runtime?.hardware,settings:detail.runtime?.profileSettings});
     setRuntimeStatus(appState.value===STATES.RECOVERY?'Recovering…':'Ready');
@@ -271,7 +275,7 @@ for(const companion of companions){
   button.addEventListener('click',()=>{
     if(activeTurn!==null){setOpen('companion-picker',false);showNotice('Finish or stop the current response before switching companions.',false,'warning');return;}
     chat.setDraft($('message').value,selected);
-    selected=companion.id;const current=companionById[selected];$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=selected;document.documentElement.style.setProperty('--accent',current.accent);
+    selected=companion.id;const current=companionById[selected];$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=selected;document.documentElement.style.setProperty('--accent',current.accent);setPresenceLine();
     avatar.showRobot(selected);setOpen('companion-picker',false);
     if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'switch_bot',botId:selected}));
     else showNotice('Runtime unavailable. Bot switching will apply when it reconnects.',true,'warning');
