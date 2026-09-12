@@ -65,13 +65,20 @@ function applyCompanionTheme(companion){
   for(const [name,value] of Object.entries(palette))document.documentElement.style.setProperty(`--${name}`,value);
 }
 const stopDrag=()=>{document.body.classList.remove('dragging');avatar.setDragging(false);desktop?.stopDrag?.();};
-stage.addEventListener('pointerdown',event=>{if(event.button!==0||(!event.target?.matches?.('canvas')&&event.target!==stage))return;document.body.classList.add('dragging');avatar.setDragging(true);desktop?.startDrag?.();stage.setPointerCapture?.(event.pointerId);});
+const beginDrag=(target,event)=>{document.body.classList.add('dragging');avatar.setDragging(true);desktop?.startDrag?.();target.setPointerCapture?.(event.pointerId);};
+// The whole avatar area—including its status line—is a drag handle. Exact
+// canvas targeting fails once an expanded surface adds an overlay above it.
+stage.addEventListener('pointerdown',event=>{if(event.button===0)beginDrag(stage,event);});
 stage.addEventListener('pointerup',stopDrag);
 stage.addEventListener('pointercancel',stopDrag);
+stage.addEventListener('lostpointercapture',stopDrag);
 const platform=document.querySelector('.widget-card');
-platform.addEventListener('pointerdown',event=>{if(event.button!==0||event.target.closest('button,input,textarea,select,label'))return;document.body.classList.add('dragging');avatar.setDragging(true);desktop?.startDrag?.();platform.setPointerCapture?.(event.pointerId);});
+platform.addEventListener('pointerdown',event=>{if(event.button!==0||event.target.closest('button,input,textarea,select,label'))return;beginDrag(platform,event);});
 platform.addEventListener('pointerup',stopDrag);
 platform.addEventListener('pointercancel',stopDrag);
+platform.addEventListener('lostpointercapture',stopDrag);
+window.addEventListener('pointerup',stopDrag);
+window.addEventListener('blur',stopDrag);
 
 function resizePanels(){const wide=!$('nova-workspace').hidden||!$('more-menu').hidden;const tall=wide||!$('chat-panel').hidden;desktop?.resize?.(tall?805:520,wide?630:260);}
 function setOpen(id,open){
