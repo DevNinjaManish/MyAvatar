@@ -160,6 +160,10 @@ textarea:focus-visible {
   background: #ffffff0a;
   border-color: #ffffff16;
 }
+.identity[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent) 88%, transparent);
+  background: color-mix(in srgb, var(--accent) 20%, var(--raised));
+}
 .identity-title {
   display: grid;
   gap: 1px;
@@ -218,14 +222,15 @@ textarea:focus-visible {
   opacity: 0.42;
 }
 .toolbar button[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--accent) 72%, transparent);
-  background: color-mix(in srgb, var(--accent) 16%, var(--inset));
+  border-color: color-mix(in srgb, var(--accent) 88%, transparent);
+  background: color-mix(in srgb, var(--accent) 26%, var(--inset));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
   color: var(--accent);
 }
 .chat-panel {
   position: absolute;
   z-index: 5;
-  top: 545px;
+  top: 535px;
   left: 0;
   width: 240px;
   height: 250px;

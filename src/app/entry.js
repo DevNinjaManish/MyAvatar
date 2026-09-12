@@ -76,10 +76,10 @@ platform.addEventListener('pointercancel',stopDrag);
 function resizePanels(){const wide=!$('nova-workspace').hidden||!$('more-menu').hidden;const tall=wide||!$('chat-panel').hidden;desktop?.resize?.(tall?805:520,wide?630:260);}
 function setOpen(id,open){
   const panel=$(id);const changed=panel.hidden===open;panel.hidden=!open;
-  if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(open)$('message').focus({preventScroll:true});}
-  if(id==='companion-picker')$('companion-toggle').setAttribute('aria-expanded',String(open));
-  if(id==='more-menu'){document.body.classList.toggle('more-open',open);$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');}
-  if(id==='nova-workspace')document.body.classList.toggle('workspace-open',open);
+  if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-pressed',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(open)$('message').focus({preventScroll:true});}
+  if(id==='companion-picker'){$('companion-toggle').setAttribute('aria-expanded',String(open));$('companion-toggle').setAttribute('aria-pressed',String(open));$('companion-toggle').setAttribute('aria-label',open?'Close companion picker':'Choose companion');}
+  if(id==='more-menu'){document.body.classList.toggle('more-open',open);$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-pressed',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');}
+  if(id==='nova-workspace'){$('workspace-toggle').setAttribute('aria-pressed',String(open));$('workspace-toggle').setAttribute('aria-label',open?'Close Nova Today':'Open Nova Today');document.body.classList.toggle('workspace-open',open);}
   if(changed&&['chat-panel','more-menu','nova-workspace'].includes(id))resizePanels();
 }
 function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){resizePanels();healthRequested=true;runtimeSocket?.send(JSON.stringify({type:'health'}));}else resizePanels();}
