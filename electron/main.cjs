@@ -1,6 +1,6 @@
 const {app,BrowserWindow,ipcMain,screen,session}=require('electron');
 const path=require('node:path');
-const COMPACT_HEIGHT=500;
+const COMPACT_HEIGHT=520;
 const CHAT_HEIGHT=770;
 const PREFERENCES_HEIGHT=850;
 

@@ -60,11 +60,11 @@ stage.addEventListener('pointercancel',stopDrag);
 
 function setOpen(id,open){
   const panel=$(id);const changed=panel.hidden===open;panel.hidden=!open;
-  if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(changed)desktop?.resize?.(open?770:500);if(open)$('message').focus({preventScroll:true});}
+  if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(changed)desktop?.resize?.(open?770:520);if(open)$('message').focus({preventScroll:true});}
   if(id==='companion-picker')$('companion-toggle').setAttribute('aria-expanded',String(open));
-  if(id==='more-menu'){$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');if(changed)desktop?.resize?.(open?850:500);}
+  if(id==='more-menu'){$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');if(changed)desktop?.resize?.(open?850:520);}
 }
-function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){desktop?.resize?.(850,350);healthRequested=true;runtimeSocket?.send(JSON.stringify({type:'health'}));}else desktop?.resize?.($('more-menu').hidden?500:850,260);}
+function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){desktop?.resize?.(850,350);healthRequested=true;runtimeSocket?.send(JSON.stringify({type:'health'}));}else desktop?.resize?.($('more-menu').hidden?520:850,260);}
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
 function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
@@ -265,8 +265,8 @@ window.addEventListener('myavatar:runtime-event',event=>{
     if(healthRequested){healthRequested=false;if(health.available&&!document.body.classList.contains('performance-open'))showNotice(`Runtime: ${provider} · ${runtimeInfo?.profile||'unknown'} · ready`,false,'info');else if(!health.available)showNotice(`Runtime unavailable: ${health.reason||'provider health check failed.'}`,true,'warning');}
   }
   if(detail?.type==='transcript')showNotice(`Heard: ${detail.text}`);
-  if(detail?.type==='partial_transcript'){setRuntimeStatus('Hearing…');showNotice(`Hearing: ${detail.text}`);}
-  if(detail?.type==='recognizing'){setRuntimeStatus('Understanding…');showNotice('Understanding…');}
+  if(detail?.type==='partial_transcript'){setRuntimeStatus('Hearing…');showNotice('');}
+  if(detail?.type==='recognizing'){setRuntimeStatus('Understanding…');showNotice('');}
   if(detail?.type==='audio'){setRuntimeStatus('Speaking…');if(detail.emotion)avatar.setExpression(detail.emotion);playSpeech(detail.audio,detail.turn).catch(error=>{avatar.setExpression('relaxed');appState.set(STATES.IDLE);showNotice(`Speech output unavailable: ${error.message}`,false,'warning');});}
   if(detail?.type==='speech_unavailable'){recoverTurn('Voice unavailable');showNotice(detail.message,false,'warning');}
   if(['done','error'].includes(detail?.type)){
