@@ -26,14 +26,17 @@ const imagePython=process.env.MYAVATAR_IMAGE_PYTHON||path.join(projectRoot,'.ven
 const imageWorker=path.join(projectRoot,'scripts/luma-image-worker.py');
 const lumaConversationModel=()=>process.env.MYAVATAR_FAST_MODEL||'huihui_ai/qwen3.5-abliterated:4b';
 let lumaJob=null;
-const runLumaWorker=request=>new Promise(resolve=>{
+let lumaCancelled=false;
+const runLumaWorker=(request,onProgress=()=>{})=>new Promise(resolve=>{
   if(lumaJob)return resolve({error:'Luma is already creating one image.'});
   const modelPath=path.join(app.getPath('userData'),'models','stable-diffusion-v1-5');
   const outputPath=path.join(app.getPath('userData'),'creations');
-  const child=spawn(imagePython,[imageWorker,modelPath,outputPath],{stdio:['pipe','pipe','pipe'],env:{...process.env,HF_HUB_DISABLE_XET:'1'}});let stdout='',stderr='',settled=false;
+  const child=spawn(imagePython,[imageWorker,modelPath,outputPath],{stdio:['pipe','pipe','pipe'],env:{...process.env,HF_HUB_DISABLE_XET:'1'}});let stdout='',stdoutBuffer='',stderr='',settled=false;
   const finish=value=>{if(settled)return;settled=true;clearTimeout(timer);lumaJob=null;resolve(value);};
   const timer=setTimeout(()=>{child.kill('SIGTERM');finish({error:'Luma took too long. Try again after closing other memory-heavy apps.'});},600000);
-  lumaJob=child;child.stdout.on('data',chunk=>{stdout+=chunk;});child.stderr.on('data',chunk=>{stderr+=chunk;});child.on('error',()=>finish({error:'Luma’s local image worker could not start. Run setup for image support.'}));child.on('close',()=>{try{const result=JSON.parse(stdout);finish(result.error?{error:result.error}:result);}catch{finish({error:stderr.trim()||'Luma could not finish that image.'});}});
+  lumaCancelled=false;lumaJob=child;child.stdout.on('data',chunk=>{stdoutBuffer+=String(chunk);const lines=stdoutBuffer.split('\n');stdoutBuffer=lines.pop();for(const line of lines){if(line.startsWith('__LUMA_PROGRESS__')){try{onProgress(JSON.parse(line.slice(17)));}catch{}}else stdout+=line+'\n';}});child.stderr.on('data',chunk=>{stderr+=chunk;});child.on('error',()=>finish({error:'Luma’s local image worker could not start. Run setup for image support.'}));child.on('close',()=>{if(lumaCancelled){finish({error:'Luma creation cancelled.'});return;}stdout+=stdoutBuffer;const resultLine=stdout.split('\n').find(line=>{const trimmed=line.trim();return trimmed.startsWith('{')&&(trimmed.includes('"image"')||trimmed.includes('"ready"')||trimmed.includes('"error"'));});try{const result=JSON.parse(resultLine||'');finish(result.error?{error:result.error}:result);}catch{finish({error:stderr.trim()||'Luma could not finish that image.'});}});
+  // Progress messages are deliberately separate from the final JSON response.
+  // The renderer receives actual denoising steps, never a guessed completion bar.
   child.stdin.end(JSON.stringify(request));
 });
 const directoryBytes=async directory=>{let total=0;const visit=async folder=>{let entries=[];try{entries=await fs.readdir(folder,{withFileTypes:true});}catch{return;}for(const entry of entries){const target=path.join(folder,entry.name);if(entry.isDirectory())await visit(target);else if(entry.isFile()){try{total+=(await fs.stat(target)).size;}catch{}}}};await visit(directory);return total;};
@@ -133,7 +136,12 @@ else app.whenReady().then(()=>{
     if(image&&(!/^data:image\/(?:png|jpeg|webp);base64,/.test(image)||image.length>16*1024*1024))return {error:'Choose a PNG, JPEG, or WebP image up to 12 MB.'};
     const strength=Math.max(.32,Math.min(.76,Number(request.strength)||.46));
     const format=['square','portrait','landscape'].includes(request.format)?request.format:'square';
-    return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image,strength,format});
+    const report=progress=>event.sender.send('luma-progress',progress);
+    return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image,strength,format},report);
+  });
+  ipcMain.handle('luma-cancel',event=>{
+    if(event.sender!==mainWindow?.webContents||!lumaJob)return {cancelled:false};
+    lumaCancelled=true;lumaJob.kill('SIGTERM');return {cancelled:true};
   });
   ipcMain.handle('luma-direct',async(event,request)=>{
     if(event.sender!==mainWindow?.webContents||typeof request?.prompt!=='string'||!request.prompt.trim())return null;

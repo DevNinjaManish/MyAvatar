@@ -11,8 +11,10 @@ contextBridge.exposeInMainWorld('desktop',{
   listProjectFiles:path=>ipcRenderer.invoke('project-list-files',path),
   readProjectFile:(path,file)=>ipcRenderer.invoke('project-read-file',path,file),
   createImage:request=>ipcRenderer.invoke('luma-create',request),
+  cancelImage:()=>ipcRenderer.invoke('luma-cancel'),
+  onLumaProgress:callback=>{const listener=(_event,progress)=>callback(progress);ipcRenderer.on('luma-progress',listener);return ()=>ipcRenderer.removeListener('luma-progress',listener);},
   directImage:request=>ipcRenderer.invoke('luma-direct',request),
   lumaModelStatus:()=>ipcRenderer.invoke('luma-model-status'),
-  repairLumaModel:()=>ipcRenderer.invoke('luma-model-repair')
-  ,warmLuma:()=>ipcRenderer.invoke('luma-warm')
+  repairLumaModel:()=>ipcRenderer.invoke('luma-model-repair'),
+  warmLuma:()=>ipcRenderer.invoke('luma-warm')
 });

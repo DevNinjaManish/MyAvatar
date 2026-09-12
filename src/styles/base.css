@@ -1271,6 +1271,13 @@ body[data-avatar-glow="false"] #stage::after {
 .luma-director button,.luma-variation { color:var(--accent); font-weight:760; }
 .luma-variation { width:100%; margin-top:6px; }
 .luma-action { width: 100%; margin-top: 7px; }
+.luma-progress { display:grid; grid-template-columns:1fr auto; gap:5px 8px; align-items:center; margin-top:7px; padding:7px 8px; border:1px solid color-mix(in srgb, var(--accent) 28%, transparent); border-radius:9px; background:color-mix(in srgb, var(--accent) 7%, var(--inset)); }
+.luma-progress > div:first-child { display:flex; align-items:baseline; justify-content:space-between; gap:8px; min-width:0; }
+.luma-progress strong { color:var(--soft); font-size:9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.luma-progress span { flex:none; color:var(--accent); font-size:8px; font-variant-numeric:tabular-nums; }
+.luma-progress-track { grid-column:1; height:4px; overflow:hidden; border-radius:999px; background:#ffffff12; }
+.luma-progress-track i { display:block; width:8%; height:100%; border-radius:inherit; background:var(--accent); transition:width 280ms ease; }
+.luma-progress button { grid-column:2; grid-row:1 / span 2; min-height:28px; padding:0 8px; border:1px solid #ffffff16; border-radius:8px; background:var(--inset); color:var(--soft); font:inherit; font-size:9px; }
 .luma-workspace > .workspace-section > small { display: block; margin-top: 7px; color: var(--muted); font-size: 8px; line-height: 1.35; }
 
 .bot-stack {
