@@ -9,6 +9,12 @@ prosody are already implemented.
 
 V1 is voice-first. Listening, thinking, speaking, interruption, silence, and nonverbal expression must feel like a natural live interaction. Each bot has a unique voice performance based on persona, not merely a different pitch or voice preset.
 
+Natural liveness is a V1 baseline, never an optional enhancement. Continuous
+listening, interruption, fast first response, contextual acknowledgement,
+persona-led pacing, and recovery from misunderstanding apply to every bot by
+default. Settings may adjust boundaries or performance, but may not turn the
+core companion loop into a passive push-to-talk chat tool.
+
 V1 uses a hybrid local voice stack:
 
 - Local real-time TTS for spoken words and fast conversational response
@@ -37,6 +43,12 @@ steady fan, AC, and device noise do not open the speech gate. Chromium's local
 echo cancellation, noise suppression, and automatic gain controls are enabled
 before the VAD. These measures improve common background noise; they do not
 magically separate nearby human speech or loud television audio from the user.
+
+English speech is streamed to a local Zipformer recognizer in 160 ms batches
+while the user speaks. At the end of a clearly English turn, its latest stable
+result takes the fast path; Hindi, Hinglish, unclear, or non-English output
+automatically falls back to persistent Faster-Whisper. This is an internal
+quality route, not a user-facing mode choice.
 
 ## Listening performance
 

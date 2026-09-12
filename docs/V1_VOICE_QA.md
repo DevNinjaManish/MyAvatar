@@ -19,6 +19,10 @@ Implemented in this batch:
 - Microphone startup includes a 900 ms local room calibration before accepting
   a turn. Browser echo cancellation, noise suppression, and automatic gain are
   explicitly requested before the local detector sees audio.
+- English microphone frames are sent to the local streaming Zipformer recognizer
+  in 160 ms batches. A stable ASCII-English streaming result is used at endpoint;
+  Hindi, Hinglish, and uncertain/non-English output automatically uses the
+  persistent Faster-Whisper fallback.
 - Live barge-in uses its own detector and never performs startup calibration.
   It may interrupt after 260 ms of reply playback when it hears 110 ms of user
   speech; the shorter guard is supported by the browser echo-cancellation path.
@@ -31,6 +35,8 @@ Evidence:
   streamed sentence boundaries, and interruption onset with retained speech.
 - Production build passes (existing bundle-size warning remains).
 - Runtime smoke and recorded speech input integration passed.
+- `npm run test:streaming-voice` passed with streamed `HOW ARE YOU` recognized
+  through the Zipformer path and selected by the conversation service.
 - `node scripts/test-voice-dialogue.mjs` passed six spoken turns: Nova recalled
   mango from the previous turn, a two-sentence fixture produced two WAV chunks,
   and Sterling, Rivit, and Luma each returned valid audio.

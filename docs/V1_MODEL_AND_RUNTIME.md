@@ -58,6 +58,13 @@ a language. The default decoder uses beam size two; `MYAVATAR_WHISPER_BEAM_SIZE`
 can override it when a user deliberately prefers more speed or more accuracy.
 Install Python dependencies from `requirements-voice.txt`.
 
+The default first path for English is local streaming Zipformer, installed in
+`models/streaming-asr/`. It receives microphone frames during speech and avoids
+waiting for a complete recording before beginning recognition. Faster-Whisper
+remains the automatic verifier/fallback for Hindi, Hinglish, unclear audio, and
+any result that is not clearly English. Neither route is a user setting: the
+runtime selects the right one to preserve a natural conversation.
+
 ### Fast
 
 Fast is optimized for slower or resource-constrained Macs. It uses smaller models, shorter context windows, lighter memory retrieval, and reduced visual effects to keep voice interaction responsive.

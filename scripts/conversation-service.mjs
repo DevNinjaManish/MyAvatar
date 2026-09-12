@@ -16,6 +16,7 @@ import {detectPerformanceProfile, hardwareSummary, PERFORMANCE_PROFILES, profile
 import {voiceProfiles} from '../src/app/voice-profiles.js';
 import {SpeechSegments} from '../src/conversation/speech-segments.js';
 import {JsonWorker} from './json-worker.mjs';
+import {JsonEventWorker} from './json-event-worker.mjs';
 import {quickReply} from '../src/conversation/quick-replies.js';
 import {backchannelFor,shouldBackchannel} from '../src/conversation/backchannels.js';
 import {useFastVoiceModel} from '../src/conversation/voice-routing.js';
@@ -37,6 +38,10 @@ const recognitionLanguage=process.env.MYAVATAR_SPEECH_LANGUAGE||'auto';
 const projectRoot=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const localPython=join(projectRoot,'.venv/bin/python');
 const recognizer=new JsonWorker(process.env.MYAVATAR_WHISPER_PYTHON||localPython,[join(projectRoot,'scripts/whisper-worker.py'),whisperModel]);
+const streamingModel=process.env.MYAVATAR_STREAMING_ASR_MODEL||join(projectRoot,'models/streaming-asr/sherpa-onnx-streaming-zipformer-en-2023-06-26');
+const streamingReady=existsSync(join(streamingModel,'tokens.txt'));
+const streamingCallbacks=new Map();
+const streamingRecognizer=streamingReady?new JsonEventWorker(process.env.MYAVATAR_STREAMING_ASR_PYTHON||localPython,[join(projectRoot,'scripts/streaming-asr-worker.py'),streamingModel],event=>streamingCallbacks.get(event.streamId)?.(event)):null;
 const kokoroPython=process.env.MYAVATAR_KOKORO_PYTHON||join(projectRoot,'.venv/bin/python');
 const kokoroModel=process.env.MYAVATAR_KOKORO_MODEL||join(projectRoot,'models/kokoro-v1.0.onnx');
 const kokoroVoices=process.env.MYAVATAR_KOKORO_VOICES||join(projectRoot,'models/voices-v1.0.bin');
@@ -51,7 +56,7 @@ if(kokoroWorker){
   });
   kokoroWorker.on('close',()=>{for(const pending of kokoroResponses.values())pending.reject(Error('Kokoro TTS worker stopped.'));kokoroResponses.clear();});
 }
-const stopKokoro=()=>{recognizer.close();if(kokoroWorker&&!kokoroWorker.killed)kokoroWorker.kill('SIGTERM');};
+const stopKokoro=()=>{recognizer.close();streamingRecognizer?.close();if(kokoroWorker&&!kokoroWorker.killed)kokoroWorker.kill('SIGTERM');};
 process.on('SIGTERM',()=>{stopKokoro();process.exit(0);});
 process.on('SIGINT',()=>{stopKokoro();process.exit(0);});
 const bots=Object.freeze({nova:{name:'Nova',voice:voiceProfiles.nova},sterling:{name:'Sterling',voice:voiceProfiles.sterling},rivet:{name:'Rivit',voice:voiceProfiles.rivet},luma:{name:'Luma',voice:voiceProfiles.luma}});
@@ -158,6 +163,7 @@ const server=new WebSocketServer({host:'127.0.0.1',port});
 server.on('connection',(socket,request)=>{
   if(new URL(request.url,'ws://127.0.0.1').searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
   const sessionId=randomUUID();let sequence=0;let stopped=new Set();const activeControllers=new Map();let activeBot='nova';
+  const streamingTurns=new Map();
   const pendingAcknowledgements=new Map();
   const histories=new Map();
   const scheduleAcknowledgement=(turn,bot,text)=>{
@@ -172,7 +178,7 @@ server.on('connection',(socket,request)=>{
     }
     if(socket.readyState===1)socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
   };
-  const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),voiceFastModel:fastVoiceModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
+  const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),voiceFastModel:fastVoiceModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,streamingRecognition:streamingReady?'zipformer-en':'unavailable',voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
   recognizer.ready.then(sendConfig).catch(error=>{sendConfig();send({type:'speech_unavailable',message:`Local recognition unavailable: ${error.message}`});});
   const answer=async(turn,text,{speak=false,recognizedLanguage=''}={})=>{
     let spokenText='';const bot=activeBot;const history=histories.get(bot)||[];
@@ -208,6 +214,23 @@ server.on('connection',(socket,request)=>{
   socket.on('message',async raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{return;}
     if(message.type==='stop'){clearTimeout(pendingAcknowledgements.get(message.turn));pendingAcknowledgements.delete(message.turn);stopped.add(message.turn);activeControllers.get(message.turn)?.abort(new Error('Turn stopped by user.'));return;}
+    if(message.type==='voice_stream_start'&&typeof message.streamId==='string'&&streamingRecognizer){
+      const streamId=`${sessionId}:${message.streamId}`;streamingTurns.set(message.streamId,{streamId,latest:null,final:null,waiters:[]});streamingCallbacks.set(streamId,event=>{
+        const state=streamingTurns.get(message.streamId);if(!state)return;
+        if(event.type==='partial'){state.latest=event;send({type:'partial_transcript',streamId:message.streamId,text:event.text});}
+        if(event.type==='final'){state.final=event;for(const resolve of state.waiters.splice(0))resolve(event);}
+        if(event.type==='error'){state.error=event.error;send({type:'streaming_recognition_error',streamId:message.streamId,message:event.error});}
+      });streamingRecognizer.send({operation:'start',streamId});return;
+    }
+    if(message.type==='voice_stream_audio'&&typeof message.streamId==='string'&&typeof message.audio==='string'){
+      const state=streamingTurns.get(message.streamId);if(state)streamingRecognizer?.send({operation:'feed',streamId:state.streamId,audio:message.audio});return;
+    }
+    if(message.type==='voice_stream_end'&&typeof message.streamId==='string'){
+      const state=streamingTurns.get(message.streamId);if(state)streamingRecognizer?.send({operation:'end',streamId:state.streamId});return;
+    }
+    if(message.type==='voice_stream_cancel'&&typeof message.streamId==='string'){
+      const state=streamingTurns.get(message.streamId);if(state){streamingRecognizer?.send({operation:'cancel',streamId:state.streamId});streamingCallbacks.delete(state.streamId);streamingTurns.delete(message.streamId);}return;
+    }
     if(message.type==='clear_history'){histories.delete(activeBot);return;}
     if(message.type==='switch_bot'&&typeof message.botId==='string'&&bots[message.botId]){activeBot=message.botId;sendConfig();return;}
     if(message.type==='set_profile'&&['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(message.profile)){
@@ -234,9 +257,12 @@ server.on('connection',(socket,request)=>{
       if(message.type==='voice'){
         if(typeof message.audio!=='string'||!message.audio)throw Error('No microphone audio was received.');
         send({type:'recognizing',turn});
-        const recognition=await transcribeVoice(message.audio,message.mime);text=recognition.text;recognizedLanguage=recognition.language;
+        const streamState=message.streamId?streamingTurns.get(message.streamId):null;
+        const streamResult=streamState?.final||streamState?.latest||await new Promise(resolve=>{if(!streamState)return resolve(null);const timer=setTimeout(()=>resolve(streamState.latest),120);streamState.waiters.push(value=>{clearTimeout(timer);resolve(value);});});
+        const fastEnglish=streamResult?.text&&/^[\x20-\x7e]+$/.test(streamResult.text)&&/[a-z]/i.test(streamResult.text);
+        const recognition=fastEnglish?{text:streamResult.text,language:'en',durationMs:streamResult.durationMs,uncertain:false,streaming:true}:await transcribeVoice(message.audio,message.mime);text=recognition.text;recognizedLanguage=recognition.language;
         if(stopped.has(turn)||socket.readyState!==1){stopped.delete(turn);return;}
-        send({type:'recognition',turn,text,language:recognition.language,durationMs:recognition.durationMs,uncertain:recognition.uncertain,rescuedEnglish:recognition.rescuedEnglish===true});
+        send({type:'recognition',turn,text,language:recognition.language,durationMs:recognition.durationMs,uncertain:recognition.uncertain,rescuedEnglish:recognition.rescuedEnglish===true,streaming:recognition.streaming===true});
         if(recognition.uncertain||!text){
           const clarification='I didn’t catch that clearly. Could you say it again?';
           send({type:'token',turn,text:clarification});
@@ -250,6 +276,6 @@ server.on('connection',(socket,request)=>{
       await answer(turn,text,{speak:message.type==='voice'||message.speak===true,recognizedLanguage});
     }catch(error){if(!stopped.has(turn)&&error?.name!=='AbortError')send({type:'error',turn,message:`${message.type==='voice'?'Voice':'Conversation'} unavailable: ${message.type==='voice'?voiceSetupError(error):error.message}`});stopped.delete(turn);}
   });
-  socket.on('close',()=>{for(const controller of activeControllers.values())controller.abort();for(const timer of pendingAcknowledgements.values())clearTimeout(timer);pendingAcknowledgements.clear();});
+  socket.on('close',()=>{for(const controller of activeControllers.values())controller.abort();for(const timer of pendingAcknowledgements.values())clearTimeout(timer);pendingAcknowledgements.clear();for(const state of streamingTurns.values()){streamingRecognizer?.send({operation:'cancel',streamId:state.streamId});streamingCallbacks.delete(state.streamId);}});
 });
 server.on('listening',()=>console.log(`Conversation service listening on ws://127.0.0.1:${port}`));

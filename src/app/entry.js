@@ -7,7 +7,7 @@ import {installSocketBridge} from '../conversation/socket-bridge.js';
 import {AppState,STATES} from '../conversation/state.js';
 import {presenceStateForEvent} from '../conversation/presence.js';
 import {turnPlayback} from '../audio/turn-playback.js';
-import {AudioEngine,endActiveCapture,resumeActiveLiveCapture} from '../audio/engine.js';
+import {AudioEngine,endActiveCapture,resumeActiveLiveCapture,resample} from '../audio/engine.js';
 
 const $=id=>document.getElementById(id);
 const stage=$('stage');
@@ -36,6 +36,7 @@ let greetingTimer=null;
 let profileSelection='auto';
 let activeProfile='fast';
 let recoveryTimer=null;
+let streamingVoiceId=null,streamingFrames=[],streamingSamples=0,nextStreamingVoice=0;
 const MAX_RECONNECT_ATTEMPTS=Infinity;
 const PROFILE_IDS=['auto','fast','balanced'];
 
@@ -87,12 +88,26 @@ function pcmToWavBase64(samples,sampleRate=16000){
   for(let i=0;i<samples.length;i++){const sample=Math.max(-1,Math.min(1,samples[i]));view.setInt16(44+i*2,sample<0?sample*0x8000:sample*0x7fff,true);}
   return bytesToBase64(new Uint8Array(buffer));
 }
+function float32ToBase64(samples){return bytesToBase64(new Uint8Array(samples.buffer,samples.byteOffset,samples.byteLength));}
+function flushStreamingSpeech(){
+  if(!streamingVoiceId||!streamingSamples)return;
+  const merged=new Float32Array(streamingSamples);let offset=0;for(const frame of streamingFrames){merged.set(frame,offset);offset+=frame.length;}
+  streamingFrames=[];streamingSamples=0;
+  runtimeSocket?.send(JSON.stringify({type:'voice_stream_audio',streamId:streamingVoiceId,audio:float32ToBase64(resample(merged,audioEngine.ctx?.sampleRate||16000))}));
+}
+function streamLiveSpeech(frame,{sampleRate}={}){
+  if(!liveVoiceEnabled||activeTurn!==null||runtimeSocket?.readyState!==WebSocket.OPEN)return;
+  if(!streamingVoiceId){streamingVoiceId=`voice-${++nextStreamingVoice}`;runtimeSocket.send(JSON.stringify({type:'voice_stream_start',streamId:streamingVoiceId}));}
+  streamingFrames.push(frame.slice());streamingSamples+=frame.length;
+  if(streamingSamples>=sampleRate*.16)flushStreamingSpeech();
+}
 function resumeLiveListening(){if(liveVoiceEnabled&&!paused&&turnPlayback.canResumeListening()){resumeActiveLiveCapture();appState.set(STATES.LISTENING);setVoiceButton(true);setRuntimeStatus('Listening');}}
 function handleVoiceUtterance(samples,{bargeIn=false}={}){
   if(bargeIn&&liveVoiceEnabled&&!paused){const turn=activeTurn??turnPlayback.activeTurn;if(turn!==null){runtimeSocket?.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);}stopSpeechPlayback();activeTurn=null;}
   if(!liveVoiceEnabled||paused||activeTurn!==null||runtimeSocket?.readyState!==WebSocket.OPEN)return;
   const turn=++nextTurn;voiceTurn=turn;activeTurn=turn;appState.set(STATES.THINKING);setRuntimeStatus('Thinking…');$('send-message').hidden=true;$('stop-response').hidden=false;
-  runtimeSocket.send(JSON.stringify({type:'voice',turn,audio:pcmToWavBase64(samples),mime:'audio/wav'}));
+  const streamId=streamingVoiceId;flushStreamingSpeech();if(streamId)runtimeSocket.send(JSON.stringify({type:'voice_stream_end',streamId}));streamingVoiceId=null;
+  runtimeSocket.send(JSON.stringify({type:'voice',turn,audio:pcmToWavBase64(samples),mime:'audio/wav',streamId}));
 }
 async function startVoiceCapture({automatic=false}={}){
   if(liveVoiceEnabled)return true;
@@ -100,7 +115,7 @@ async function startVoiceCapture({automatic=false}={}){
   const socket=runtimeSocket;
   if(!socket||socket.readyState!==WebSocket.OPEN){if(!automatic)showNotice('Conversation service unavailable. Typed chat is available.',true,'warning');return false;}
   try{
-    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:480,shortSilenceMs:360,shortTurnMs:850,preRollMs:260,calibrationMs:900,releaseRatio:.68,onCalibrationChange:calibrating=>{if(calibrating)setRuntimeStatus('Tuning microphone…');else if(liveVoiceEnabled&&!paused&&activeTurn===null)setRuntimeStatus('Listening');},onBargeIn:()=>{
+    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:480,shortSilenceMs:360,shortTurnMs:850,preRollMs:260,calibrationMs:900,releaseRatio:.68,onLiveSpeechFrame:streamLiveSpeech,onCalibrationChange:calibrating=>{if(calibrating)setRuntimeStatus('Tuning microphone…');else if(liveVoiceEnabled&&!paused&&activeTurn===null)setRuntimeStatus('Listening');},onBargeIn:()=>{
       const turn=activeTurn??turnPlayback.activeTurn;if(turn!==null){runtimeSocket?.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);}stopSpeechPlayback();activeTurn=null;appState.set(STATES.LISTENING);setRuntimeStatus('Listening');
     },bargeIn:{guardMs:260,threshold:.010,onsetMs:110,minSpeechMs:150,silenceMs:360,preRollMs:180,releaseRatio:.7}});
     if(!started||!audioEngine.setListening(true))throw Error('Microphone listening could not be started.');
@@ -108,7 +123,7 @@ async function startVoiceCapture({automatic=false}={}){
   }catch(error){endActiveCapture();liveVoiceEnabled=false;setVoiceButton(false);showNotice(`Microphone unavailable: ${error.message}`,false,'warning');return false;}
 }
 function stopVoiceCapture(){
-  const wasActive=liveVoiceEnabled;endActiveCapture();liveVoiceEnabled=false;setVoiceButton(false);if(wasActive){appState.set(paused?STATES.PAUSED:STATES.IDLE);setRuntimeStatus(paused?'Paused':'Ready');}return wasActive;
+  const wasActive=liveVoiceEnabled;if(streamingVoiceId)runtimeSocket?.send(JSON.stringify({type:'voice_stream_cancel',streamId:streamingVoiceId}));streamingVoiceId=null;streamingFrames=[];streamingSamples=0;endActiveCapture();liveVoiceEnabled=false;setVoiceButton(false);if(wasActive){appState.set(paused?STATES.PAUSED:STATES.IDLE);setRuntimeStatus(paused?'Paused':'Ready');}return wasActive;
 }
 async function playGreeting(audioData){
   if(!audioData)return false;

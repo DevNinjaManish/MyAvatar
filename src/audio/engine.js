@@ -107,6 +107,7 @@ export class AudioEngine{
       if(this.liveGate){
         const utterance=this.detector.push(frame);
         if(calibrationReported&&!this.detector.calibrating){calibrationReported=false;settings.onCalibrationChange?.(false);}
+        if(this.detector.started)settings.onLiveSpeechFrame?.(frame,{sampleRate:this.ctx.sampleRate});
         if(utterance&&this._isCaptureCurrent(generation)){this.liveGate=false;emitInputLevel(0);onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.detector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:false});}
         return;
       }
