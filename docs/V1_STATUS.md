@@ -21,6 +21,7 @@ and validated product behavior.
 | Motion and behavior specifications | Core implementation complete | Nine shared states have deterministic transitions, runtime mapping, Fast/Balanced reduction, reduced-motion behavior, and four-bot visual fixtures |
 | Streaming voice turn manager | Implemented; human qualification pending | Continuous launch listening, provisional captions, clause streaming, Fast English / Balanced multilingual STT, bot TTS, and explicit Understanding state are connected; real-microphone Hinglish and repeated-turn soak remain |
 | Memory and context systems | Not started | Implement local stores, collectors, permissions, and retrieval |
+| Nova Today workspace | Implemented locally | Persistent local focus, reminders, schedule entries, and plan steps; calendar integration remains permissioned future work |
 | Specialist panels and delegation | Contracts only | Build after core context and action boundaries |
 | V1 acceptance qualification | Not started | Track evidence in `V1_ACCEPTANCE_MATRIX.md` |
 
