@@ -44,7 +44,8 @@ const conversationProvider=providerRegistry.resolve('conversation',{preferred:re
 
 async function transcribeVoice(audio,mime='audio/webm'){
   const dir=await fs.mkdtemp(join(tmpdir(),'myavatar-voice-'));
-  const input=join(dir,mime.includes('aiff')?'input.aiff':'input.webm');
+  const extension=mime.includes('wav')?'wav':mime.includes('aiff')?'aiff':'webm';
+  const input=join(dir,`input.${extension}`);
   const output=join(dir,'output');
   try{
     await fs.writeFile(input,Buffer.from(audio,'base64'));
