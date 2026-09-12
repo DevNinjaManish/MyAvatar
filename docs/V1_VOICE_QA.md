@@ -16,9 +16,12 @@ Implemented in this batch:
   uses 420 ms. Room-noise calibration and release hysteresis remain active.
   This is still an energy-based detector, not semantic understanding of whether
   a sentence is finished.
-- Microphone startup includes a 900 ms local room calibration before accepting
-  a turn. Browser echo cancellation, noise suppression, and automatic gain are
-  explicitly requested before the local detector sees audio.
+- Room-noise learning is continuous and non-blocking, so speech is accepted
+  immediately after listening starts. Browser echo cancellation, noise
+  suppression, and automatic gain are explicitly requested before the local
+  detector sees audio.
+- A noise burst that reaches onset but fails minimum speech duration now cancels
+  its provisional streaming session. It cannot contaminate the next real turn.
 - English microphone frames are sent to the local streaming Zipformer recognizer
   in 160 ms batches. A stable ASCII-English streaming result is used at endpoint;
   Hindi, Hinglish, and uncertain/non-English output automatically uses the
@@ -36,7 +39,7 @@ Implemented in this batch:
 
 Evidence:
 
-- 102 JavaScript tests, including ordered decoding, stale decode cancellation,
+- 103 JavaScript tests, including ordered decoding, stale decode cancellation,
   streamed sentence boundaries, and interruption onset with retained speech.
 - Production build passes (existing bundle-size warning remains).
 - Runtime smoke and recorded speech input integration passed.
