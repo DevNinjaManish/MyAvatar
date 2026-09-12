@@ -45,6 +45,8 @@ const AVATAR_SCALES={small:.9,normal:1,large:1.08};
 let avatarScale=localStorage.getItem('myavatar-avatar-scale');
 let avatarGlow=localStorage.getItem('myavatar-avatar-glow')!=='off';
 let quietMode=localStorage.getItem('myavatar-quiet-mode')==='on';
+let glanceEnabled=localStorage.getItem('myavatar-glance-rail')!=='off';
+let glanceCity=(localStorage.getItem('myavatar-glance-city')||'').trim();
 if(!Object.hasOwn(AVATAR_SCALES,avatarScale))avatarScale='normal';
 const presenceFallback={IDLE:'Ready',LISTENING:'Listening',THINKING:'Thinking',SPEAKING:'Speaking',WORKING:'Working',PAUSED:'Paused',SLEEPING:'Resting',ERROR:'Needs attention',RECOVERY:'Returning'};
 
@@ -65,17 +67,22 @@ function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-st
 function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
 function setRuntimeReady(value){runtimeReady=Boolean(value);document.body.classList.toggle('runtime-ready',runtimeReady);stage.setAttribute('aria-busy',String(!runtimeReady));for(const id of ['mic-toggle','pause-toggle','send-message'])$(id).disabled=!runtimeReady;}
 function applyAppearanceUi(){
-  document.documentElement.style.setProperty('--avatar-scale',AVATAR_SCALES[avatarScale]);document.body.dataset.avatarGlow=String(avatarGlow);document.body.classList.toggle('quiet-mode',quietMode);
+  document.documentElement.style.setProperty('--avatar-scale',AVATAR_SCALES[avatarScale]);document.body.dataset.avatarGlow=String(avatarGlow);document.body.classList.toggle('quiet-mode',quietMode);document.body.classList.toggle('glance-enabled',glanceEnabled);
   for(const scale of Object.keys(AVATAR_SCALES))$(`avatar-scale-${scale}`).setAttribute('aria-pressed',String(scale===avatarScale));
   $('avatar-glow').setAttribute('aria-pressed',String(avatarGlow));$('avatar-glow').textContent=avatarGlow?'Presence glow':'Presence glow off';
   $('quiet-mode').setAttribute('aria-pressed',String(quietMode));$('quiet-mode').textContent=quietMode?'Quiet desktop on':'Quiet desktop';
-  $('appearance-summary').textContent=`${avatarScale==='normal'?'Natural':avatarScale[0].toUpperCase()+avatarScale.slice(1)} scale · glow ${avatarGlow?'on':'off'}${quietMode?' · quiet':''}`;
+  $('glance-toggle').setAttribute('aria-pressed',String(glanceEnabled));$('glance-toggle').textContent=glanceEnabled?'Glance rail on':'Glance rail';$('glance-city-control').textContent=glanceCity?`City · ${glanceCity}`:'Set city';
+  $('appearance-summary').textContent=`${avatarScale==='normal'?'Natural':avatarScale[0].toUpperCase()+avatarScale.slice(1)} scale · glow ${avatarGlow?'on':'off'}${quietMode?' · quiet':''}${glanceEnabled?' · glance':''}`;
 }
 function selectAvatarScale(scale){if(!Object.hasOwn(AVATAR_SCALES,scale))return;avatarScale=scale;localStorage.setItem('myavatar-avatar-scale',scale);applyAppearanceUi();}
 function setAvatarGlow(value){avatarGlow=Boolean(value);localStorage.setItem('myavatar-avatar-glow',avatarGlow?'on':'off');applyAppearanceUi();}
 function setQuietMode(value){quietMode=Boolean(value);localStorage.setItem('myavatar-quiet-mode',quietMode?'on':'off');applyAppearanceUi();}
+function updateGlanceRail(){const now=new Date();$('glance-date').textContent=new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric'}).format(now);$('glance-time').textContent=new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(now);$('glance-city').hidden=!glanceCity;$('glance-city').textContent=glanceCity;}
+function setGlanceCity(){const next=window.prompt('City for the glance rail',glanceCity);if(next===null)return;glanceCity=next.trim().slice(0,40);if(glanceCity)localStorage.setItem('myavatar-glance-city',glanceCity);else localStorage.removeItem('myavatar-glance-city');updateGlanceRail();applyAppearanceUi();}
 setRuntimeReady(false);
 applyAppearanceUi();
+updateGlanceRail();
+setInterval(updateGlanceRail,30000);
 appState.addEventListener('change',setPresenceLine);
 setPresenceLine();
 function applyProfileUi({profile='fast',selection='auto',hardware=null,settings=null}={}){
@@ -266,6 +273,8 @@ $('profile-balanced').addEventListener('click',()=>selectProfile('balanced'));
 for(const scale of Object.keys(AVATAR_SCALES))$(`avatar-scale-${scale}`).addEventListener('click',()=>selectAvatarScale(scale));
 $('avatar-glow').addEventListener('click',()=>setAvatarGlow(!avatarGlow));
 $('quiet-mode').addEventListener('click',()=>setQuietMode(!quietMode));
+$('glance-toggle').addEventListener('click',()=>{glanceEnabled=!glanceEnabled;localStorage.setItem('myavatar-glance-rail',glanceEnabled?'on':'off');applyAppearanceUi();});
+$('glance-city-control').addEventListener('click',setGlanceCity);
 $('hide-widget').addEventListener('click',()=>{setOpen('more-menu',false);desktop?.minimize?.();});
 $('quit-app').addEventListener('click',()=>desktop?.close?.());
 const options=$('companion-options');

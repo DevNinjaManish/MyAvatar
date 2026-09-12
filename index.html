@@ -9,6 +9,9 @@
   <body class="mvp-widget">
     <main id="app" aria-label="MyAvatar companion">
       <div class="stage-frame" aria-live="polite">
+        <aside id="glance-rail" class="glance-rail" aria-label="Local glance information">
+          <span id="glance-date"></span><strong id="glance-time"></strong><span id="glance-city" hidden></span>
+        </aside>
         <div id="stage" aria-label="Companion avatar" aria-busy="true"></div>
         <div class="presence-chip" aria-live="polite"><i></i><span id="stage-status">Warming…</span></div>
       </div>
@@ -45,6 +48,8 @@
           </div>
           <button id="avatar-glow" class="appearance-toggle" type="button" aria-pressed="true">Presence glow</button>
           <button id="quiet-mode" class="appearance-toggle" type="button" aria-pressed="false">Quiet desktop</button>
+          <button id="glance-toggle" class="appearance-toggle" type="button" aria-pressed="true">Glance rail</button>
+          <button id="glance-city-control" class="appearance-toggle" type="button">Set city</button>
         </section>
         <button id="runtime-health" type="button"><span>Runtime health</span><small>Provider and connection</small></button>
         <button id="hide-widget" type="button"><span>Hide widget</span><small>Keep the runtime active</small></button>
