@@ -70,14 +70,24 @@ export class AudioEngine{
   }
   async record(onTimeout,onFrame,{mode='manual'}={}){
     const captureGeneration=this._claimCapture(mode);
-    await this.ready();if(!this._isCaptureCurrent(captureGeneration))return false;
+    try{await this.ready();}
+    catch(error){this._abandonCapture(null,captureGeneration);throw error;}
+    if(!this._isCaptureCurrent(captureGeneration))return false;
     let timedOut=false,timeout;
     // These are handled by Chromium/the selected device before the local VAD.
     // Use required booleans rather than hints where the platform supports them.
-    const request=navigator.mediaDevices.getUserMedia({audio:{channelCount:{ideal:1},echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+    let request;
+    try{
+      if(typeof globalThis.navigator?.mediaDevices?.getUserMedia!=='function')throw Error('Microphone capture is unavailable in this browser.');
+      request=globalThis.navigator.mediaDevices.getUserMedia({audio:{channelCount:{ideal:1},echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+    }catch(error){
+      this._abandonCapture(null,captureGeneration);
+      throw error;
+    }
     request.then(stream=>{if(timedOut||!this._isCaptureCurrent(captureGeneration))this._stopStream(stream);},()=>{});
     let stream;
     try{stream=await Promise.race([request,new Promise((_,reject)=>{timeout=setTimeout(()=>{timedOut=true;reject(Error('Microphone permission is pending. Allow microphone access for Electron in macOS System Settings → Privacy & Security → Microphone, then try again.'));},15000);})]);}
+    catch(error){this._abandonCapture(null,captureGeneration);throw error;}
     finally{clearTimeout(timeout);}
     if(!this._isCaptureCurrent(captureGeneration)){this._stopStream(stream);return false;}
     try{

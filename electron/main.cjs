@@ -12,6 +12,7 @@ app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required');
 
 let mainWindow=null;
 let dragTimer=null;
+const stopDragging=()=>{if(dragTimer){clearInterval(dragTimer);dragTimer=null;}};
 
 const createWindow=()=>{
   const area=screen.getPrimaryDisplay().workArea;
@@ -30,13 +31,14 @@ const createWindow=()=>{
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.loadURL('http://127.0.0.1:5173');
-  win.on('closed',()=>{mainWindow=null;});
+  win.on('blur',stopDragging);
+  win.on('closed',()=>{stopDragging();mainWindow=null;});
 };
 
 if(!app.requestSingleInstanceLock()) app.quit();
 else app.whenReady().then(()=>{
   session.defaultSession.setPermissionRequestHandler((webContents,permission,callback)=>{
-    callback(permission==='media');
+    callback(permission==='media'&&webContents===mainWindow?.webContents);
   });
   ipcMain.on('window-close',event=>{if(event.sender===mainWindow?.webContents) mainWindow.close();});
   ipcMain.on('window-minimize',event=>{if(event.sender===mainWindow?.webContents) mainWindow.minimize();});
@@ -55,16 +57,16 @@ else app.whenReady().then(()=>{
   });
   ipcMain.on('widget-drag-start',event=>{
     if(event.sender!==mainWindow?.webContents) return;
-    if(dragTimer) clearInterval(dragTimer);
+    stopDragging();
     const origin=screen.getCursorScreenPoint();
     const bounds=mainWindow.getBounds();
     dragTimer=setInterval(()=>{
-      if(mainWindow?.isDestroyed()){clearInterval(dragTimer);dragTimer=null;return;}
+      if(mainWindow?.isDestroyed()){stopDragging();return;}
       const cursor=screen.getCursorScreenPoint();
       mainWindow.setPosition(bounds.x+cursor.x-origin.x,bounds.y+cursor.y-origin.y);
     },16);
   });
-  ipcMain.on('widget-drag-stop',event=>{if(event.sender===mainWindow?.webContents&&dragTimer){clearInterval(dragTimer);dragTimer=null;}});
+  ipcMain.on('widget-drag-stop',event=>{if(event.sender===mainWindow?.webContents)stopDragging();});
   createWindow();
 });
 

@@ -174,7 +174,7 @@ async function synthesizeSpeech(text,botId='nova',emotion=null,{speed=1,pauseMs=
           const id=String(++kokoroRequestId);const timer=setTimeout(()=>{kokoroResponses.delete(id);reject(Error('Speech synthesis timed out.'));},30000);
           kokoroResponses.set(id,{resolve:value=>{clearTimeout(timer);resolveAudio(value);},reject:error=>{clearTimeout(timer);reject(error);}});
           const hindiVoice={nova:'hf_alpha',sterling:'hm_omega',rivet:'hm_psi',luma:'hf_beta'}[botId]||'hf_alpha';
-          kokoroWorker.stdin.write(`${JSON.stringify({id,text:cleanText,voice:needsHindiVoice?hindiVoice:voice.voiceId,speed:voiceSpeed,lang:needsHindiVoice?'hi':voice.lang,pauseMs})}\n`,error=>{if(error){kokoroResponses.delete(id);reject(error);}});
+          kokoroWorker.stdin.write(`${JSON.stringify({id,text:cleanText,voice:needsHindiVoice?hindiVoice:voice.voiceId,speed:voiceSpeed,lang:needsHindiVoice?'hi':voice.lang,pauseMs})}\n`,error=>{if(error){const pending=kokoroResponses.get(id);kokoroResponses.delete(id);pending?.reject(error);}});
         });
         return audio;
       }catch(error){throw Error(`Local Kokoro speech failed: ${error.message}`);}
@@ -304,12 +304,18 @@ server.on('connection',(socket,request)=>{
       const nextSelection=message.profile;const nextProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),modelIdentifier:macModelIdentifier,requested:nextSelection});
       const nextModel=nextProfile===PERFORMANCE_PROFILES.BALANCED?balancedConversationModel():fastConversationModel();
       const previousModel=modelForProfile();
-      await warmConversation(nextModel,{force:true});
-      const nextRecognizer=await warmRecognizer(nextProfile);
-      if(nextRecognizer){const previous=recognizer;recognizer=nextRecognizer.worker;whisperModel=nextRecognizer.model;previous.close();}
-      profileSelection=nextSelection;performanceProfile=nextProfile;
-      if(previousModel!==nextModel)await unloadConversation(previousModel);
-      send({type:'profile',profile:performanceProfile,selection:profileSelection,settings:profileSettings(performanceProfile),hardware:machine});
+      try{
+        // A profile is committed only after both dependencies are usable. This
+        // preserves the current conversation route if a warmup fails.
+        await warmConversation(nextModel);
+        const nextRecognizer=await warmRecognizer(nextProfile);
+        if(nextRecognizer){const previous=recognizer;recognizer=nextRecognizer.worker;whisperModel=nextRecognizer.model;previous?.close();}
+        profileSelection=nextSelection;performanceProfile=nextProfile;
+        if(previousModel!==nextModel)await unloadConversation(previousModel);
+        send({type:'profile',profile:performanceProfile,selection:profileSelection,settings:profileSettings(performanceProfile),hardware:machine});
+      }catch(error){
+        send({type:'profile',profile:performanceProfile,selection:profileSelection,settings:profileSettings(performanceProfile),hardware:machine,error:`Could not switch profiles: ${voiceSetupError(error)}`});
+      }
       return;
     }
     if(message.type==='health'){

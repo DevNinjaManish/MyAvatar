@@ -266,8 +266,8 @@ window.addEventListener('myavatar:runtime-event',event=>{
   if(detail?.type==='profile'){
     runtimeInfo={...runtimeInfo,profile:detail.profile,profileSelection:detail.selection,profileSettings:detail.settings,hardware:detail.hardware};
     applyProfileUi({profile:detail.profile,selection:detail.selection,hardware:detail.hardware,settings:detail.settings});
-    showNotice(`${detail.selection==='auto'?'Auto':'Manual'} · ${detail.profile} profile active`,false,'info');
-    setTimeout(()=>showNotice(''),1800);
+    if(detail.error){showNotice(detail.error,true,'warning');}
+    else{showNotice(`${detail.selection==='auto'?'Auto':'Manual'} · ${detail.profile} profile active`,false,'info');setTimeout(()=>showNotice(''),1800);}
   }
   if(detail?.type==='presence')setRuntimeStatus({IDLE:'Ready',LISTENING:'Listening',THINKING:'Understanding…',SPEAKING:'Speaking…',WORKING:'Working',PAUSED:'Paused',SLEEPING:'Sleeping',ERROR:'Needs attention',RECOVERY:'Recovering…'}[detail.state]||$('runtime-status').textContent);
   if(['job','delegation'].includes(detail?.type)&&['started','queued','running','working'].includes(detail.status))setRuntimeStatus('Working');

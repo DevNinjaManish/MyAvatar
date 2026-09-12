@@ -52,6 +52,22 @@ test('capture setup failure releases the granted microphone immediately',async()
  finally{if(original)Object.defineProperty(globalThis,'navigator',original);else delete globalThis.navigator;}
 });
 
+test('unavailable microphone capture releases ownership for a later retry',async()=>{
+ const engine=new AudioEngine(()=>{});engine.ctx={state:'running',resume:async()=>{}};
+ const original=Object.getOwnPropertyDescriptor(globalThis,'navigator');
+ Object.defineProperty(globalThis,'navigator',{configurable:true,value:{}});
+ try{await assert.rejects(()=>engine.record(),/Microphone capture is unavailable/);assert.equal(getActiveCaptureSnapshot().active,false);}
+ finally{if(original)Object.defineProperty(globalThis,'navigator',original);else delete globalThis.navigator;}
+});
+
+test('denied microphone permission releases ownership for a later retry',async()=>{
+ const engine=new AudioEngine(()=>{});engine.ctx={state:'running',resume:async()=>{}};
+ const original=Object.getOwnPropertyDescriptor(globalThis,'navigator');
+ Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getUserMedia:async()=>{throw Error('Permission denied');}}}});
+ try{await assert.rejects(()=>engine.record(),/Permission denied/);assert.equal(getActiveCaptureSnapshot().active,false);}
+ finally{if(original)Object.defineProperty(globalThis,'navigator',original);else delete globalThis.navigator;}
+});
+
 test('only one AudioEngine owns capture at a time',()=>{
  const first=new AudioEngine(()=>{}),second=new AudioEngine(()=>{});let stopped=0;
  first.stream={getTracks:()=>[{stop:()=>stopped++}]};first.captureMode='live';first.captureActive=true;
