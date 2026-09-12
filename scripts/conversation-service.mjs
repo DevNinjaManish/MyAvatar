@@ -265,7 +265,9 @@ server.on('connection',(socket,request)=>{
       histories.set(bot,[...history,{role:'user',content:text},{role:'assistant',content:quick}].slice(-12));send({type:'done',turn});return;
     }
     const model=modelForProfile();
-    const segments=new SpeechSegments({clauseThreshold:speak?62:88});let speechChain=Promise.resolve();
+    // Spoken replies can safely start at an early natural clause; holding 62
+    // characters made a responsive model feel as though it waited for chat.
+    const segments=new SpeechSegments({clauseThreshold:speak?40:88});let speechChain=Promise.resolve();
     const controller=new AbortController();activeControllers.set(turn,controller);
     const queueSpeech=sentence=>{speechChain=speechChain.then(async()=>{
       if(controller.signal.aborted||stopped.has(turn))return;
