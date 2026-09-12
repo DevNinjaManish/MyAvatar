@@ -22,7 +22,7 @@ and validated product behavior.
 | Streaming voice turn manager | Implemented; human qualification pending | Continuous launch listening, provisional captions, earlier natural-clause TTS streaming, Fast English / Balanced multilingual STT, bot TTS, and explicit Understanding state are connected; real-microphone Hinglish and repeated-turn soak remain |
 | Truthful local boot | Implemented | ASR, Zipformer, Kokoro, conversation, and final voice-check milestones are shown before Ready; avatar and runtime controls remain unavailable until warm |
 | Companion visual theming | Implemented | Nova, Sterling, Rivit, and Luma each supply a full surface palette; active panel controls follow the selected companion |
-| Expanded panel layout | Implemented | Chat and Today/Preferences may coexist; system notices have their own strip and Chat remains within the native window bounds |
+| Expanded panel layout | Implemented | Chat and Today/Preferences may coexist; system notices have their own strip, including in compact mode, and Chat remains within the native window bounds |
 | Memory and context systems | Not started | Implement local stores, collectors, permissions, and retrieval |
 | Nova Today workspace | Implemented locally | Persistent local focus, reminders, schedule entries, plan steps, and a left-side local month view; macOS Calendar integration remains permissioned future work |
 | Specialist panels and delegation | Contracts only | Build after core context and action boundaries |

@@ -80,7 +80,7 @@ platform.addEventListener('lostpointercapture',stopDrag);
 window.addEventListener('pointerup',stopDrag);
 window.addEventListener('blur',stopDrag);
 
-function resizePanels(){const wide=!$('nova-workspace').hidden||!$('more-menu').hidden;const tall=wide||!$('chat-panel').hidden;desktop?.resize?.(tall?805:520,wide?630:260);}
+function resizePanels(){const wide=!$('nova-workspace').hidden||!$('more-menu').hidden;const tall=wide||!$('chat-panel').hidden;desktop?.resize?.(tall?805:550,wide?630:260);}
 function setOpen(id,open){
   const panel=$(id);const changed=panel.hidden===open;panel.hidden=!open;
   if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-pressed',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(open)$('message').focus({preventScroll:true});}
