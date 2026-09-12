@@ -23,19 +23,20 @@ Implemented in this batch:
 - A noise burst that reaches onset but fails minimum speech duration now cancels
   its provisional streaming session. It cannot contaminate the next real turn.
 - English microphone frames are sent to the local streaming Zipformer recognizer
-  in 160 ms batches. A stable ASCII-English streaming result is used at endpoint;
-  Hindi, Hinglish, and uncertain/non-English output automatically uses the
-  persistent Faster-Whisper fallback.
-- Streaming begins with the detector's retained pre-roll, includes the trailing
-  endpoint frames, and requires the finalized transcript rather than a stale
-  partial. If finalization exceeds 260 ms, the turn falls back to Whisper.
+  in 160 ms batches for provisional captions and exact immediate commands only.
+  Persistent Faster-Whisper `large-v3-turbo` is authoritative for every normal
+  conversational utterance, including English, Hindi, and Hinglish.
+- Streaming begins with the detector's retained pre-roll and includes trailing
+  endpoint frames. A finalized exact stop/cancel command may be handled directly;
+  a stale partial is never acted on. Normal turns always go through Whisper.
   The 360 ms endpoint now applies only below 520 ms of voiced speech; full
   sentences retain the safer 480 ms pause window.
 - Live barge-in uses its own detector and never performs startup calibration.
   It may interrupt after 260 ms of reply playback when it hears 110 ms of user
   speech; the shorter guard is supported by the browser echo-cancellation path.
-- Balanced uses local huihui_ai/qwen3.5-abliterated:4b; Fast uses huihui_ai/qwen3.5-abliterated:0.8b. An explicit model
-  environment setting overrides both. Models must already be installed.
+- Normal replies use local `huihui_ai/qwen3.5-abliterated:4b`; complex requests
+  use `huihui_ai/qwen3.5-abliterated:9b`. Environment settings can override each
+  role. The 0.8B model is not exposed in user-facing reply routing.
 
 Evidence:
 
@@ -61,7 +62,7 @@ persistent memory are not implemented. These are not implied by passing tests.
 
 ## Recognition and response latency follow-up
 
-- Active recognizer: persistent Faster-Whisper small, int8 CPU, beam-two
+- Active authoritative recognizer: persistent Faster-Whisper `large-v3-turbo`, int8 CPU, beam-two
   decoding by default, automatic
   language detection for Hindi–English. No MLX or Apple system voices in the
   runtime. Kokoro supplies Hindi and English voice models locally.
@@ -77,20 +78,23 @@ persistent memory are not implemented. These are not implied by passing tests.
   waiting for final sentence punctuation. Spoken generation is instructed to
   lead with a short complete sentence, and uses a lower clause threshold so the
   first WAV can begin sooner.
-- Short social spoken requests route to the warm local 0.8b model even when the
-  user has selected Balanced. Requests that imply explanation, planning, code,
-  analysis, or other work remain on the selected profile model. This preserves
-  Balanced quality where it matters without making everyday conversation pay for it.
-- The direct spoken `How are you?` fast lane is pre-rendered while the runtime
-  connects. Repeated synthetic runs returned first reply audio in 1,667–1,722 ms
-  with zero filler (previous measurement: 2,050 ms). This excludes microphone
-  endpointing and uses a synthetic WAV; real-room latency can differ.
-- Clear English recognition was exact at 1,414 ms in the isolated fixture. The
-  Hindi fixture was normalized to the intended sentence at 2,070 ms. The
-  deliberately difficult synthetic mixed-language fixture was rejected as
-  uncertain at 2,135 ms rather than accepted confidently. Real microphone
-  Hinglish still requires human QA; do not call recognition fully fixed from
-  synthesized fixtures alone.
+- Short social and ordinary spoken requests use the 4B conversation model.
+  Requests that imply explanation, planning, code, analysis, research, design,
+  or other substantial work use 9B. Both routes stream output and remain
+  interruptible.
+- 2026-09-12 benchmark on the target 16GB Apple Silicon Mac: warm Ollama first
+  token was 172 ms for 4B and 303 ms for 9B. Cold model-load first token was
+  4,750 ms and 7,112 ms respectively. Total generation depends on requested
+  length; the bounded benchmark completed in 772 ms for 4B and 5,663 ms for 9B.
+- On the same Mac, persistent `large-v3-turbo` decoded the clear synthetic
+  English fixture exactly in 6,579 ms and the Hindi fixture accurately in
+  8,710 ms. The end-to-end voice integration reported 6,905 ms recognition and
+  8,529 ms to first reply audio. Zipformer produced the provisional `HOW ARE
+  YOU` caption, while authoritative Whisper returned `How are you?` in 7,887 ms.
+- The deliberately difficult synthesized Hinglish fixture took 8,459 ms and
+  produced awkward code-switching that the uncertainty heuristic did not flag.
+  Real-microphone Hinglish and noisy-room latency remain human-QA requirements;
+  the synthetic benchmark is not evidence that those cases are fully qualified.
 - Repeated/hallucinated recognition and low-confidence segments trigger a
   clarification rather than normal answer generation; this heuristic will not
   catch every incorrect word.

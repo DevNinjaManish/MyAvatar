@@ -42,15 +42,20 @@ selection is retained locally for the next launch. Profile changes affect the
 conversation response budget and avatar rendering load without changing bot
 identity or voice mapping.
 
-Current conversation defaults are `huihui_ai/qwen3.5-abliterated:0.8b` for Fast and `huihui_ai/qwen3.5-abliterated:4b`
-for Balanced; `MYAVATAR_CONVERSATION_MODEL` overrides both. These models
-must be present in the local Ollama installation. The profile changes apply
-to subsequent requests. Brief social spoken turns may use the Fast model while
-Balanced is selected; `MYAVATAR_VOICE_FAST_MODEL` controls that low-latency
-lane. Requests that require explanation, planning, analysis, coding, or similar
-work remain on the selected profile model.
+Normal conversation uses `huihui_ai/qwen3.5-abliterated:4b`. Requests that imply
+explanation, planning, analysis, research, coding, design, or other substantial
+work route to `huihui_ai/qwen3.5-abliterated:9b`; very long requests do as well.
+`MYAVATAR_CONVERSATION_MODEL` and `MYAVATAR_COMPLEX_MODEL` override those two
+roles. Both models must be present in Ollama. The 0.8B model is not used in
+user-facing replies. Fast and Balanced remain rendering/response-budget
+profiles and no longer trade away conversation quality by selecting 0.8B.
 
-Voice inference uses local open-source Faster-Whisper small (int8 CPU) for
+The configured active stack is approximately 12 GB of model weights on disk
+(4B + 9B Qwen, 1.5 GB Whisper, 342 MB Zipformer, and 337 MB Kokoro/voices),
+inside the approximately 20 GB active-model budget. Ollama may evict one Qwen
+route from memory when macOS memory pressure requires it.
+
+Voice inference uses local open-source Faster-Whisper `large-v3-turbo` (int8 CPU) for
 multilingual recognition and Kokoro for English/Hindi speech. It does not use
 Apple system voices or MLX. Recognition detects language automatically by
 default for Hindi–English use; `MYAVATAR_SPEECH_LANGUAGE` can explicitly select
@@ -58,12 +63,12 @@ a language. The default decoder uses beam size two; `MYAVATAR_WHISPER_BEAM_SIZE`
 can override it when a user deliberately prefers more speed or more accuracy.
 Install Python dependencies from `requirements-voice.txt`.
 
-The default first path for English is local streaming Zipformer, installed in
-`models/streaming-asr/`. It receives microphone frames during speech and avoids
-waiting for a complete recording before beginning recognition. Faster-Whisper
-remains the automatic verifier/fallback for Hindi, Hinglish, unclear audio, and
-any result that is not clearly English. Neither route is a user setting: the
-runtime selects the right one to preserve a natural conversation.
+Local streaming Zipformer, installed in `models/streaming-asr/`, receives
+microphone frames during speech and supplies provisional captions. Its output is
+never authoritative conversational input. Every ordinary utterance is decoded
+again by Faster-Whisper after endpointing. Only an exact, narrow, harmless
+immediate-command allowlist (`stop`, `cancel`, `stop talking`, `be quiet`, or
+`never mind`) may act directly on a finalized Zipformer result.
 
 ### Fast
 

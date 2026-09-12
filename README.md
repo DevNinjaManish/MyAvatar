@@ -57,13 +57,23 @@ Do not add telemetry, cloud accounts, paid runtime APIs, remote model providers,
 
 MyAvatar is released under the [MIT License](LICENSE).
 
-## Optional voice setup
+## Local voice setup
 
-Typed chat works without voice dependencies. To enable local voice input, install Whisper and FFmpeg on macOS:
+Create the project virtual environment, install the checked-in voice dependencies,
+and install Ollama. The configured V1 stack uses Faster-Whisper
+`large-v3-turbo`, Zipformer provisional captions, the 4B/9B Qwen conversation
+routes, and Kokoro persona voices:
 
 ```sh
-brew install openai-whisper ffmpeg
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-voice.txt
+ollama pull huihui_ai/qwen3.5-abliterated:4b
+ollama pull huihui_ai/qwen3.5-abliterated:9b
+.venv/bin/python -c "from faster_whisper import WhisperModel; WhisperModel('large-v3-turbo', device='cpu', compute_type='int8')"
 npm run doctor
 ```
 
-The first voice turn downloads the configured Whisper `tiny` model if it is not already cached. macOS speech output uses the built-in `say` command. If Whisper is unavailable, the widget keeps typed chat available and shows a recoverable voice warning.
+Large model files live outside Git. Do not delete existing Ollama or Hugging Face
+models during setup. Kokoro and Zipformer assets are expected under `models/`.
+If an authoritative recognizer or TTS asset is unavailable, the widget keeps
+typed chat available and shows a recoverable voice warning.

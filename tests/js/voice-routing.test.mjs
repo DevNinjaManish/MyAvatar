@@ -1,12 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {useFastVoiceModel} from '../../src/conversation/voice-routing.js';
+import {immediateVoiceCommand,useComplexConversationModel} from '../../src/conversation/voice-routing.js';
 
-test('short social spoken turns take the fast local model lane',()=>{
-  assert.equal(useFastVoiceModel('How are you?',{speaking:true}),true);
-  assert.equal(useFastVoiceModel('क्या हाल है?',{speaking:true}),true);
+test('normal conversation stays on the normal model',()=>{
+  assert.equal(useComplexConversationModel('How are you?'),false);
+  assert.equal(useComplexConversationModel('क्या हाल है?'),false);
 });
-test('work requests and typed requests retain the configured profile model',()=>{
-  assert.equal(useFastVoiceModel('Please explain how this architecture works.',{speaking:true}),false);
-  assert.equal(useFastVoiceModel('How are you?',{speaking:false}),false);
+test('complex requests select the larger model',()=>{
+  assert.equal(useComplexConversationModel('Please explain how this architecture works.'),true);
+  assert.equal(useComplexConversationModel('Debug this code and propose a refactor.'),true);
+});
+test('only narrow immediate commands may trust provisional recognition',()=>{
+  assert.equal(immediateVoiceCommand('Stop.'),'stop');
+  assert.equal(immediateVoiceCommand('never mind'),'stop');
+  assert.equal(immediateVoiceCommand('How are you?'),null);
 });

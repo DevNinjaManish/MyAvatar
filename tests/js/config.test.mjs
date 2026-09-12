@@ -19,6 +19,11 @@ test('companion configuration is complete and unique',()=>{
 
 test('MVP model paths reference the preserved local assets',()=>{
   assert.equal(config.models.conversation.provider,'ollama');
+  assert.equal(config.models.conversation.model,'huihui_ai/qwen3.5-abliterated:4b');
+  assert.equal(config.models.conversation.complexModel,'huihui_ai/qwen3.5-abliterated:9b');
+  assert.equal(config.models.speechToText.provider,'faster-whisper');
+  assert.equal(config.models.speechToText.model,'large-v3-turbo');
+  assert.equal(config.models.speechToText.provisionalProvider,'zipformer');
   assert.equal(config.models.textToSpeech.model,'models/kokoro-v1.0.onnx');
   assert.equal(config.models.textToSpeech.voices,'models/voices-v1.0.bin');
 });

@@ -19,7 +19,7 @@ import {JsonWorker} from './json-worker.mjs';
 import {JsonEventWorker} from './json-event-worker.mjs';
 import {quickReply} from '../src/conversation/quick-replies.js';
 import {backchannelFor,shouldBackchannel} from '../src/conversation/backchannels.js';
-import {useFastVoiceModel} from '../src/conversation/voice-routing.js';
+import {immediateVoiceCommand,useComplexConversationModel} from '../src/conversation/voice-routing.js';
 import {languageInstruction,responseLanguageFor} from '../src/conversation/language-routing.js';
 
 const port=8787;
@@ -28,12 +28,13 @@ const requestedProfile=process.env.MYAVATAR_PERFORMANCE_PROFILE||'auto';
 const machine=hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length});
 let profileSelection=['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(requestedProfile)?requestedProfile:'auto';
 let performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:profileSelection});
-const modelForProfile=()=>process.env.MYAVATAR_CONVERSATION_MODEL||(performanceProfile==='balanced'?'huihui_ai/qwen3.5-abliterated:4b':'huihui_ai/qwen3.5-abliterated:0.8b');
-const fastVoiceModel=()=>process.env.MYAVATAR_VOICE_FAST_MODEL||'huihui_ai/qwen3.5-abliterated:0.8b';
+const normalConversationModel=()=>process.env.MYAVATAR_CONVERSATION_MODEL||'huihui_ai/qwen3.5-abliterated:4b';
+const complexConversationModel=()=>process.env.MYAVATAR_COMPLEX_MODEL||'huihui_ai/qwen3.5-abliterated:9b';
+const modelForRequest=text=>useComplexConversationModel(text)?complexConversationModel():normalConversationModel();
 const requestedProvider=process.env.MYAVATAR_CONVERSATION_PROVIDER||'ollama';
 const ollamaUrl='http://127.0.0.1:11434/api/chat';
 const exec=promisify(execFile);
-const whisperModel=process.env.MYAVATAR_WHISPER_MODEL||'small';
+const whisperModel=process.env.MYAVATAR_WHISPER_MODEL||'large-v3-turbo';
 const recognitionLanguage=process.env.MYAVATAR_SPEECH_LANGUAGE||'auto';
 const projectRoot=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const localPython=join(projectRoot,'.venv/bin/python');
@@ -68,7 +69,7 @@ providerRegistry.register('conversation','ollama',Object.freeze({
     if(!response.ok)return {available:false,reason:`Local model returned HTTP ${response.status}.`};
     return {available:true};
   },
-  async stream({text,signal,onToken,botId='nova',history=[],model=modelForProfile(),replyLanguage='english'}){
+  async stream({text,signal,onToken,botId='nova',history=[],model=normalConversationModel(),replyLanguage='english'}){
     const profile=voiceProfiles[botId]||voiceProfiles.nova;
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal,
       body:JSON.stringify({model,stream:true,think:false,options:{num_predict:profileSettings(performanceProfile).maxTokens},messages:[{role:'system',content:profile.systemPrompt+' '+languageInstruction(replyLanguage)+' Answer the actual request directly. For spoken requests, begin with one short natural sentence, ideally 4 to 12 words and ending in punctuation, before adding detail. Usually use one to three short spoken sentences. Use ordinary conversational language, no emojis, stage directions, or uninvited flirting. Follow the user’s requested length. Be honest about your capabilities.'},...history,{role:'user',content:text}]})});
@@ -83,8 +84,8 @@ const acknowledgementAudio=new Map();
 const quickAudio=new Map();
 function quickSpeech(text,bot){const key=bot+text;if(!quickAudio.has(key))quickAudio.set(key,synthesizeSpeech(text,bot).catch(error=>{quickAudio.delete(key);throw error;}));return quickAudio.get(key);}
 const warmedModels=new Set();
-function warmConversation(){
-  const model=modelForProfile();if(warmedModels.has(model))return;
+function warmConversation(model=normalConversationModel()){
+  if(warmedModels.has(model))return;
   warmedModels.add(model);
   fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(60000),body:JSON.stringify({model,messages:[],stream:false,keep_alive:'10m'})})
     .then(async response=>{await response.body?.cancel();if(!response.ok)warmedModels.delete(model);}).catch(()=>warmedModels.delete(model));
@@ -178,7 +179,7 @@ server.on('connection',(socket,request)=>{
     }
     if(socket.readyState===1)socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
   };
-  const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),voiceFastModel:fastVoiceModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,streamingRecognition:streamingReady?'zipformer-en':'unavailable',voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
+  const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:normalConversationModel(),complexModel:complexConversationModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,streamingRecognition:streamingReady?'zipformer-provisional-en':'unavailable',voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
   recognizer.ready.then(sendConfig).catch(error=>{sendConfig();send({type:'speech_unavailable',message:`Local recognition unavailable: ${error.message}`});});
   const answer=async(turn,text,{speak=false,recognizedLanguage=''}={})=>{
     let spokenText='';const bot=activeBot;const history=histories.get(bot)||[];
@@ -197,7 +198,7 @@ server.on('connection',(socket,request)=>{
       try{const audio=await synthesizeSpeech(clean,bot,emotion);if(!controller.signal.aborted&&!stopped.has(turn))send({type:'audio',turn,audio,mime:'audio/wav',voice:bots[bot].voice,emotion});}
       catch(error){if(!controller.signal.aborted)send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
     });};
-    const model=useFastVoiceModel(text,{speaking:speak})?fastVoiceModel():modelForProfile();
+    const model=modelForRequest(text);
     const replyLanguage=responseLanguageFor(text,recognizedLanguage);
     try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:bot,history,model,replyLanguage},onToken(tokenText){
       if(stopped.has(turn))return;
@@ -262,10 +263,10 @@ server.on('connection',(socket,request)=>{
         // budget, use Whisper rather than risking a truncated partial sentence.
         const streamResult=streamState?.final||await new Promise(resolve=>{if(!streamState)return resolve(null);const timer=setTimeout(()=>resolve(null),260);streamState.waiters.push(value=>{clearTimeout(timer);resolve(value);});});
         if(streamState){streamingCallbacks.delete(streamState.streamId);streamingTurns.delete(message.streamId);}
-        const fastEnglish=streamResult?.text&&/^[\x20-\x7e]+$/.test(streamResult.text)&&/[a-z]/i.test(streamResult.text);
-        const recognition=fastEnglish?{text:streamResult.text,language:'en',durationMs:streamResult.durationMs,uncertain:false,streaming:true}:await transcribeVoice(message.audio,message.mime);text=recognition.text;recognizedLanguage=recognition.language;
+        const provisionalCommand=immediateVoiceCommand(streamResult?.text);
+        const recognition=provisionalCommand?{text:streamResult.text,language:'en',durationMs:streamResult.durationMs,uncertain:false,streaming:true,provisionalCommand}:await transcribeVoice(message.audio,message.mime);text=recognition.text;recognizedLanguage=recognition.language;
         if(stopped.has(turn)||socket.readyState!==1){stopped.delete(turn);return;}
-        send({type:'recognition',turn,text,language:recognition.language,durationMs:recognition.durationMs,uncertain:recognition.uncertain,rescuedEnglish:recognition.rescuedEnglish===true,streaming:recognition.streaming===true});
+        send({type:'recognition',turn,text,language:recognition.language,durationMs:recognition.durationMs,uncertain:recognition.uncertain,rescuedEnglish:recognition.rescuedEnglish===true,streaming:recognition.streaming===true,provisionalCommand:recognition.provisionalCommand||null});
         if(recognition.uncertain||!text){
           const clarification='I didn’t catch that clearly. Could you say it again?';
           send({type:'token',turn,text:clarification});
@@ -273,6 +274,9 @@ server.on('connection',(socket,request)=>{
         }
         if(!text)throw Error('No speech was recognized. Typed chat is available.');
         send({type:'transcript',turn,text});
+        if(recognition.provisionalCommand==='stop'){
+          send({type:'token',turn,text:'Okay.'});send({type:'done',turn});return;
+        }
         if(!quickReply(text,activeBot))scheduleAcknowledgement(turn,activeBot,text);
       }
       if(typeof text!=='string'||!text.trim())throw Error('Empty request.');

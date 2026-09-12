@@ -2,13 +2,15 @@
   "models": {
     "conversation": {
       "provider": "ollama",
-      "model": "qwen3.5:0.8b",
+      "model": "huihui_ai/qwen3.5-abliterated:4b",
+      "complexModel": "huihui_ai/qwen3.5-abliterated:9b",
       "url": "http://127.0.0.1:11434",
       "context": 2048
     },
     "speechToText": {
-      "provider": "mlx-whisper",
-      "model": "mlx-community/whisper-base.en-mlx"
+      "provider": "faster-whisper",
+      "model": "large-v3-turbo",
+      "provisionalProvider": "zipformer"
     },
     "textToSpeech": {
       "provider": "kokoro",

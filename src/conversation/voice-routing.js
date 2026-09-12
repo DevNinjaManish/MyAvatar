@@ -1,12 +1,15 @@
-const COMPLEX_REQUEST=/\b(?:compare|explain|analyse|analyze|research|plan|write|code|debug|design|summari[sz]e|why|how does|what is|help me)\b/i;
+const COMPLEX_REQUEST=/\b(?:compare|explain|analyse|analyze|research|investigate|plan|strategy|write|code|debug|design|architect|review|refactor|summari[sz]e|calculate|prove|reason|why|how does|what is|help me)\b/i;
 
-/**
- * Short, social spoken turns benefit more from immediate acknowledgement than
- * a larger reasoning model. Keep requests that imply work on the configured
- * profile model so this is a latency optimisation, not a capability downgrade.
- */
-export function useFastVoiceModel(text,{speaking=false}={}){
-  if(!speaking)return false;
-  const words=String(text||'').trim().split(/\s+/u).filter(Boolean);
-  return words.length>0&&words.length<=14&&!COMPLEX_REQUEST.test(text);
+/** Select 9B for work that benefits from additional reasoning; 4B handles chat. */
+export function useComplexConversationModel(text){
+  const value=String(text||'').trim();
+  const words=value.split(/\s+/u).filter(Boolean);
+  return COMPLEX_REQUEST.test(value)||words.length>60;
+}
+
+// Zipformer may make only harmless, latency-sensitive control decisions. All
+// conversational text, including ordinary English, is verified by Whisper.
+export function immediateVoiceCommand(text){
+  const value=String(text||'').trim().toLowerCase().replace(/[.!?]+$/,'');
+  return /^(?:stop|cancel|stop talking|be quiet|never mind|nevermind)$/.test(value)?'stop':null;
 }
