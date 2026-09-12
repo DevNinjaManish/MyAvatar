@@ -6,7 +6,8 @@ import {tmpdir} from 'node:os';
 import {arch, totalmem, cpus} from 'node:os';
 import {join} from 'node:path';
 import {WebSocketServer} from 'ws';
-import {ProviderRegistry} from '../src/runtime/providers.js';
+import {ProviderRegistry,checkProviderHealth} from '../src/runtime/providers.js';
+import {runProviderStream} from '../src/runtime/stream-runner.js';
 import {detectPerformanceProfile, hardwareSummary, PERFORMANCE_PROFILES} from '../src/runtime/profiles.js';
 
 const port=8787;
@@ -14,6 +15,7 @@ const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
 const requestedProfile=process.env.MYAVATAR_PERFORMANCE_PROFILE||'auto';
 const performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:requestedProfile});
 const model=process.env.MYAVATAR_CONVERSATION_MODEL||'qwen3.5:0.8b';
+const requestedProvider=process.env.MYAVATAR_CONVERSATION_PROVIDER||'ollama';
 const ollamaUrl='http://127.0.0.1:11434/api/chat';
 const exec=promisify(execFile);
 const whisperBinary=process.env.MYAVATAR_WHISPER_BIN||'whisper';
@@ -24,6 +26,11 @@ const bots=Object.freeze({nova:{name:'Nova'},sterling:{name:'Sterling'},rivit:{n
 const providerRegistry=new ProviderRegistry();
 providerRegistry.register('conversation','ollama',Object.freeze({
   name:'ollama',
+  async health({signal}){
+    const response=await fetch('http://127.0.0.1:11434/api/tags',{signal});
+    if(!response.ok)return {available:false,reason:`Local model returned HTTP ${response.status}.`};
+    return {available:true};
+  },
   async stream({text,signal,onToken}){
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal,
       body:JSON.stringify({model,stream:true,think:false,options:{num_predict:performanceProfile===PERFORMANCE_PROFILES.FAST?192:256},messages:[{role:'user',content:text}]})});
@@ -33,7 +40,7 @@ providerRegistry.register('conversation','ollama',Object.freeze({
     if(buffer.trim()){const part=JSON.parse(buffer);const tokenText=part.message?.content||'';if(tokenText)onToken(tokenText);}
   }
 }));
-const conversationProvider=providerRegistry.get('conversation','ollama');
+const conversationProvider=providerRegistry.resolve('conversation',{preferred:requestedProvider,fallbacks:['ollama']});
 
 async function transcribeVoice(audio,mime='audio/webm'){
   const dir=await fs.mkdtemp(join(tmpdir(),'myavatar-voice-'));
@@ -66,16 +73,15 @@ server.on('connection',(socket,request)=>{
   if(new URL(request.url,'ws://127.0.0.1').searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
   const sessionId=randomUUID();let sequence=0;let stopped=new Set();const activeControllers=new Map();let activeBot='nova';
   const send=(event)=>socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
-  const sendConfig=()=>send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider.name,profile:performanceProfile},bots},runtime:{provider:conversationProvider.name,profile:performanceProfile,hardware:hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length})}});
+  const sendConfig=()=>send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',profile:performanceProfile,hardware:hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length})}});
   sendConfig();
   const answer=async(turn,text,{speak=false}={})=>{
     let spokenText='';
     const controller=new AbortController();activeControllers.set(turn,controller);
-    const timeout=setTimeout(()=>controller.abort(new Error('Conversation timed out.')),30000);
-    try{await conversationProvider.stream({text,signal:controller.signal,onToken(tokenText){
+    try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,onToken(tokenText){
       if(stopped.has(turn))return;
       spokenText+=tokenText;send({type:'token',turn,text:tokenText});
-    }});}finally{clearTimeout(timeout);activeControllers.delete(turn);}
+    }});}finally{activeControllers.delete(turn);}
     if(stopped.has(turn)||controller.signal.aborted){stopped.delete(turn);return;}
     if(speak){
       try{send({type:'audio',turn,audio:await synthesizeSpeech(spokenText),mime:'audio/wav'});}
@@ -87,6 +93,10 @@ server.on('connection',(socket,request)=>{
     let message;try{message=JSON.parse(raw.toString());}catch{return;}
     if(message.type==='stop'){stopped.add(message.turn);activeControllers.get(message.turn)?.abort(new Error('Turn stopped by user.'));return;}
     if(message.type==='switch_bot'&&typeof message.botId==='string'&&bots[message.botId]){activeBot=message.botId;sendConfig();return;}
+    if(message.type==='health'){
+      send({type:'health',health:await checkProviderHealth(conversationProvider,{timeoutMs:1500})});
+      return;
+    }
     if(!['turn','voice'].includes(message.type)||!Number.isInteger(message.turn))return;
     const turn=message.turn;
     try{

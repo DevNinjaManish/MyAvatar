@@ -18,13 +18,16 @@ export class ProviderRegistry{
 export async function checkProviderHealth(provider,{timeoutMs=3000}={}){
   if(!provider)return {available:false,reason:'Provider is not registered.'};
   if(typeof provider.health!=='function')return {available:true,provider:provider.name};
-  const timeout=AbortSignal.timeout(timeoutMs);
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(new Error('Provider health check timed out.')),timeoutMs);
+  const healthPromise=Promise.resolve().then(()=>provider.health({signal:controller.signal}));
   try{
-    const result=await provider.health({signal:timeout});
+    const result=await Promise.race([healthPromise,new Promise((_,reject)=>controller.signal.addEventListener('abort',()=>reject(controller.signal.reason||new Error('Provider health check timed out.')),{once:true}))]);
     return {available:result!==false,provider:provider.name,...(result&&typeof result==='object'?result:{})};
   }catch(error){return {available:false,provider:provider.name,reason:error?.message||'Health check failed.'};}
+  finally{clearTimeout(timer);}
 }
 
-export function createFakeProvider({name='fake',respond=async()=>({})}={}){
-  return Object.freeze({name,respond});
+export function createFakeProvider({name='fake',respond=async()=>({}),stream}={}){
+  return Object.freeze({name,respond,async stream(args){if(stream)return stream(args);const result=await respond(args);if(result?.text)args.onToken?.(result.text);return result;}});
 }

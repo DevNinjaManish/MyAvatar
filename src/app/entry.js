@@ -33,7 +33,7 @@ let speechSource=null;
 let speechToken=null;
 let paused=false;
 let runtimeInfo=null;
-const MAX_RECONNECT_ATTEMPTS=3;
+const MAX_RECONNECT_ATTEMPTS=Infinity;
 
 const desktop=globalThis.desktop;
 const stopDrag=()=>{document.body.classList.remove('dragging');avatar.setDragging(false);desktop?.stopDrag?.();};
@@ -97,7 +97,7 @@ async function startVoiceCapture(){
 function scheduleRuntimeReconnect(){
   if(reconnectTimer||reconnectAttempts>=MAX_RECONNECT_ATTEMPTS)return;
   reconnectAttempts+=1;setRuntimeStatus('Reconnecting…');
-  reconnectTimer=setTimeout(()=>{reconnectTimer=null;connectRuntime();},Math.min(1000*2**(reconnectAttempts-1),4000));
+  reconnectTimer=setTimeout(()=>{reconnectTimer=null;connectRuntime();},Math.min(1000*2**Math.min(reconnectAttempts-1,4),10000));
 }
 function connectRuntime(){
   if(runtimeSocket&&(runtimeSocket.readyState===WebSocket.OPEN||runtimeSocket.readyState===WebSocket.CONNECTING))return;
@@ -105,7 +105,7 @@ function connectRuntime(){
   const socket=new WebSocket('ws://127.0.0.1:8787/?token=local-mvp');runtimeSocket=socket;
   socket.addEventListener('open',()=>{reconnectAttempts=0;setRuntimeStatus('Connecting…');});
   socket.addEventListener('error',()=>{if(runtimeSocket===socket)setRuntimeStatus('Unavailable');});
-  socket.addEventListener('close',()=>{if(runtimeSocket!==socket)return;runtimeSocket=null;if(activeTurn!==null){chat.applyRuntimeEvent({type:'error',turn:activeTurn,message:'The local runtime disconnected.'});activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;}if(reconnectAttempts<MAX_RECONNECT_ATTEMPTS){setRuntimeStatus('Reconnecting…');showNotice('Reconnecting to the local runtime…',false,'info');scheduleRuntimeReconnect();}else{setRuntimeStatus('Unavailable');showNotice('Runtime unavailable. Typed chat will return when it reconnects.',true,'warning');}});
+  socket.addEventListener('close',()=>{if(runtimeSocket!==socket)return;runtimeSocket=null;if(activeTurn!==null){chat.applyRuntimeEvent({type:'error',turn:activeTurn,message:'The local runtime disconnected.'});activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;}setRuntimeStatus('Reconnecting…');showNotice('Reconnecting to the local runtime…',false,'info');scheduleRuntimeReconnect();});
 }
 function renderMessages(){
   const messages=$('messages');
@@ -133,6 +133,12 @@ window.addEventListener('myavatar:runtime-event',event=>{
     runtimeInfo=detail.runtime||runtimeInfo;
     setRuntimeStatus('Ready');
   }
+  if(detail?.type==='health'){
+    const health=detail.health||{};
+    const provider=health.provider||runtimeInfo?.provider||'unknown';
+    if(health.available)showNotice(`Runtime: ${provider} · ${runtimeInfo?.profile||'unknown'} · ready`,false,'info');
+    else showNotice(`Runtime unavailable: ${health.reason||'provider health check failed.'}`,true,'warning');
+  }
   if(detail?.type==='transcript')showNotice('Thinking…');
   if(detail?.type==='audio')playSpeech(detail.audio,detail.turn).catch(error=>{appState.set(STATES.IDLE);showNotice(`Speech output unavailable: ${error.message}`,false,'warning');});
   if(detail?.type==='speech_unavailable'){appState.set(STATES.IDLE);showNotice(detail.message,false,'warning');}
@@ -148,7 +154,7 @@ $('picker-close').addEventListener('click',()=>setOpen('companion-picker',false)
 $('more-toggle').addEventListener('click',()=>{setOpen('chat-panel',false);setOpen('companion-picker',false);setOpen('more-menu',$('more-menu').hidden);});
 $('more-close').addEventListener('click',()=>setOpen('more-menu',false));
 $('pause-toggle').addEventListener('click',()=>{if(activeTurn!==null){showNotice('Stop the current response before pausing the companion.',false,'warning');return;}setPaused(!paused);setOpen('more-menu',false);showNotice(paused?'Companion paused.':'Companion resumed.',false,'info');});
-$('runtime-health').addEventListener('click',()=>{const profile=runtimeInfo?.profile||'unknown';const provider=runtimeInfo?.provider||'unknown';showNotice(`Runtime: ${provider} · ${profile} · ${runtimeSocket?.readyState===WebSocket.OPEN?'connected':'unavailable'}`,false,runtimeSocket?.readyState===WebSocket.OPEN?'info':'warning');setOpen('more-menu',false);});
+$('runtime-health').addEventListener('click',()=>{setOpen('more-menu',false);if(runtimeSocket?.readyState!==WebSocket.OPEN){showNotice('Runtime unavailable. Reconnecting…',true,'warning');return;}showNotice('Checking runtime health…',false,'info');runtimeSocket.send(JSON.stringify({type:'health'}));});
 $('hide-widget').addEventListener('click',()=>{setOpen('more-menu',false);desktop?.minimize?.();});
 $('quit-app').addEventListener('click',()=>desktop?.close?.());
 const options=$('companion-options');

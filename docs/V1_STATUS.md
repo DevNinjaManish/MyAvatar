@@ -12,7 +12,8 @@ and validated product behavior.
 | Runtime contracts and provider registry | Implemented | JavaScript contract tests pass |
 | Hardware/profile detection | Implemented | Profile unit tests pass |
 | Local conversation service integration | Implemented | MVP WebSocket path preserved; build/tests pass |
-| Provider timeout and cancellation | Implemented | Provider tests pass; native runtime test still required |
+| Provider timeout and cancellation | Implemented | Hard timeout/cancellation runner tests and runtime smoke pass |
+| Runtime health and reconnect recovery | Implemented | Typed health event, bounded provider probe, and automatic reconnect path pass |
 | Platform controls and compact geometry | Implemented | Pause/Resume, More, runtime health, hide, quit; native visual QA passes |
 | V1 documentation consolidation | Implemented | Active docs are V1-only; former MVP docs are archived |
 | Structural wireframes | Complete | Ten V1 wireframes exist |
@@ -35,8 +36,9 @@ and validated product behavior.
 
 ## Batch checkpoints
 
-- Batch 0: V1 foundation and documentation consolidation — checkpoint pending
-- Batch 1: Runtime resilience — next implementation batch
+- Batch 0: V1 foundation and documentation consolidation — complete (`0fa5fe7`)
+- Batch 1: Runtime resilience — complete; ready for checkpoint
+- Batch 2: Voice-first liveness — next implementation batch
 
 ## Definition of “documented” versus “done”
 

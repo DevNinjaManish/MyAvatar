@@ -17,7 +17,8 @@ the corresponding item in `V1_ACCEPTANCE.md` complete.
 | Delegation | Scoped task, visible status, cancellation, timeout, loop rejection, and result return | Delegation contract and soak tests | Foundation only |
 | Setup and repair | Clean install, interrupted download, dependency failure, repair, and resume | Native setup matrix | Not started |
 | Performance profiles | Fast works on 8 GB target; Balanced remains responsive on preferred hardware | Hardware benchmark and thermal logs | Profile selection only |
-| Provider portability | Provider can be replaced through contracts without UI/bot changes | Fake provider and adapter tests | Foundation only |
+| Provider portability | Provider can be replaced through contracts without UI/bot changes | Fake provider and adapter tests | Passing foundation |
+| Runtime resilience | Provider health, hard timeout, cancellation, typed health event, reconnect, and streamed response | `runtime-stream` tests and `test:runtime` | Passing |
 | Regression safety | Existing launch, chat, stop, voice fallback, and relaunch path remains green | `npm test`, build, runtime and native smoke | Passing foundation |
 | Platform controls | Pause/Resume, More, runtime health, hide, quit, and compact geometry remain distinct and unclipped | Native Electron visual QA and interaction smoke | Passing foundation |
 
