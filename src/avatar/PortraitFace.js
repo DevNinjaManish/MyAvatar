@@ -7,7 +7,12 @@ const poses={
   IDLE:{lift:0,pitch:0,yaw:0,roll:0,scale:0},
   LISTENING:{lift:.014,pitch:-.026,yaw:.042,roll:.018,scale:.006},
   THINKING:{lift:.006,pitch:.012,yaw:.068,roll:-.022,scale:.003},
-  SPEAKING:{lift:.01,pitch:-.012,yaw:.018,roll:.006,scale:.009}
+  SPEAKING:{lift:.01,pitch:-.012,yaw:.018,roll:.006,scale:.009},
+  WORKING:{lift:.003,pitch:.016,yaw:-.035,roll:.012,scale:.001},
+  PAUSED:{lift:-.008,pitch:.018,yaw:0,roll:0,scale:-.004},
+  SLEEPING:{lift:-.016,pitch:.035,yaw:0,roll:0,scale:-.008},
+  ERROR:{lift:-.004,pitch:.012,yaw:.025,roll:-.018,scale:-.002},
+  RECOVERY:{lift:.004,pitch:-.006,yaw:-.018,roll:.008,scale:.002}
 };
 const blend=(from,to,amount,key)=>THREE.MathUtils.lerp(from[key]||0,to[key]||0,amount);
 const characters={
@@ -109,8 +114,8 @@ export class PortraitFace {
     // The portrait is the live face layer; the dedicated upper-body art below
     // it gets enough room to cross the circular frame for every companion.
     const portraitRadius=.565;
-    const portrait=new THREE.Mesh(new THREE.CircleGeometry(portraitRadius,48),new THREE.MeshBasicMaterial({map,transparent:true}));
-    portrait.position.z=-.015;this.root.add(portrait);
+    this.portrait=new THREE.Mesh(new THREE.CircleGeometry(portraitRadius,48),new THREE.MeshBasicMaterial({map,transparent:true}));
+    this.portrait.position.z=-.015;this.root.add(this.portrait);
     // Dedicated transparent busts sit behind the live circular face. The circle
     // masks their centre while each companion's shoulders and chest escape the
     // frame without obscuring animated eyes or speaker hardware.
@@ -145,7 +150,7 @@ export class PortraitFace {
       pixel:{speaker:[314,344,82,52,'dots','#c9ff55'],eyes:[[225,242,53,43],[404,242,53,43]]},
       luma:{speaker:[314,339,80,54,'vertical','#73d8ff'],eyes:[[192,242,82,24],[435,242,82,24]]}
     }[bot]||null;
-    this.character=characters[bot]||characters.rivet;
+    this.character=characters[bot]||characters.rivet;this.visualProfile='balanced';this.reduceEffects=false;
     this.profile=expressiveProfiles[bot]||expressiveProfiles.rivet;
     this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.lastEmotion='relaxed';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.expressionKick=0;this.nextGaze=1.8;this.gaze=0;this.gazeTarget=0;this.transitionKick=0;this.dragKick=0;this.ambientKick=0;this.nextAmbient=2;this.ambientTarget={lift:0,roll:0};this.surpriseJump=0;this.nextMicroGesture=1.2;this.microGesture={lift:0,yaw:0,roll:0,scale:0};this.microTarget={...this.microGesture};this.nextIdleLightPaintAt=0;
     this.image=new Image();this.image.decoding='async';
@@ -153,7 +158,7 @@ export class PortraitFace {
     this.image.src=`/assets/bots/${portraits[bot]||'rivet'}/portrait.png`;
   }
   update(t,blink,mouth,state,previousState='IDLE',transition=1,emotion='relaxed',previousEmotion='relaxed',emotionTransition=1,motion=1,attention={x:0,y:0,dragging:false},dt=1/60){
-    const gazeRange=state==='THINKING'?.4:state==='LISTENING'?.3:state==='CURIOUS'?.1:.9;
+    const gazeRange=state==='THINKING'||state==='WORKING'?.4:state==='LISTENING'?.3:['SLEEPING','PAUSED'].includes(state)?0:.9;
     if(t>this.nextGaze){this.gazeTarget=(Math.random()-.5)*gazeRange;this.nextGaze=t+(state==='THINKING'?.8:2.6)+Math.random()*4.2;}
     if(t>this.nextAmbient){this.ambientKick=1;this.ambientTarget={lift:(Math.random()-.5)*.01,roll:(Math.random()-.5)*.02};this.nextAmbient=t+5+Math.random()*10;}
     if(t>this.nextMicroGesture&&!attention.dragging){
@@ -171,7 +176,7 @@ export class PortraitFace {
     this.gaze=THREE.MathUtils.lerp(this.gaze,this.gazeTarget,ease(5.4,dt));
     for(const key of Object.keys(this.microGesture))this.microGesture[key]=THREE.MathUtils.lerp(this.microGesture[key],this.microTarget[key],ease(2.45,dt));
     this.reaction=decay(this.reaction,2.1,dt);this.transitionKick=decay(this.transitionKick,2.8,dt);this.expressionKick=decay(this.expressionKick,7.5,dt);this.dragKick=decay(this.dragKick,3.8,dt);this.ambientKick=decay(this.ambientKick,2.45,dt);this.surpriseJump=decay(this.surpriseJump,9.5,dt);
-    const speaking=state==='SPEAKING',listening=state==='LISTENING',thinking=state==='THINKING';
+    const speaking=state==='SPEAKING',listening=state==='LISTENING',thinking=state==='THINKING',working=state==='WORKING',sleeping=state==='SLEEPING',errored=state==='ERROR',recovering=state==='RECOVERY';
     const eased=smoothstep(transition),from=poses[previousState]||poses.IDLE,to=poses[state]||poses.IDLE;
     const pose={lift:blend(from,to,eased,'lift'),pitch:blend(from,to,eased,'pitch'),yaw:blend(from,to,eased,'yaw'),roll:blend(from,to,eased,'roll'),scale:blend(from,to,eased,'scale')};
     const temperament=this.character[speaking?'speaking':listening?'listening':thinking?'thinking':'idle'];
@@ -182,10 +187,15 @@ export class PortraitFace {
     const thoughtful=thinking?Math.sin(t*1.65*temperament)*.011:0;
     const emotionMix=smoothstep(emotionTransition),oldExpression=expressionPose[previousEmotion]||expressionPose.relaxed,newExpression=expressionPose[emotion]||expressionPose.relaxed;
     const expression={lift:blend(oldExpression,newExpression,emotionMix,'lift'),pitch:blend(oldExpression,newExpression,emotionMix,'pitch'),yaw:blend(oldExpression,newExpression,emotionMix,'yaw'),roll:blend(oldExpression,newExpression,emotionMix,'roll')};
-    const characterGesture=state==='THINKING'?Math.sin(t*4.4*temperament)*.011*this.character.tilt:state==='LISTENING'?Math.sin(t*2.2*temperament)*.008*this.character.tilt:0;
+    const characterGesture=thinking?Math.sin(t*4.4*temperament)*.011*this.character.tilt:listening?Math.sin(t*2.2*temperament)*.008*this.character.tilt:working?Math.sin(t*1.3*temperament)*.004:errored?Math.sin(t*13)*.003:recovering?Math.sin(t*2.2)*.003:0;
     const signature=personaMotion(this.bot,state,t,this.mouthValue);
     const proximity=attention.dragging?0:1;
-    this.root.position.y=1.30+(breath*(speaking ? .011 : .006)+pose.lift+signature.lift+speechBeat*.006+expression.lift+this.transitionKick*.01+this.expressionKick*.006+this.ambientKick*this.ambientTarget.lift+this.microGesture.lift+this.surpriseJump*.02-attention.y*.008*proximity+this.dragKick*.01)*motion;
+    const stateBreath=sleeping?.002:working?.004:.006;
+    const tint=sleeping?'#59636a':state==='PAUSED'?'#818b90':errored?'#ff9ca1':recovering?'#b8f3f5':working?'#fff1d0':'#ffffff';
+    this.portrait.material.color.set(tint);
+    if(this.bust)this.bust.material.color.set(tint);
+    if(this.bustShadow)this.bustShadow.material.opacity=sleeping?.68:errored?.56:.48;
+    this.root.position.y=1.30+(breath*(speaking ? .011 : stateBreath)+pose.lift+signature.lift+speechBeat*.006+expression.lift+this.transitionKick*.01+this.expressionKick*.006+this.ambientKick*this.ambientTarget.lift+this.microGesture.lift+this.surpriseJump*.02-attention.y*.008*proximity+this.dragKick*.01)*motion;
     this.root.scale.setScalar(1+(pose.scale+signature.scale+Math.sin(t*.8*temperament)*.0018+speechBeat*.003+this.microGesture.scale+this.dragKick*.006)*motion);
     this.root.rotation.set(
       (pose.pitch+signature.pitch+breath*.006+speechBeat*.014+this.reaction*.018+expression.pitch-attention.y*.018*proximity)*motion,
@@ -209,13 +219,16 @@ export class PortraitFace {
     // Presence lights move gently even at rest. Idle repaints are capped at
     // 12 fps; active states still use the configured effect rate.
     const idleLights=state==='IDLE'&&now>=this.nextIdleLightPaintAt;
-    if(this.imageReady&&enoughTime&&(Math.abs(this.mouthValue-this.lastLevel)>.018||Math.abs(blink-this.lastBlink)>.04||state!==this.lastState||emotion!==this.lastEmotion||emotion!=='relaxed'||speaking||listening||thinking||idleLights))this.paintHardware(this.mouthValue,blink,state,t,emotion,now);
+    const activeState=speaking||listening||thinking||working||sleeping||errored||recovering;
+    if(this.imageReady&&enoughTime&&(Math.abs(this.mouthValue-this.lastLevel)>.018||Math.abs(blink-this.lastBlink)>.04||state!==this.lastState||emotion!==this.lastEmotion||emotion!=='relaxed'||activeState||idleLights))this.paintHardware(this.mouthValue,blink,state,t,emotion,now);
   }
-  configure(options={}){if(Number.isFinite(options.effectFps))this.performance.effectFps=THREE.MathUtils.clamp(options.effectFps,1,60);}
+  configure(options={}){if(Number.isFinite(options.effectFps))this.performance.effectFps=THREE.MathUtils.clamp(options.effectFps,1,60);if(['fast','balanced'].includes(options.profile))this.visualProfile=options.profile;this.reduceEffects=options.reducedMotion===true||this.visualProfile==='fast';}
   react(state,previousState='IDLE'){
-    this.reaction=state==='SPEAKING'||state==='LISTENING'?1:.45;
+    this.reaction=state==='SPEAKING'||state==='LISTENING'?1:state==='ERROR'?.15:.45;
     this.transitionKick=state==='LISTENING'||(previousState==='THINKING'&&state==='SPEAKING')?1:.45;
     if(state==='LISTENING')this.gazeTarget=.18;
+    if(state==='SLEEPING'||state==='PAUSED')this.gazeTarget=0;
+    if(state==='RECOVERY')this.gazeTarget=-.12;
   }
   reactExpression(emotion,previousEmotion='relaxed'){
     this.expressionKick=emotion==='surprised'?1:emotion==='happy'?-.55:emotion==='curious'?.45:.35;
@@ -277,6 +290,23 @@ export class PortraitFace {
       ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=color;ctx.globalAlpha=.75;
       for(const [eyeX,eyeY,rx] of hardware.eyes){const sweep=eyeX-rx*.46+(Math.sin(t*3)+1)*rx*.46;ctx.fillRect(sweep,eyeY-2,3,4);}ctx.restore();
     }
+    if(state==='WORKING'){
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.strokeStyle=color;ctx.globalAlpha=.35;ctx.lineWidth=2;
+      for(const [eyeX,eyeY,rx,ry] of hardware.eyes){const sweep=(Math.sin(t*2.2)*.5+.5)*rx*1.2-rx*.6;ctx.beginPath();ctx.moveTo(eyeX+sweep,eyeY-ry*.45);ctx.lineTo(eyeX+sweep,eyeY+ry*.45);ctx.stroke();}ctx.restore();
+    }
+    if(state==='SLEEPING'||state==='PAUSED'){
+      ctx.save();ctx.fillStyle=`rgba(4,7,10,${state==='SLEEPING'?.68:.46})`;
+      for(const [eyeX,eyeY,rx,ry] of hardware.eyes){ctx.beginPath();ctx.ellipse(eyeX,eyeY,rx*.82,Math.max(3,ry*(state==='SLEEPING'?.13:.28)),0,0,Math.PI*2);ctx.fill();}ctx.restore();
+    }
+    if(state==='ERROR'){
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.strokeStyle='#ff696f';ctx.fillStyle='#ff696f';ctx.globalAlpha=.58;ctx.lineWidth=2;
+      for(const [eyeX,eyeY,rx] of hardware.eyes){ctx.beginPath();ctx.moveTo(eyeX-rx*.35,eyeY);ctx.lineTo(eyeX+rx*.35,eyeY);ctx.stroke();}
+      if(!this.reduceEffects){const jitter=Math.sin(t*31)*4;ctx.fillRect(x-width*.28+jitter,y-height*.08,width*.56,2);}ctx.restore();
+    }
+    if(state==='RECOVERY'){
+      ctx.save();ctx.globalCompositeOperation='screen';ctx.strokeStyle=color;ctx.globalAlpha=.25+.22*Math.sin(t*3);ctx.lineWidth=2;
+      for(const [eyeX,eyeY,rx,ry] of hardware.eyes){ctx.beginPath();ctx.ellipse(eyeX,eyeY,rx*(.45+.2*Math.sin(t*1.7)),ry*(.45+.2*Math.sin(t*1.7)),0,0,Math.PI*2);ctx.stroke();}ctx.restore();
+    }
     if(emotion!=='relaxed'){
       ctx.save();ctx.globalCompositeOperation='screen';ctx.strokeStyle=color;ctx.fillStyle=color;
       if(emotion==='happy'){
@@ -296,6 +326,10 @@ export class PortraitFace {
     ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=color;ctx.globalAlpha=.55+.35*Math.sin(t*4);
     const panelY=y+height*.62;
     if(state==='THINKING')for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(x-7+i*7,panelY,1.7+(i===Math.floor(t*4)%3?1:0),0,Math.PI*2);ctx.fill();}
+    else if(state==='WORKING'){const progress=(Math.sin(t*1.8)*.5+.5)*12;ctx.fillRect(x-7,panelY-1,progress,2);}
+    else if(state==='SLEEPING'||state==='PAUSED'){ctx.globalAlpha=.25;ctx.fillRect(x-5,panelY,10,1);}
+    else if(state==='ERROR'){ctx.fillStyle='#ff696f';ctx.fillRect(x-5,panelY-1,10,2);}
+    else if(state==='RECOVERY'){ctx.strokeStyle=color;ctx.beginPath();ctx.arc(x,panelY,4+Math.sin(t*2),0,Math.PI*2);ctx.stroke();}
     else if(state==='LISTENING'){ctx.beginPath();ctx.arc(x,panelY,3.5+Math.sin(t*5),0,Math.PI*2);ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();}
     else if(state==='SPEAKING'){ctx.fillRect(x-6,panelY-2,3,4);ctx.fillRect(x-1,panelY-4,3,8);ctx.fillRect(x+4,panelY-2,3,4);}
     else{ctx.fillRect(x-4,panelY,3,2);ctx.fillRect(x-1,panelY+2,3,2);ctx.fillRect(x+2,panelY-2,3,2);}ctx.restore();
@@ -304,7 +338,7 @@ export class PortraitFace {
     this.nextIdleLightPaintAt=now+1000/Math.min(this.performance.effectFps,12);
   }
   paintPresenceLights(ctx,hardware,state,t,blink){
-    const active=state==='SPEAKING'?1:state==='LISTENING'?.82:state==='THINKING'?.7:.42;
+    const active=state==='SPEAKING'?1:state==='LISTENING'?.82:state==='THINKING'?.7:state==='WORKING'?.62:state==='RECOVERY'?.5:state==='ERROR'?.25:state==='SLEEPING'?.08:state==='PAUSED'?.14:.42;
     const phase=t*this.profile.lightSpeed;
     const color=this.profile.eye;
     ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle=color;ctx.strokeStyle=color;

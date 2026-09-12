@@ -15,9 +15,9 @@ design work required before each surface is considered design-ready.
 - [x] Shared high-fidelity reference for Ready, Listening, Thinking, Speaking, and recoverable Error across all four bots
 - [x] Extend the shared reference with Working, Sleeping, and Recovery
 - [x] Motion timing and interruption specification for each state in `V1_MOTION_SPEC.md`
-- [ ] Audio-reactive mouth and equalizer behavior reference
+- [x] Audio-reactive mouth and equalizer implementation plus Speaking fixture
 - [ ] Nova, Sterling, Rivit, and Luma expression and lighting parameters
-- [ ] Layered asset breakdown and final asset slots
+- [x] Layered asset breakdown and final asset slots in `V1_ASSET_MANIFEST.md`
 
 ## Context, memory, and trust
 

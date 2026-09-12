@@ -32,4 +32,7 @@ test('presence transitions are fastest into speech and reduced motion is immedia
   assert.ok(stateTransitionDuration('LISTENING')<stateTransitionDuration('IDLE'));
   assert.equal(stateTransitionDuration('SPEAKING',{reducedMotion:true}),.01);
   assert.ok(motionScaleForState('SPEAKING')>motionScaleForState('IDLE'));
+  assert.ok(motionScaleForState('WORKING')>motionScaleForState('SLEEPING'));
+  assert.ok(stateTransitionDuration('ERROR')<stateTransitionDuration('RECOVERY'));
+  assert.ok(motionScaleForState('PAUSED')<motionScaleForState('WORKING'));
 });

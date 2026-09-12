@@ -1,12 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {resample,AudioEngine,getActiveCaptureSnapshot,endActiveCapture,suspendActiveLiveCapture} from '../../src/audio/engine.js';
-import {AppState} from '../../src/conversation/state.js';
+import {AppState,STATES} from '../../src/conversation/state.js';
 import {turnPlayback} from '../../src/audio/turn-playback.js';
 
 test('48k capture retains duration and DC level at 16k',()=>{const output=resample(new Float32Array(48000).fill(.25),48000);assert.equal(output.length,16000);assert.ok(output.every(x=>x===.25));});
 test('44.1k capture handles non-integral resampling without NaNs',()=>{const output=resample(new Float32Array(44100).fill(.5),44100);assert.equal(output.length,16000);assert.ok(output.every(x=>Number.isFinite(x)&&x===.5));});
 test('state rejects unknown states and ignores duplicate transitions',()=>{const state=new AppState();let n=0;state.addEventListener('change',()=>n++);assert.equal(state.set('LISTENING'),true);assert.equal(state.set('LISTENING'),false);assert.equal(state.value,'LISTENING');assert.equal(n,1);assert.throws(()=>state.set('BROKEN'));});
+test('production companion lifecycle exposes nine stable states',()=>{assert.deepEqual(Object.values(STATES),['IDLE','LISTENING','THINKING','SPEAKING','WORKING','PAUSED','SLEEPING','ERROR','RECOVERY']);});
 test('stop discards an audio decode that finishes after interruption',async()=>{
   turnPlayback.beginTurn(1);turnPlayback.noteServerEvent({type:'audio',turn:1});
   let resolveDecode;const engine=new AudioEngine(()=>{});

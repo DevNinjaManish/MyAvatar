@@ -17,7 +17,8 @@ const chat=new ChatStore();
 const appState=new AppState();
 const audioEngine=new AudioEngine(level=>avatar.setMouth(level));
 globalThis.appState=appState;
-appState.addEventListener('change',()=>avatar.setState(appState.value));
+appState.addEventListener('change',()=>{avatar.setState(appState.value);document.body.dataset.presence=appState.value.toLowerCase();});
+document.body.dataset.presence=appState.value.toLowerCase();
 installSocketBridge(window);
 installRuntimeEventGuard(window);
 let selected='nova';
@@ -34,6 +35,7 @@ let greetingSent=false;
 let greetingTimer=null;
 let profileSelection='auto';
 let activeProfile='fast';
+let recoveryTimer=null;
 const MAX_RECONNECT_ATTEMPTS=Infinity;
 const PROFILE_IDS=['auto','fast','balanced'];
 
@@ -53,7 +55,8 @@ function showNotice(text,retry=false,variant='info'){const visible=Boolean(text)
 function setRuntimeStatus(text){$('runtime-status').textContent=text;}
 function applyProfileUi({profile='fast',selection='auto',hardware=null,settings=null}={}){
   activeProfile=profile;profileSelection=selection;
-  if(settings)avatar.configure({maxFps:settings.maxFps,effectFps:settings.effectFps});
+  document.body.dataset.performance=profile;
+  if(settings)avatar.configure({maxFps:settings.maxFps,effectFps:settings.effectFps,profile});
   for(const id of PROFILE_IDS){const button=$(`profile-${id}`);if(button)button.setAttribute('aria-pressed',String(id===selection));}
   const ram=hardware?.memoryGb?` (${hardware.memoryGb} GB RAM)`:'';
   $('profile-summary').textContent=selection==='auto'?`Auto · ${profile[0].toUpperCase()+profile.slice(1)}${ram}`:`${profile[0].toUpperCase()+profile.slice(1)} · selected manually`;
@@ -72,6 +75,10 @@ function stopSpeechPlayback(){
   audioEngine.stop();
   avatar.setMouth(0);avatar.setExpression('relaxed');
   return true;
+}
+function recoverTurn(message='Ready'){
+  clearTimeout(recoveryTimer);appState.set(STATES.ERROR);setRuntimeStatus(message);
+  recoveryTimer=setTimeout(()=>{appState.set(STATES.RECOVERY);setRuntimeStatus('Recovering…');recoveryTimer=setTimeout(()=>{if(paused)return;appState.set(STATES.IDLE);setRuntimeStatus('Ready');resumeLiveListening();},650);},500);
 }
 function pcmToWavBase64(samples,sampleRate=16000){
   const buffer=new ArrayBuffer(44+samples.length*2);const view=new DataView(buffer);
@@ -127,7 +134,7 @@ function connectRuntime(){
   const socket=new WebSocket('ws://127.0.0.1:8787/?token=local-mvp');runtimeSocket=socket;
   socket.addEventListener('open',()=>{reconnectAttempts=0;setRuntimeStatus('Connecting…');const saved=localStorage.getItem('myavatar-performance-profile');if(PROFILE_IDS.includes(saved)&&saved!=='auto')socket.send(JSON.stringify({type:'set_profile',profile:saved}));});
   socket.addEventListener('error',()=>{if(runtimeSocket===socket)setRuntimeStatus('Unavailable');});
-  socket.addEventListener('close',()=>{if(runtimeSocket!==socket)return;runtimeSocket=null;stopVoiceCapture();if(activeTurn!==null){chat.applyRuntimeEvent({type:'error',turn:activeTurn,message:'The local runtime disconnected.'});activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;}setRuntimeStatus('Reconnecting…');showNotice('Reconnecting to the local runtime…',false,'info');scheduleRuntimeReconnect();});
+  socket.addEventListener('close',()=>{if(runtimeSocket!==socket)return;runtimeSocket=null;stopVoiceCapture();clearTimeout(recoveryTimer);appState.set(STATES.ERROR);if(activeTurn!==null){chat.applyRuntimeEvent({type:'error',turn:activeTurn,message:'The local runtime disconnected.'});activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;}setRuntimeStatus('Unavailable');showNotice('Reconnecting to the local runtime…',false,'info');scheduleRuntimeReconnect();});
 }
 function renderMessages(){
   const messages=$('messages');
@@ -154,7 +161,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
     if(current){selected=current.id;$('companion-name').textContent=current.name;stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);$('message').value=chat.draft(current.id);$('pause-toggle').textContent=paused?'Resume':'Pause';}
     runtimeInfo=detail.runtime||runtimeInfo;
     applyProfileUi({profile:detail.runtime?.profile||activeProfile,selection:detail.runtime?.profileSelection||profileSelection,hardware:detail.runtime?.hardware,settings:detail.runtime?.profileSettings});
-    setRuntimeStatus('Ready');
+    setRuntimeStatus(appState.value===STATES.RECOVERY?'Recovering…':'Ready');
     if(!greetingSent){greetingSent=true;clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>startVoiceCapture({automatic:true}),8000);if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'greeting'}));}
     else if(!liveVoiceEnabled&&!paused)startVoiceCapture({automatic:true});
   }
@@ -164,6 +171,8 @@ window.addEventListener('myavatar:runtime-event',event=>{
     showNotice(`${detail.selection==='auto'?'Auto':'Manual'} · ${detail.profile} profile active`,false,'info');
     setTimeout(()=>showNotice(''),1800);
   }
+  if(detail?.type==='presence')setRuntimeStatus({IDLE:'Ready',LISTENING:'Listening',THINKING:'Understanding…',SPEAKING:'Speaking…',WORKING:'Working',PAUSED:'Paused',SLEEPING:'Sleeping',ERROR:'Needs attention',RECOVERY:'Recovering…'}[detail.state]||$('runtime-status').textContent);
+  if(['job','delegation'].includes(detail?.type)&&['started','queued','running','working'].includes(detail.status))setRuntimeStatus('Working');
   if(detail?.type==='greeting'){
     clearTimeout(greetingTimer);greetingTimer=null;
     if(detail.audio)playGreeting(detail.audio).catch(()=>startVoiceCapture({automatic:true}));else{showNotice(detail.text||'Ready');startVoiceCapture({automatic:true});setTimeout(()=>showNotice(''),1600);}
@@ -177,11 +186,11 @@ window.addEventListener('myavatar:runtime-event',event=>{
   if(detail?.type==='transcript')showNotice(`Heard: ${detail.text}`);
   if(detail?.type==='recognizing'){setRuntimeStatus('Understanding…');showNotice('Understanding…');}
   if(detail?.type==='audio'){setRuntimeStatus('Speaking…');if(detail.emotion)avatar.setExpression(detail.emotion);playSpeech(detail.audio,detail.turn).catch(error=>{avatar.setExpression('relaxed');appState.set(STATES.IDLE);showNotice(`Speech output unavailable: ${error.message}`,false,'warning');});}
-  if(detail?.type==='speech_unavailable'){appState.set(STATES.IDLE);resumeLiveListening();showNotice(detail.message,false,'warning');}
+  if(detail?.type==='speech_unavailable'){recoverTurn('Voice unavailable');showNotice(detail.message,false,'warning');}
   if(['done','error'].includes(detail?.type)){
     activeTurn=null;voiceTurn=null;
     if(detail.type==='error'){
-      stopSpeechPlayback();appState.set(STATES.IDLE);resumeLiveListening();
+      stopSpeechPlayback();recoverTurn('Needs attention');
     }else if(turnPlayback.canResumeListening()){appState.set(STATES.IDLE);setRuntimeStatus('Ready');resumeLiveListening();}
     $('send-message').hidden=!turnPlayback.canResumeListening();$('stop-response').hidden=turnPlayback.canResumeListening();
     if(detail.type==='error'){

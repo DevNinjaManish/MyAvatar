@@ -18,7 +18,7 @@ and validated product behavior.
 | V1 documentation consolidation | Implemented | Active docs are V1-only; former MVP docs are archived |
 | Structural wireframes | Complete | Ten V1 wireframes exist |
 | High-fidelity visual designs | Core batch complete; variants remain | Five-board UI gallery covers all ten wireframes; both four-bot state references exist; production layered assets and secondary failure variants remain |
-| Motion and behavior specifications | Documented; implementation partial | Shared state timing is specified; production state animation and bot-specific fixtures remain |
+| Motion and behavior specifications | Core implementation complete | Nine shared states have deterministic transitions, runtime mapping, Fast/Balanced reduction, reduced-motion behavior, and four-bot visual fixtures |
 | Streaming voice turn manager | Implemented; human qualification pending | Continuous launch listening, interruption, clause streaming, contextual persona fallbacks, local multilingual STT, bot TTS, and explicit Understanding state are connected; real-microphone Hinglish and repeated-turn soak remain |
 | Memory and context systems | Not started | Implement local stores, collectors, permissions, and retrieval |
 | Specialist panels and delegation | Contracts only | Build after core context and action boundaries |
@@ -40,6 +40,7 @@ and validated product behavior.
 - Batch 2: Continuous voice launch slice — implemented; native clean-launch and typed speech QA pass
 - Batch 3: Responsive multilingual voice and visual-state direction — implemented (`80f547c`); 92 tests and production build pass; real-microphone Hinglish and repeated-turn soak remain
 - Batch 4: Focused V1 design package — complete; core-surface HTML/PNG gallery, Working/Sleeping/Recovery character reference, asset manifest, wireframe links, and visual QA record added
+- Batch 5: Production companion-state foundation — complete; Ready, Listening, Understanding, Speaking, Working, Paused, Sleeping, Error, and Recovery are implemented and visually qualified across all four bots
 
 ## Next recommended batch
 

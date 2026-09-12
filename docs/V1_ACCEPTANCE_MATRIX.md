@@ -10,7 +10,7 @@ the corresponding item in `V1_ACCEPTANCE.md` complete.
 | Memory and forgetting | Create, retrieve, edit, forget, restart, and verify removed data is not retrieved | Memory contract/integration tests | Not started |
 | Activity history | Meaningful events are summarized, visible, bounded, and never raw screen logs | Store tests and inspection UI QA | Not started |
 | Voice turn loop | Repeated turns, endpointing, barge-in, cancellation, bot-specific TTS, restart, automatic launch listening, and greeting | Voice integration and soak tests | Implementation complete; synthetic fixtures and native smoke pass, real-microphone Hinglish and repeated-turn soak pending |
-| Liveness states | Listening, thinking, speaking, working, sleeping, broken, recovery, and reduced motion are clear | Visual state fixtures | MVP subset |
+| Liveness states | Listening, thinking, speaking, working, sleeping, broken, recovery, and reduced motion are clear | Visual state fixtures | Core implementation passing; nine state captures cover all four bots in fixed geometry, native Nova smoke passes |
 | Seeing Eye and context | Off-by-default, scoped permission, provenance, freshness, revoke, and graceful failure | Context integration and native QA | Not started |
 | Action trust | Read, prepare, approve, deny, cancel, and retry boundaries are explicit | Action contract and UI tests | Not started |
 | Specialist panels | Nova/Sterling, Rivit, and Luma panels stay focused and connected to common chat | Panel integration and visual QA | Not started |

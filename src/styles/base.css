@@ -5,3 +5,15 @@
 .toolbar{grid-template-columns:repeat(4,1fr);gap:5px}.more-menu{left:0;right:auto;top:320px;width:240px;max-height:none;overflow:visible;padding:6px}.more-menu header{margin-bottom:2px;padding:0 2px}.more-menu>button{min-height:30px;padding:4px 9px;display:grid;grid-template-columns:1fr;gap:1px}.more-menu>button span{font-size:10px}.more-menu>button small{display:block;color:var(--muted);font-size:8px;line-height:1.02}.more-menu>button.danger{margin-top:2px}
 .profile-control{padding:6px 8px 8px;margin-bottom:3px;border-bottom:1px solid var(--hairline)}.profile-control>strong{display:block;font-size:10px}.profile-control>small{display:block;margin-top:2px;color:var(--muted);font-size:8px}.profile-options{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}.profile-options button{min-height:28px;padding:4px 3px;border-radius:8px;background:#ffffff08;color:var(--soft);font-size:9px}.profile-options button[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--inset));color:var(--accent)}
 .mvp-widget{min-height:500px}.mvp-widget main{min-height:480px}
+.mvp-widget #stage{position:relative;isolation:isolate;overflow:visible}
+.mvp-widget #stage::after{content:"";position:absolute;inset:38px 18px 24px;border:1px solid transparent;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .2s,border-color .2s,filter .2s}
+.mvp-widget #stage canvas{position:relative;z-index:1;transition:filter .35s,opacity .35s}
+body[data-presence="listening"] #stage::after{opacity:.45;border-color:var(--accent);filter:drop-shadow(0 0 8px var(--accent))}
+body[data-presence="thinking"] #stage::after{opacity:.32;border-color:#e3b862;border-style:dashed}
+body[data-presence="speaking"] #stage::after{opacity:.55;border-color:var(--accent);filter:drop-shadow(0 0 12px var(--accent))}
+body[data-presence="working"] #stage::after{opacity:.4;border-color:#e3b862;border-style:dotted}
+body[data-presence="paused"] #stage canvas{filter:saturate(.45) brightness(.7)}
+body[data-presence="sleeping"] #stage canvas{filter:saturate(.25) brightness(.48);opacity:.86}
+body[data-presence="error"] #stage::after{opacity:.62;border-color:#ff696f;filter:drop-shadow(0 0 8px #ff696f)}
+body[data-presence="recovery"] #stage::after{opacity:.5;border-color:var(--accent);border-style:dashed;filter:drop-shadow(0 0 7px var(--accent))}
+@media (prefers-reduced-motion:reduce){.mvp-widget #stage::after,.mvp-widget #stage canvas{transition:none}body[data-presence="thinking"] #stage::after,body[data-presence="working"] #stage::after,body[data-presence="recovery"] #stage::after{border-style:solid}}

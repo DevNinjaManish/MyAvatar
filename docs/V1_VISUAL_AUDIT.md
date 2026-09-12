@@ -14,6 +14,25 @@
 - Concept sheets remain non-production references; layered alpha assets and
   runtime state fixtures must pass a separate implementation audit.
 
+## Production companion states — 2026-09-12
+
+- Added the deterministic fixture at `qa/avatar-states.html` with state,
+  Fast/Balanced profile, and reduced-motion query controls.
+- Captured all nine states across Nova, Sterling, Rivit, and Luma at fixed
+  240 × 390 geometry under `visual-qa/companion-states/`.
+- Verified Ready, Listening, Understanding, Speaking, Working, Paused,
+  Sleeping, Error, and Recovery. No crop, anchor, geometry, or identity shift
+  was observed between captures.
+- Initial QA found Sleeping and Error too dependent on status text. The renderer
+  was revised with state-specific material dimming/tinting and the fixtures were
+  regenerated. Sleeping now reads as intentionally dormant; Error is clearly
+  distinct without destructive glitch motion; Recovery uses a cooler stabilizing
+  treatment.
+- Captured Balanced Speaking and Fast reduced-motion Working variants. Mouth
+  amplitude remains visible and reduced motion preserves state meaning.
+- Native Electron smoke verified Nova in Understanding with stable controls,
+  full visibility, and no window movement or clipping.
+
 ## Current asset assessment
 
 The current Nova, Rivit, Sterling, and Luma busts provide a coherent robot-family foundation and are useful MVP assets. They are not yet final V1 visual designs.

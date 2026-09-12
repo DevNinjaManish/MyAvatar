@@ -6,7 +6,7 @@ import {stateTransitionDuration,motionScaleForState} from './state-presence.js';
 export class Avatar {
   constructor(container){
     this.container=container;this.performance={maxFps:45,pixelRatio:1.25,portraitSize:512,effectFps:24};
-    this.state='IDLE';this.previousState='IDLE';this.stateStarted=0;this.mouth=0;this.mouthTarget=0;this.emotion='relaxed';this.previousEmotion='relaxed';this.emotionStarted=0;this.time=0;this.nextBlink=2;this.blinkStart=-10;
+    this.state='IDLE';this.previousState='IDLE';this.stateStarted=0;this.mouth=0;this.mouthTarget=0;this.emotion='relaxed';this.previousEmotion='relaxed';this.emotionStarted=0;this.time=0;this.nextBlink=2;this.blinkStart=-10;this.visualProfile='balanced';
     this.reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false;
     this.attention={x:0,y:0,targetX:0,targetY:0,dragging:false};
     this.scene=new THREE.Scene();
@@ -31,7 +31,7 @@ export class Avatar {
     if(this.bot===bot)return;
     this.scene.remove(this.robot.scene);this.robot.dispose();this.robot=new PortraitFace(bot,this.performance);this.bot=bot;this.scene.add(this.robot.scene);
   }
-  configure(options={}){for(const key of ['maxFps','pixelRatio','portraitSize','effectFps'])if(Number.isFinite(options[key]))this.performance[key]=options[key];this.maxFps=this.performance.maxFps;this.renderer.setPixelRatio(Math.min(devicePixelRatio,this.performance.pixelRatio));this.resize();this.robot.configure(this.performance);}
+  configure(options={}){for(const key of ['maxFps','pixelRatio','portraitSize','effectFps'])if(Number.isFinite(options[key]))this.performance[key]=options[key];if(['fast','balanced'].includes(options.profile))this.visualProfile=options.profile;if(typeof options.reducedMotion==='boolean')this.reducedMotion=options.reducedMotion;this.maxFps=this.performance.maxFps;this.renderer.setPixelRatio(Math.min(devicePixelRatio,this.performance.pixelRatio));this.resize();this.robot.configure({...this.performance,profile:this.visualProfile,reducedMotion:this.reducedMotion});}
   setState(state){
     if(this.state===state)return;
     this.previousState=this.state;this.state=state;this.stateStarted=this.time;
