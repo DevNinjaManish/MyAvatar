@@ -134,3 +134,21 @@ persistent memory are not implemented. These are not implied by passing tests.
 - Starting in Fast and switching to Balanced passed the runtime integration:
   the next Whisper and Qwen models warmed before the profile event, and the
   previous recognizer was closed after the swap.
+
+### 2026-09-12 repeated warm end-to-end profile check
+
+The recorded Kokoro speech fixture was replayed through the running local
+service after each profile had completed its own warm-up. These numbers include
+authoritative recognition, response generation, and the first Kokoro reply WAV;
+they are not microphone endpoint timings.
+
+| Profile | Authoritative ASR | First reply WAV | Zipformer provisional turn |
+| --- | ---: | ---: | ---: |
+| Fast (`base.en` + Qwen 4B) | 352 ms | 1,938 ms | 211 ms total; final Whisper 190 ms |
+| Balanced (`large-v3-turbo` + Qwen 9B) | 4,555 ms | 6,900 ms | 2,680 ms total; final Whisper 2,654 ms |
+
+Conclusion: Fast is the sensible default for live voice conversation on this
+16 GB Mac. Balanced remains the explicit quality option for multilingual or
+complex work, where its stronger multilingual recognition and 9B reasoning are
+worth the wait. Do not hide this difference with a visual “thinking” state or
+by silently swapping models during a turn.
