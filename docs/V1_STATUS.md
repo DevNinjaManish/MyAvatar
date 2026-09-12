@@ -19,7 +19,7 @@ and validated product behavior.
 | Structural wireframes | Complete | Ten V1 wireframes exist |
 | High-fidelity visual designs | Not started | Produce references per `V1_DESIGN_DELIVERABLES.md` |
 | Motion and behavior specifications | Not started | Define after shared visual language is approved |
-| Streaming voice turn manager | Partial | Automatic greeting, continuous listening, local turn detection, and re-arm are implemented; complete barge-in and repeated-turn soak testing |
+| Streaming voice turn manager | Partial | Automatic greeting, continuous listening, local turn detection, bot-specific speech profiles, and re-arm are implemented; complete barge-in and repeated-turn soak testing |
 | Memory and context systems | Not started | Implement local stores, collectors, permissions, and retrieval |
 | Specialist panels and delegation | Contracts only | Build after core context and action boundaries |
 | V1 acceptance qualification | Not started | Track evidence in `V1_ACCEPTANCE_MATRIX.md` |

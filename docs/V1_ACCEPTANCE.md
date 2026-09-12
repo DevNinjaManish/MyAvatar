@@ -12,6 +12,7 @@
 - [ ] User can pause, mute, dismiss, or say “not now.”
 - [ ] After first-run microphone consent, the app can start continuous listening when the runtime becomes ready.
 - [ ] Nova gives one short ready greeting per app session without greeting on every reconnect.
+- [ ] Automatic greeting and response playback work without a second click after launch.
 - [ ] Pause/Resume, panel close, widget hide, and Quit MyAvatar have distinct behavior.
 - [ ] More menu never contains a visible control that silently does nothing.
 - [ ] Pause/Resume is outside More and remains reachable without opening a menu.

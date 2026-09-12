@@ -11,9 +11,10 @@ test('companion configuration is complete and unique',()=>{
   assert.equal(config.defaultCompanion,'nova');
   const names=new Set();
   for(const companion of companions){const {id}=companion;
-    assert.match(id,/^[a-z][a-z0-9_-]*$/);assert.ok(companion.name);assert.ok(companion.asset);
+    assert.match(id,/^[a-z][a-z0-9_-]*$/);assert.ok(companion.name);assert.ok(companion.asset);assert.ok(companion.voice?.name);assert.ok(companion.voice?.rate>0);
     assert.equal(names.has(companion.name),false,companion.name+' is duplicated');names.add(companion.name);
   }
+  assert.equal(new Set(companions.map(companion=>companion.voice.name)).size,companions.length);
 });
 
 test('MVP model paths reference the preserved local assets',()=>{

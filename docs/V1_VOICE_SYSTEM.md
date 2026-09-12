@@ -67,6 +67,13 @@ Initial direction:
 - **Sterling:** British, male, composed, measured, articulate, and discreet
 - **Luma:** expressive, curious, fluid, emotionally colorful, and creatively enthusiastic
 
+The current local fallback assigns a distinct installed macOS voice and speaking
+rate to every bot while the Kokoro provider is being integrated: Nova uses
+Samantha, Sterling uses Daniel, Rivit uses Fred, and Luma uses Karen. The voice
+profile is part of the bot contract, so greetings, normal replies, and future
+nonverbal assets must resolve through the same profile rather than a global
+default.
+
 ## Nonverbal vocalizations
 
 Bots may use non-word vocalizations when they fit the moment and the character. Examples include:

@@ -1,5 +1,10 @@
-const {app,BrowserWindow,ipcMain,screen}=require('electron');
+const {app,BrowserWindow,ipcMain,screen,session}=require('electron');
 const path=require('node:path');
+
+// V1 voice is intentionally automatic after runtime readiness. Allow the
+// local widget to resume its AudioContext and play the greeting without a
+// second click; macOS still owns the actual microphone permission prompt.
+app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required');
 
 let mainWindow=null;
 let dragTimer=null;
@@ -26,6 +31,9 @@ const createWindow=()=>{
 
 if(!app.requestSingleInstanceLock()) app.quit();
 else app.whenReady().then(()=>{
+  session.defaultSession.setPermissionRequestHandler((webContents,permission,callback)=>{
+    callback(permission==='media');
+  });
   ipcMain.on('window-close',event=>{if(event.sender===mainWindow?.webContents) mainWindow.close();});
   ipcMain.on('window-minimize',event=>{if(event.sender===mainWindow?.webContents) mainWindow.minimize();});
   ipcMain.on('window-resize',(event,height)=>{

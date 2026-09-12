@@ -9,7 +9,7 @@ the corresponding item in `V1_ACCEPTANCE.md` complete.
 | Common chat and bot switching | Repeated switch/send/interrupt flow preserves identity and relationship context | JS integration and native smoke | MVP path only |
 | Memory and forgetting | Create, retrieve, edit, forget, restart, and verify removed data is not retrieved | Memory contract/integration tests | Not started |
 | Activity history | Meaningful events are summarized, visible, bounded, and never raw screen logs | Store tests and inspection UI QA | Not started |
-| Voice turn loop | Repeated turns, endpointing, barge-in, cancellation, TTS fallback, restart, automatic launch listening, and greeting | Voice integration and soak tests | Partial; automatic launch slice implemented |
+| Voice turn loop | Repeated turns, endpointing, barge-in, cancellation, bot-specific TTS, restart, automatic launch listening, and greeting | Voice integration and soak tests | Partial; automatic launch and bot voice profiles implemented |
 | Liveness states | Listening, thinking, speaking, working, sleeping, broken, recovery, and reduced motion are clear | Visual state fixtures | MVP subset |
 | Seeing Eye and context | Off-by-default, scoped permission, provenance, freshness, revoke, and graceful failure | Context integration and native QA | Not started |
 | Action trust | Read, prepare, approve, deny, cancel, and retry boundaries are explicit | Action contract and UI tests | Not started |

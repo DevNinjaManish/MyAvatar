@@ -9,6 +9,7 @@ import {WebSocketServer} from 'ws';
 import {ProviderRegistry,checkProviderHealth} from '../src/runtime/providers.js';
 import {runProviderStream} from '../src/runtime/stream-runner.js';
 import {detectPerformanceProfile, hardwareSummary, PERFORMANCE_PROFILES} from '../src/runtime/profiles.js';
+import {voiceProfiles} from '../src/app/voice-profiles.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
@@ -22,7 +23,7 @@ const whisperBinary=process.env.MYAVATAR_WHISPER_BIN||'whisper';
 const whisperModel=process.env.MYAVATAR_WHISPER_MODEL||'tiny';
 const sayBinary='/usr/bin/say';
 const ffmpegBinary=process.env.MYAVATAR_FFMPEG_BIN||'ffmpeg';
-const bots=Object.freeze({nova:{name:'Nova'},sterling:{name:'Sterling'},rivit:{name:'Rivit'},luma:{name:'Luma'}});
+const bots=Object.freeze({nova:{name:'Nova',voice:voiceProfiles.nova},sterling:{name:'Sterling',voice:voiceProfiles.sterling},rivet:{name:'Rivit',voice:voiceProfiles.rivet},luma:{name:'Luma',voice:voiceProfiles.luma}});
 const providerRegistry=new ProviderRegistry();
 providerRegistry.register('conversation','ollama',Object.freeze({
   name:'ollama',
@@ -54,11 +55,12 @@ async function transcribeVoice(audio,mime='audio/webm'){
   }finally{await fs.rm(dir,{recursive:true,force:true});}
 }
 
-async function synthesizeSpeech(text){
+async function synthesizeSpeech(text,botId='nova'){
   const dir=await fs.mkdtemp(join(tmpdir(),'myavatar-speech-'));
   const aiff=join(dir,'speech.aiff');const wav=join(dir,'speech.wav');
   try{
-    await exec(sayBinary,['-o',aiff,text],{timeout:30000});
+    const voice=bots[botId]?.voice||voiceProfiles.nova;
+    await exec(sayBinary,['-v',voice.name,'-r',String(voice.rate),'-o',aiff,text],{timeout:30000});
     await exec(ffmpegBinary,['-y','-loglevel','error','-i',aiff,'-acodec','pcm_s16le',wav],{timeout:30000});
     return (await fs.readFile(wav)).toString('base64');
   }finally{await fs.rm(dir,{recursive:true,force:true});}
@@ -85,7 +87,7 @@ server.on('connection',(socket,request)=>{
     }});}finally{activeControllers.delete(turn);}
     if(stopped.has(turn)||controller.signal.aborted){stopped.delete(turn);return;}
     if(speak){
-      try{send({type:'audio',turn,audio:await synthesizeSpeech(spokenText),mime:'audio/wav'});}
+      try{send({type:'audio',turn,audio:await synthesizeSpeech(spokenText,activeBot),mime:'audio/wav',voice:bots[activeBot]?.voice});}
       catch(error){send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
     }
     send({type:'done',turn});
@@ -100,7 +102,7 @@ server.on('connection',(socket,request)=>{
     }
     if(message.type==='greeting'){
       const text='Hi, I’m ready.';
-      try{send({type:'greeting',text,audio:await synthesizeSpeech(text),mime:'audio/wav'});}
+      try{send({type:'greeting',text,audio:await synthesizeSpeech(text,activeBot),mime:'audio/wav',voice:bots[activeBot]?.voice});}
       catch{send({type:'greeting',text});}
       return;
     }

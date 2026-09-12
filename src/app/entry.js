@@ -91,9 +91,10 @@ function stopVoiceCapture(){
 }
 async function playGreeting(audioData){
   if(!audioData)return false;
+  if(liveVoiceEnabled)stopVoiceCapture();
   speechContext??=new AudioContext();await speechContext.resume();
   const buffer=await speechContext.decodeAudioData(base64ToBytes(audioData).buffer.slice(0));stopSpeechPlayback();
-  const source=speechContext.createBufferSource();source.buffer=buffer;source.connect(speechContext.destination);speechSource=source;showNotice('Ready');
+  const source=speechContext.createBufferSource();source.buffer=buffer;source.connect(speechContext.destination);speechSource=source;setRuntimeStatus('Speaking…');showNotice('Ready');
   source.onended=()=>{if(speechSource!==source)return;speechSource=null;showNotice('');startVoiceCapture({automatic:true});};source.start();return true;
 }
 async function playSpeech(audioData,turn){
@@ -148,7 +149,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
     if(current){selected=current.id;$('companion-name').textContent=current.name;stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);$('message').value=chat.draft(current.id);$('pause-toggle').textContent=paused?'Resume':'Pause';}
     runtimeInfo=detail.runtime||runtimeInfo;
     setRuntimeStatus('Ready');
-    if(!greetingSent){greetingSent=true;clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>startVoiceCapture({automatic:true}),1800);if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'greeting'}));}
+    if(!greetingSent){greetingSent=true;clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>startVoiceCapture({automatic:true}),8000);if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'greeting'}));}
     else if(!liveVoiceEnabled&&!paused)startVoiceCapture({automatic:true});
   }
   if(detail?.type==='greeting'){
