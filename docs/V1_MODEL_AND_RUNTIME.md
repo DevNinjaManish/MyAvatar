@@ -111,3 +111,9 @@ Destructive commands, broad autonomous edits, publishing, and unrestricted termi
 ## Runtime resilience
 
 Voice, animation, and basic companion interaction remain available if a deeper reasoning model, vision model, or background task is unavailable. Model failure should degrade to a smaller supported model or an honest limited state.
+
+At launch, the companion remains in a sleeping “Warming…” state. It does not
+present Ready, greet, accept chat or microphone input, or begin live listening
+until Faster-Whisper, Zipformer, Kokoro, and both configured Ollama routes have
+initialized successfully. A failed warmup leaves the companion unavailable with
+the failure reason instead of presenting a partially ready bot.

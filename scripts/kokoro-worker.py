@@ -35,6 +35,7 @@ def main():
     if len(sys.argv)!=3:
         raise SystemExit('usage: kokoro-worker.py MODEL VOICES')
     kokoro=Kokoro(sys.argv[1],sys.argv[2])
+    print(json.dumps({'ready': True}), flush=True)
     for line in sys.stdin:
         if not line.strip():
             continue

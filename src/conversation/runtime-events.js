@@ -14,7 +14,7 @@ export class RuntimeEventGate{
     if(event.runtimeVersion!==RUNTIME_EVENT_VERSION||event.sequence<=0||!event.sessionId||!event.botId)return false;
     this.typed=true;
     if(this.sessionId===null){
-      if(event.type!=='config')return false;
+      if(!['readiness','config'].includes(event.type))return false;
       this.sessionId=event.sessionId;this.sequence=0;this.botId=event.botId;
     }
     if(event.sessionId!==this.sessionId||event.sequence<=this.sequence)return false;

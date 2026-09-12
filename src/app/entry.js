@@ -18,6 +18,7 @@ const appState=new AppState();
 const audioEngine=new AudioEngine(level=>avatar.setMouth(level));
 globalThis.appState=appState;
 appState.addEventListener('change',()=>{avatar.setState(appState.value);document.body.dataset.presence=appState.value.toLowerCase();});
+appState.set(STATES.SLEEPING);
 document.body.dataset.presence=appState.value.toLowerCase();
 installSocketBridge(window);
 installRuntimeEventGuard(window);
@@ -37,6 +38,7 @@ let profileSelection='auto';
 let activeProfile='fast';
 let recoveryTimer=null;
 let streamingVoiceId=null,streamingFrames=[],streamingSamples=0,nextStreamingVoice=0;
+let runtimeReady=false;
 const MAX_RECONNECT_ATTEMPTS=Infinity;
 const PROFILE_IDS=['auto','fast','balanced'];
 
@@ -54,6 +56,8 @@ function setOpen(id,open){
 }
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;}
+function setRuntimeReady(value){runtimeReady=Boolean(value);for(const id of ['mic-toggle','pause-toggle','send-message'])$(id).disabled=!runtimeReady;}
+setRuntimeReady(false);
 function applyProfileUi({profile='fast',selection='auto',hardware=null,settings=null}={}){
   activeProfile=profile;profileSelection=selection;
   document.body.dataset.performance=profile;
@@ -69,7 +73,7 @@ function selectProfile(selection){
   if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'set_profile',profile:selection}));
   else showNotice('Runtime unavailable. The profile will apply when it reconnects.',true,'warning');
 }
-function setPaused(value){paused=Boolean(value);if(paused){stopVoiceCapture();stopSpeechPlayback();turnPlayback.cancelTurn();}appState.set(paused?STATES.PAUSED:STATES.IDLE);$('pause-toggle').textContent=paused?'Resume':'Pause';$('pause-toggle').setAttribute('aria-label',paused?'Resume companion':'Pause companion');setRuntimeStatus(paused?'Paused':'Ready');if(!paused)startVoiceCapture({automatic:false});}
+function setPaused(value){if(!runtimeReady)return;paused=Boolean(value);if(paused){stopVoiceCapture();stopSpeechPlayback();turnPlayback.cancelTurn();}appState.set(paused?STATES.PAUSED:STATES.IDLE);$('pause-toggle').textContent=paused?'Resume':'Pause';$('pause-toggle').setAttribute('aria-label',paused?'Resume companion':'Pause companion');setRuntimeStatus(paused?'Paused':'Ready');if(!paused)startVoiceCapture({automatic:false});}
 function setVoiceButton(active){$('mic-toggle').textContent=active?'Stop':'Mic';$('mic-toggle').setAttribute('aria-label',active?'Stop microphone':'Start microphone');$('mic-toggle').setAttribute('aria-pressed',String(active));}
 function bytesToBase64(bytes){let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(binary);}
 function stopSpeechPlayback(){
@@ -105,7 +109,7 @@ function rejectLiveSpeech(){
   if(streamingVoiceId)runtimeSocket?.send(JSON.stringify({type:'voice_stream_cancel',streamId:streamingVoiceId}));
   streamingVoiceId=null;streamingFrames=[];streamingSamples=0;
 }
-function resumeLiveListening(){if(liveVoiceEnabled&&!paused&&turnPlayback.canResumeListening()){resumeActiveLiveCapture();appState.set(STATES.LISTENING);setVoiceButton(true);setRuntimeStatus('Listening');}}
+function resumeLiveListening(){if(runtimeReady&&liveVoiceEnabled&&!paused&&turnPlayback.canResumeListening()){resumeActiveLiveCapture();appState.set(STATES.LISTENING);setVoiceButton(true);setRuntimeStatus('Listening');}}
 function handleVoiceUtterance(samples,{bargeIn=false}={}){
   if(bargeIn&&liveVoiceEnabled&&!paused){const turn=activeTurn??turnPlayback.activeTurn;if(turn!==null){runtimeSocket?.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);}stopSpeechPlayback();activeTurn=null;}
   if(!liveVoiceEnabled||paused||activeTurn!==null||runtimeSocket?.readyState!==WebSocket.OPEN)return;
@@ -115,6 +119,7 @@ function handleVoiceUtterance(samples,{bargeIn=false}={}){
 }
 async function startVoiceCapture({automatic=false}={}){
   if(liveVoiceEnabled)return true;
+  if(!runtimeReady){if(!automatic)showNotice('Local models are still warming.',false,'info');return false;}
   if(paused){if(!automatic)showNotice('Resume the companion before starting voice.',false,'info');return false;}
   const socket=runtimeSocket;
   if(!socket||socket.readyState!==WebSocket.OPEN){if(!automatic)showNotice('Conversation service unavailable. Typed chat is available.',true,'warning');return false;}
@@ -153,7 +158,7 @@ function connectRuntime(){
   const socket=new WebSocket('ws://127.0.0.1:8787/?token=local-mvp');runtimeSocket=socket;
   socket.addEventListener('open',()=>{reconnectAttempts=0;setRuntimeStatus('Connecting…');const saved=localStorage.getItem('myavatar-performance-profile');if(PROFILE_IDS.includes(saved)&&saved!=='auto')socket.send(JSON.stringify({type:'set_profile',profile:saved}));});
   socket.addEventListener('error',()=>{if(runtimeSocket===socket)setRuntimeStatus('Unavailable');});
-  socket.addEventListener('close',()=>{if(runtimeSocket!==socket)return;runtimeSocket=null;stopVoiceCapture();clearTimeout(recoveryTimer);appState.set(STATES.ERROR);if(activeTurn!==null){chat.applyRuntimeEvent({type:'error',turn:activeTurn,message:'The local runtime disconnected.'});activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;}setRuntimeStatus('Unavailable');showNotice('Reconnecting to the local runtime…',false,'info');scheduleRuntimeReconnect();});
+  socket.addEventListener('close',()=>{if(runtimeSocket!==socket)return;runtimeSocket=null;setRuntimeReady(false);stopVoiceCapture();clearTimeout(recoveryTimer);appState.set(STATES.ERROR);if(activeTurn!==null){chat.applyRuntimeEvent({type:'error',turn:activeTurn,message:'The local runtime disconnected.'});activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;}setRuntimeStatus('Unavailable');showNotice('Reconnecting to the local runtime…',false,'info');scheduleRuntimeReconnect();});
 }
 function renderMessages(){
   const messages=$('messages');
@@ -176,6 +181,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
   const detail=event.detail;chat.applyRuntimeEvent(detail);const nextPresence=presenceStateForEvent(detail,appState.value);
   if(detail?.type!=='done'||turnPlayback.canResumeListening())appState.set(nextPresence);
   if(detail?.type==='config'){
+    setRuntimeReady(true);
     const current=companionById[detail.botId];
     if(current){selected=current.id;$('companion-name').textContent=current.name;stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);$('message').value=chat.draft(current.id);$('pause-toggle').textContent=paused?'Resume':'Pause';}
     runtimeInfo=detail.runtime||runtimeInfo;
@@ -183,6 +189,11 @@ window.addEventListener('myavatar:runtime-event',event=>{
     setRuntimeStatus(appState.value===STATES.RECOVERY?'Recovering…':'Ready');
     if(!greetingSent){greetingSent=true;clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>startVoiceCapture({automatic:true}),8000);if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'greeting'}));}
     else if(!liveVoiceEnabled&&!paused)startVoiceCapture({automatic:true});
+  }
+  if(detail?.type==='readiness'){
+    setRuntimeReady(detail.readiness?.ready===true);
+    if(detail.readiness?.state==='warming'){appState.set(STATES.SLEEPING);setRuntimeStatus(detail.readiness.message||'Warming…');}
+    if(detail.readiness?.state==='unavailable'){appState.set(STATES.ERROR);setRuntimeStatus('Unavailable');showNotice(detail.readiness.message||'Runtime warmup failed.',true,'warning');}
   }
   if(detail?.type==='profile'){
     runtimeInfo={...runtimeInfo,profile:detail.profile,profileSelection:detail.selection,profileSettings:detail.settings,hardware:detail.hardware};
@@ -249,7 +260,7 @@ for(const companion of companions){
 }
 $('mic-toggle').addEventListener('click',()=>liveVoiceEnabled?stopVoiceCapture():startVoiceCapture());
 $('message').addEventListener('input',()=>chat.setDraft($('message').value));
-$('chat-form').addEventListener('submit',event=>{event.preventDefault();const text=$('message').value.trim();if(paused){showNotice('Resume the companion before sending a message.',false,'info');return;}if(!text||activeTurn!==null||!turnPlayback.canResumeListening())return;const socket=runtimeSocket;if(!socket||socket.readyState!==WebSocket.OPEN){connectRuntime();showNotice(socket?.readyState===WebSocket.CONNECTING?'Starting runtime…':'Runtime unavailable.',!socket||socket.readyState!==WebSocket.CONNECTING,'warning');return;}const turn=++nextTurn;activeTurn=turn;appState.set(STATES.THINKING);setRuntimeStatus('Thinking…');chat.addUserText(text,turn);chat.applyRuntimeEvent({type:'token',turn,text:'',botId:chat.botId});$('message').value='';$('send-message').hidden=true;$('stop-response').hidden=false;socket.send(JSON.stringify({type:'turn',turn,text,mode:'typed',speak:liveVoiceEnabled}));});
+$('chat-form').addEventListener('submit',event=>{event.preventDefault();const text=$('message').value.trim();if(!runtimeReady){showNotice('Local models are still warming.',false,'info');return;}if(paused){showNotice('Resume the companion before sending a message.',false,'info');return;}if(!text||activeTurn!==null||!turnPlayback.canResumeListening())return;const socket=runtimeSocket;if(!socket||socket.readyState!==WebSocket.OPEN){connectRuntime();showNotice(socket?.readyState===WebSocket.CONNECTING?'Starting runtime…':'Runtime unavailable.',!socket||socket.readyState!==WebSocket.CONNECTING,'warning');return;}const turn=++nextTurn;activeTurn=turn;appState.set(STATES.THINKING);setRuntimeStatus('Thinking…');chat.addUserText(text,turn);chat.applyRuntimeEvent({type:'token',turn,text:'',botId:chat.botId});$('message').value='';$('send-message').hidden=true;$('stop-response').hidden=false;socket.send(JSON.stringify({type:'turn',turn,text,mode:'typed',speak:liveVoiceEnabled}));});
 $('stop-response').addEventListener('click',()=>{const turn=activeTurn??turnPlayback.activeTurn;if(turn===null)return;if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'stop',turn}));stopSpeechPlayback();chat.interrupt(turn);activeTurn=null;voiceTurn=null;appState.set(STATES.IDLE);setRuntimeStatus('Ready');resumeLiveListening();$('send-message').hidden=false;$('stop-response').hidden=true;showNotice('');});
 renderMessages();
 window.addEventListener('myavatar:socket-close',()=>stopSpeechPlayback());

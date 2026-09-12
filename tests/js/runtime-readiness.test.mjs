@@ -8,9 +8,18 @@ const event=(type,sequence,{sessionId='s1',botId='rivet',...rest}={})=>({
   type,runtimeVersion:1,sessionId,sequence,botId,turn:null,...rest
 });
 
-test('typed runtime starts only from config',()=>{
+test('typed runtime starts from a warming readiness event or config',()=>{
   const gate=new RuntimeEventGate();
   assert.equal(gate.accept(event('ready',1)),false);
+  assert.equal(gate.accept(event('readiness',1)),true);
+  assert.equal(gate.accept(event('config',2)),true);
+  const direct=new RuntimeEventGate();
+  assert.equal(direct.accept(event('config',1)),true);
+  assert.equal(direct.accept(event('profile',2)),true);
+});
+test('typed runtime rejects non-readiness events before config',()=>{
+  const gate=new RuntimeEventGate();
+  assert.equal(gate.accept(event('greeting',1)),false);
   assert.equal(gate.accept(event('config',1)),true);
   assert.equal(gate.accept(event('profile',2)),true);
 });

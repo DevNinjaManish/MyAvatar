@@ -51,11 +51,14 @@ const kokoroWorkerScript=join(projectRoot,'scripts/kokoro-worker.py');
 const kokoroReady=existsSync(kokoroPython)&&existsSync(kokoroModel)&&existsSync(kokoroVoices)&&existsSync(kokoroScript)&&existsSync(kokoroWorkerScript);
 const kokoroWorker=kokoroReady?spawn(kokoroPython,[kokoroWorkerScript,kokoroModel,kokoroVoices],{stdio:['pipe','pipe','inherit']}):null;
 const kokoroResponses=new Map();let kokoroRequestId=0;
+let markKokoroReady,failKokoroReady;
+const kokoroWorkerReady=kokoroWorker?new Promise((resolve,reject)=>{markKokoroReady=resolve;failKokoroReady=reject;}):Promise.reject(Error('Local Kokoro model is unavailable.'));
+kokoroWorkerReady.catch(()=>{});
 if(kokoroWorker){
   createInterface({input:kokoroWorker.stdout}).on('line',line=>{
-    try{const response=JSON.parse(line);const pending=kokoroResponses.get(response.id);if(!pending)return;kokoroResponses.delete(response.id);response.error?pending.reject(Error(response.error)):pending.resolve(response.audio);}catch{}
+    try{const response=JSON.parse(line);if(response.ready){markKokoroReady();return;}const pending=kokoroResponses.get(response.id);if(!pending)return;kokoroResponses.delete(response.id);response.error?pending.reject(Error(response.error)):pending.resolve(response.audio);}catch{}
   });
-  kokoroWorker.on('close',()=>{for(const pending of kokoroResponses.values())pending.reject(Error('Kokoro TTS worker stopped.'));kokoroResponses.clear();});
+  kokoroWorker.on('close',()=>{const error=Error('Kokoro TTS worker stopped.');failKokoroReady(error);for(const pending of kokoroResponses.values())pending.reject(error);kokoroResponses.clear();});
 }
 const stopKokoro=()=>{recognizer.close();streamingRecognizer?.close();if(kokoroWorker&&!kokoroWorker.killed)kokoroWorker.kill('SIGTERM');};
 process.on('SIGTERM',()=>{stopKokoro();process.exit(0);});
@@ -84,11 +87,13 @@ const acknowledgementAudio=new Map();
 const quickAudio=new Map();
 function quickSpeech(text,bot){const key=bot+text;if(!quickAudio.has(key))quickAudio.set(key,synthesizeSpeech(text,bot).catch(error=>{quickAudio.delete(key);throw error;}));return quickAudio.get(key);}
 const warmedModels=new Set();
-function warmConversation(model=normalConversationModel()){
+async function warmConversation(model=normalConversationModel()){
   if(warmedModels.has(model))return;
   warmedModels.add(model);
-  fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(60000),body:JSON.stringify({model,messages:[],stream:false,keep_alive:'10m'})})
-    .then(async response=>{await response.body?.cancel();if(!response.ok)warmedModels.delete(model);}).catch(()=>warmedModels.delete(model));
+  try{
+    const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(60000),body:JSON.stringify({model,messages:[],stream:false,keep_alive:'10m'})});
+    await response.body?.cancel();if(!response.ok)throw Error(`Local model returned HTTP ${response.status}.`);
+  }catch(error){warmedModels.delete(model);throw error;}
 }
 function warmVoiceFastLane(bot){
   const reply=quickReply('how are you',bot);
@@ -155,6 +160,21 @@ async function synthesizeSpeech(text,botId='nova',emotion=null){
   }finally{await fs.rm(dir,{recursive:true,force:true});}
 }
 
+// A companion may present itself as alive only after every mandatory local
+// dependency has initialized and both conversation routes have been exercised.
+// Ollama remains free to evict a route later under memory pressure; the startup
+// gate verifies that each requested route is installed and can load successfully.
+const runtimeBootstrap=Promise.all([
+  recognizer.ready,
+  streamingRecognizer?.ready||Promise.reject(Error('Local Zipformer model is unavailable.')),
+  kokoroWorkerReady,
+]).then(async()=>{
+  await warmConversation(normalConversationModel());
+  await warmConversation(complexConversationModel());
+  await synthesizeSpeech('Ready.','nova');
+});
+runtimeBootstrap.catch(()=>{});
+
 function voiceSetupError(error){
   if(error?.code==='ENOENT')return 'Local speech recognition is unavailable. Repair the project voice dependencies.';
   return error?.message||'Voice processing failed.';
@@ -180,7 +200,8 @@ server.on('connection',(socket,request)=>{
     if(socket.readyState===1)socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
   };
   const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:normalConversationModel(),complexModel:complexConversationModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,streamingRecognition:streamingReady?'zipformer-provisional-en':'unavailable',voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
-  recognizer.ready.then(sendConfig).catch(error=>{sendConfig();send({type:'speech_unavailable',message:`Local recognition unavailable: ${error.message}`});});
+  send({type:'readiness',readiness:{state:'warming',ready:false,message:'Warming local models…'}});
+  runtimeBootstrap.then(sendConfig).catch(error=>send({type:'readiness',readiness:{state:'unavailable',ready:false,message:`Runtime warmup failed: ${error.message}`}}));
   const answer=async(turn,text,{speak=false,recognizedLanguage=''}={})=>{
     let spokenText='';const bot=activeBot;const history=histories.get(bot)||[];
     const quick=quickReply(text,bot);
