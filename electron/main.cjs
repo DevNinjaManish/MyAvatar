@@ -141,8 +141,9 @@ else app.whenReady().then(()=>{
     if(image&&(!/^data:image\/(?:png|jpeg|webp);base64,/.test(image)||image.length>16*1024*1024))return {error:'Choose a PNG, JPEG, or WebP image up to 12 MB.'};
     const strength=Math.max(.32,Math.min(.76,Number(request.strength)||.46));
     const format=['square','portrait','landscape'].includes(request.format)?request.format:'square';
+    const quality=['fast','balanced','detail'].includes(request.quality)?request.quality:'balanced';
     const report=progress=>event.sender.send('luma-progress',progress);
-    return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image,strength,format},report);
+    return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image,strength,format,quality},report);
   });
   ipcMain.handle('luma-cancel',event=>{
     if(event.sender!==mainWindow?.webContents||!lumaJob)return {cancelled:false};
