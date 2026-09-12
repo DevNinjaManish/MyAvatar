@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('desktop',{
   listProjectFiles:path=>ipcRenderer.invoke('project-list-files',path),
   readProjectFile:(path,file)=>ipcRenderer.invoke('project-read-file',path,file),
   createImage:request=>ipcRenderer.invoke('luma-create',request),
+  directImage:request=>ipcRenderer.invoke('luma-direct',request),
   lumaModelStatus:()=>ipcRenderer.invoke('luma-model-status'),
   repairLumaModel:()=>ipcRenderer.invoke('luma-model-repair')
 });

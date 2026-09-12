@@ -24,6 +24,7 @@ const safeProjectFile=(projectPath,relativePath)=>{if(typeof relativePath!=='str
 const projectRoot=path.resolve(__dirname,'..');
 const imagePython=process.env.MYAVATAR_IMAGE_PYTHON||path.join(projectRoot,'.venv/bin/python');
 const imageWorker=path.join(projectRoot,'scripts/luma-image-worker.py');
+const lumaConversationModel=()=>process.env.MYAVATAR_FAST_MODEL||'huihui_ai/qwen3.5-abliterated:4b';
 let lumaJob=null;
 const runLumaWorker=request=>new Promise(resolve=>{
   if(lumaJob)return resolve({error:'Luma is already creating one image.'});
@@ -131,7 +132,14 @@ else app.whenReady().then(()=>{
     if(!prompt||prompt.length>600)return {error:'Describe the image in 600 characters or fewer.'};
     if(image&&(!/^data:image\/(?:png|jpeg|webp);base64,/.test(image)||image.length>16*1024*1024))return {error:'Choose a PNG, JPEG, or WebP image up to 12 MB.'};
     const strength=Math.max(.32,Math.min(.76,Number(request.strength)||.46));
-    return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image,strength});
+    const format=['square','portrait','landscape'].includes(request.format)?request.format:'square';
+    return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image,strength,format});
+  });
+  ipcMain.handle('luma-direct',async(event,request)=>{
+    if(event.sender!==mainWindow?.webContents||typeof request?.prompt!=='string'||!request.prompt.trim())return null;
+    const prompt=request.prompt.trim().slice(0,600),format=['square','portrait','landscape'].includes(request.format)?request.format:'square';
+    const fallback=`${prompt}, ${format==='portrait'?'portrait composition':'wide scene composition'}, clear subject, cohesive composition, refined details`;
+    try{const response=await fetch('http://127.0.0.1:11434/api/chat',{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(30000),body:JSON.stringify({model:lumaConversationModel(),stream:false,think:false,messages:[{role:'system',content:'You are Luma, a concise local image art director. Rewrite the user idea as one vivid image prompt. Preserve every concrete subject and action. Add only useful composition, lighting, and material detail. No labels, no prose, no markdown. Maximum 260 characters.'},{role:'user',content:`Format: ${format}. Idea: ${prompt}`} ]})});if(!response.ok)throw Error();const text=(await response.json())?.message?.content?.trim();return {prompt:text?.slice(0,260)||fallback,assisted:Boolean(text)};}catch{return {prompt:fallback,assisted:false};}
   });
   ipcMain.handle('luma-model-status',async event=>event.sender===mainWindow?.webContents?lumaModelStatus():null);
   ipcMain.handle('luma-model-repair',async event=>{

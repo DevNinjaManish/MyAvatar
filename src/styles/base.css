@@ -1265,6 +1265,11 @@ body[data-avatar-glow="false"] #stage::after {
 .luma-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .luma-strength { display:flex; align-items:center; justify-content:space-between; margin-top:7px; color:var(--muted); font-size:9px; }
 .luma-strength select { min-height:28px; border:1px solid #ffffff16; border-radius:8px; background:var(--inset); color:var(--soft); font:inherit; font-size:9px; padding:0 7px; }
+.luma-director { display:flex; align-items:end; gap:7px; margin-top:7px; }
+.luma-director label { display:grid; flex:1; gap:3px; color:var(--muted); font-size:8px; }
+.luma-director select,.luma-director button,.luma-variation { min-height:29px; border:1px solid #ffffff16; border-radius:8px; background:var(--inset); color:var(--soft); font:inherit; font-size:9px; padding:0 7px; }
+.luma-director button,.luma-variation { color:var(--accent); font-weight:760; }
+.luma-variation { width:100%; margin-top:6px; }
 .luma-action { width: 100%; margin-top: 7px; }
 .luma-workspace > .workspace-section > small { display: block; margin-top: 7px; color: var(--muted); font-size: 8px; line-height: 1.35; }
 

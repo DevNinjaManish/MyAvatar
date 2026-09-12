@@ -14,6 +14,9 @@ request = json.load(sys.stdin)
 prompt = request['prompt']
 mode = request.get('mode', 'generate')
 strength = max(.32, min(.76, float(request.get('strength', .46))))
+format = request.get('format', 'square')
+sizes = {'square': (512, 512), 'portrait': (448, 640), 'landscape': (640, 448)}
+width, height = sizes.get(format, sizes['square'])
 device = 'mps' if torch.backends.mps.is_available() else 'cpu'
 dtype = torch.float16 if device == 'mps' else torch.float32
 
@@ -43,11 +46,11 @@ try:
             image = ImageOps.fit(image, (512, 512), method=Image.Resampling.LANCZOS)
             output = load_pipe(True)(prompt=prompt + ', cohesive composition, refined details', negative_prompt='text, watermark, logo, blurry, low quality, malformed, deformed, extra limbs', image=image, strength=strength, guidance_scale=7.5, num_inference_steps=22, generator=generator).images[0]
         else:
-            output = load_pipe(False)(prompt=prompt + ', cohesive composition, refined details, clean edges', negative_prompt='text, watermark, logo, blurry, low quality, malformed, deformed, extra limbs', width=512, height=512, guidance_scale=7.5, num_inference_steps=22, generator=generator).images[0]
+            output = load_pipe(False)(prompt=prompt + ', cohesive composition, refined details, clean edges', negative_prompt='text, watermark, logo, blurry, low quality, malformed, deformed, extra limbs', width=width, height=height, guidance_scale=7.5, num_inference_steps=22, generator=generator).images[0]
         buffer = io.BytesIO()
         output.save(buffer, format='PNG', optimize=True)
         encoded = base64.b64encode(buffer.getvalue()).decode('ascii')
         output.save(os.path.join(output_dir, f'luma-{int(time.time())}.png'))
-        print(json.dumps({'image': 'data:image/png;base64,' + encoded}))
+        print(json.dumps({'image': 'data:image/png;base64,' + encoded, 'seed': generator.initial_seed(), 'prompt': prompt}))
 except Exception as error:
     print(json.dumps({'error': str(error)}))
