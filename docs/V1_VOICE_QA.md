@@ -33,9 +33,11 @@ Implemented in this batch:
   a stale partial is never acted on. Normal turns always go through Whisper.
   The 360 ms endpoint now applies only below 520 ms of voiced speech; full
   sentences retain the safer 480 ms pause window.
-- Acoustic barge-in remains an opt-in engine capability covered by unit tests,
-  but the V1 widget does not enable it. This restores the pre-MVP sequential
-  listen/respond behavior until semantic interruption can be qualified.
+- The V1 widget enables guarded acoustic interruption while speech is playing.
+  It retains the same microphone capture, waits 450 ms after speaker onset,
+  requires 320 ms of sustained voiced input, then cancels output and retains
+  the user's speech for authoritative recognition. This is not unrestricted
+  full-duplex conversation: room noise and short bursts must not interrupt.
 - Fast uses local `huihui_ai/qwen3.5-abliterated:4b` for every reply; Balanced
   uses `huihui_ai/qwen3.5-abliterated:9b` for every reply. The selected model is
   warmed before the profile becomes active. The 0.8B model is not exposed.
