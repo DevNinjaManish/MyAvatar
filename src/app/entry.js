@@ -44,6 +44,7 @@ let bargePending=false;
 let healthRequested=false;
 const NOVA_WORKSPACE_STORAGE_KEY='myavatar-nova-workspace-v1';
 let novaWorkspace=loadNovaWorkspace();
+let novaCalendarCursor=new Date();
 const MAX_RECONNECT_ATTEMPTS=Infinity;
 const PROFILE_IDS=['auto','fast','balanced'];
 const AVATAR_SCALES={small:.9,normal:1,large:1.08};
@@ -66,7 +67,7 @@ function setOpen(id,open){
   if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(changed)desktop?.resize?.(open?770:520);if(open)$('message').focus({preventScroll:true});}
   if(id==='companion-picker')$('companion-toggle').setAttribute('aria-expanded',String(open));
   if(id==='more-menu'){$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');if(changed)desktop?.resize?.(open?850:520);}
-  if(id==='nova-workspace'){document.body.classList.toggle('workspace-open',open);if(changed)desktop?.resize?.(open?850:520,open?350:260);}
+  if(id==='nova-workspace'){document.body.classList.toggle('workspace-open',open);if(changed)desktop?.resize?.(520,open?610:260);}
 }
 function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){desktop?.resize?.(850,350);healthRequested=true;runtimeSocket?.send(JSON.stringify({type:'health'}));}else desktop?.resize?.($('more-menu').hidden?520:850,260);}
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
@@ -77,7 +78,8 @@ function loadNovaWorkspace(){try{return normalizeNovaWorkspace(JSON.parse(localS
 function saveNovaWorkspace(){localStorage.setItem(NOVA_WORKSPACE_STORAGE_KEY,JSON.stringify(novaWorkspace));renderNovaWorkspace();}
 function localDateLabel(value){if(!value)return 'Any time';const date=new Date(value);return Number.isNaN(date.valueOf())?'Any time':new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(date);}
 function renderNovaList(id,items,kind){const list=$(id);list.replaceChildren();if(!items.length){const empty=document.createElement('li');empty.className='workspace-empty';empty.textContent=kind==='event'?'Nothing scheduled locally.':kind==='plan'?'One small step is enough.':'Nothing to remember yet.';list.append(empty);return;}for(const item of [...items].sort((a,b)=>(a.done-b.done)||(a.due||'').localeCompare(b.due||''))){const row=document.createElement('li');row.className=item.done?'is-done':'';const toggle=document.createElement('button');toggle.type='button';toggle.className='workspace-check';toggle.dataset.workspaceToggle=`${kind}:${item.id}`;toggle.setAttribute('aria-label',item.done?`Mark ${item.text} incomplete`:`Complete ${item.text}`);toggle.textContent=item.done?'✓':'';const copy=document.createElement('span');const label=document.createElement('b');label.textContent=item.text;copy.append(label);if(item.due){const due=document.createElement('small');due.textContent=localDateLabel(item.due);copy.append(due);}const remove=document.createElement('button');remove.type='button';remove.className='workspace-remove';remove.dataset.workspaceRemove=`${kind}:${item.id}`;remove.setAttribute('aria-label',`Remove ${item.text}`);remove.textContent='×';row.append(toggle,copy,remove);list.append(row);}}
-function renderNovaWorkspace(){const now=new Date();$('nova-workspace-date').textContent=new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(now);$('nova-focus').value=novaWorkspace.focus;renderNovaList('nova-reminders',novaWorkspace.reminders,'reminder');renderNovaList('nova-events',novaWorkspace.events,'event');renderNovaList('nova-plan-list',novaWorkspace.plan,'plan');}
+function renderNovaCalendar(){const first=new Date(novaCalendarCursor.getFullYear(),novaCalendarCursor.getMonth(),1);$('nova-calendar-month').textContent=new Intl.DateTimeFormat(undefined,{month:'long',year:'numeric'}).format(first);const grid=$('nova-calendar-grid');grid.replaceChildren();const start=(first.getDay()+6)%7;const days=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();const today=new Date();for(let index=0;index<start;index+=1){const blank=document.createElement('span');blank.className='calendar-day is-blank';grid.append(blank);}for(let day=1;day<=days;day+=1){const date=new Date(first.getFullYear(),first.getMonth(),day);const node=document.createElement('span');const hasEvent=novaWorkspace.events.some(item=>{if(!item.due)return false;const due=new Date(item.due);return due.getFullYear()===date.getFullYear()&&due.getMonth()===date.getMonth()&&due.getDate()===date.getDate();});node.className=`calendar-day${date.toDateString()===today.toDateString()?' is-today':''}${hasEvent?' has-event':''}`;node.textContent=String(day);if(hasEvent)node.title='A local schedule item is planned';grid.append(node);}}
+function renderNovaWorkspace(){const now=new Date();$('nova-workspace-date').textContent=new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(now);$('nova-focus').value=novaWorkspace.focus;renderNovaCalendar();renderNovaList('nova-reminders',novaWorkspace.reminders,'reminder');renderNovaList('nova-events',novaWorkspace.events,'event');renderNovaList('nova-plan-list',novaWorkspace.plan,'plan');}
 function setNovaWorkspaceOpen(open){if(open&&selected!=='nova'){showNotice('Nova’s Today workspace is available when Nova is active.',false,'info');return;}setOpen('more-menu',false);setOpen('companion-picker',false);setOpen('nova-workspace',open);if(open)renderNovaWorkspace();}
 function applyAppearanceUi(){
   document.documentElement.style.setProperty('--avatar-scale',AVATAR_SCALES[avatarScale]);document.body.dataset.avatarGlow=String(avatarGlow);document.body.classList.toggle('quiet-mode',quietMode);document.body.classList.toggle('glance-enabled',glanceEnabled);
@@ -243,7 +245,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
   if(detail?.type==='config'){
     setRuntimeReady(true);
     const current=companionById[detail.botId];
-    if(current){selected=current.id;$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);setPresenceLine();$('message').value=chat.draft(current.id);$('pause-toggle').querySelector('[data-control-label]').textContent=paused?'Resume':'Pause';}
+    if(current){selected=current.id;$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);setPresenceLine();$('message').value=chat.draft(current.id);$('pause-toggle').querySelector('[data-control-label]').textContent=paused?'Resume':'Pause';$('workspace-toggle').disabled=current.id!=='nova';}
     runtimeInfo=detail.runtime||runtimeInfo;
     applyProfileUi({profile:detail.runtime?.profile||activeProfile,selection:detail.runtime?.profileSelection||profileSelection,hardware:detail.runtime?.hardware,settings:detail.runtime?.profileSettings});
     setRuntimeStatus(appState.value===STATES.RECOVERY?'Recovering…':'Ready');
@@ -296,12 +298,15 @@ $('chat-toggle').addEventListener('click',()=>{setOpen('nova-workspace',false);s
 $('chat-close').addEventListener('click',()=>setOpen('chat-panel',false));
 $('clear-chat').addEventListener('click',()=>{if(activeTurn!==null){const turn=activeTurn;if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'stop',turn}));stopSpeechPlayback();chat.interrupt(turn);}chat.clear();activeTurn=null;voiceTurn=null;appState.set(STATES.IDLE);resumeLiveListening();$('message').value='';chat.setDraft('');$('send-message').hidden=false;$('stop-response').hidden=true;showNotice('');});
 $('runtime-retry').addEventListener('click',()=>{reconnectAttempts=0;showNotice('');connectRuntime();});
-$('companion-toggle').addEventListener('click',()=>{setOpen('chat-panel',false);if(selected==='nova')setNovaWorkspaceOpen($('nova-workspace').hidden);else setOpen('companion-picker',$('companion-picker').hidden);});
+$('companion-toggle').addEventListener('click',()=>{setNovaWorkspaceOpen(false);setOpen('chat-panel',false);setOpen('companion-picker',$('companion-picker').hidden);});
+$('workspace-toggle').addEventListener('click',()=>setNovaWorkspaceOpen($('nova-workspace').hidden));
 $('picker-close').addEventListener('click',()=>setOpen('companion-picker',false));
 $('more-toggle').addEventListener('click',()=>{setOpen('nova-workspace',false);setOpen('chat-panel',false);setOpen('companion-picker',false);setOpen('more-menu',$('more-menu').hidden);});
 $('more-close').addEventListener('click',()=>setOpen('more-menu',false));
 $('companion-picker-menu').addEventListener('click',()=>{setOpen('more-menu',false);setOpen('companion-picker',true);});
 $('nova-workspace-close').addEventListener('click',()=>setNovaWorkspaceOpen(false));
+$('nova-calendar-prev').addEventListener('click',()=>{novaCalendarCursor=new Date(novaCalendarCursor.getFullYear(),novaCalendarCursor.getMonth()-1,1);renderNovaCalendar();});
+$('nova-calendar-next').addEventListener('click',()=>{novaCalendarCursor=new Date(novaCalendarCursor.getFullYear(),novaCalendarCursor.getMonth()+1,1);renderNovaCalendar();});
 $('nova-focus-form').addEventListener('submit',event=>{event.preventDefault();novaWorkspace=normalizeNovaWorkspace({...novaWorkspace,focus:$('nova-focus').value});saveNovaWorkspace();showNotice(novaWorkspace.focus?'Focus saved locally.':'Focus cleared.',false,'info');});
 function addWorkspaceItem(kind,textId,dueId=null){const text=$(textId).value;const due=dueId?$(dueId).value:'';novaWorkspace=addNovaItem(novaWorkspace,kind,{text,due});$(textId).value='';if(dueId)$(dueId).value='';saveNovaWorkspace();}
 $('nova-reminder-form').addEventListener('submit',event=>{event.preventDefault();addWorkspaceItem('reminder','nova-reminder','nova-reminder-due');});
@@ -329,6 +334,7 @@ for(const companion of companions){
     chat.setDraft($('message').value,selected);
     setNovaWorkspaceOpen(false);
     selected=companion.id;const current=companionById[selected];$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=selected;document.documentElement.style.setProperty('--accent',current.accent);setPresenceLine();
+    $('workspace-toggle').disabled=current.id!=='nova';
     avatar.showRobot(selected);setOpen('companion-picker',false);
     if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'switch_bot',botId:selected}));
     else showNotice('Runtime unavailable. Bot switching will apply when it reconnects.',true,'warning');

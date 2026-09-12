@@ -29,8 +29,10 @@ Calendar access remains a future permissioned integration; the V1 local schedule
 does not claim to read or write the macOS Calendar.
 
 Panel: **Today**, a calm local assistant workspace for one focus, reminders,
-coming-up entries, and small next steps. It is intentionally a personal
-companion surface rather than a dense productivity suite.
+coming-up entries, and small next steps. It opens from Nova's platform calendar
+icon as a left-side surface, leaving Nova's on-platform scale unchanged. Its
+local month view marks locally scheduled entries; it is intentionally a
+personal companion surface rather than a dense productivity suite.
 
 Behavior: begins warm and playful; calibrates intimacy from reciprocal signals; gently tests for more when supported; backs off under uncertainty; immediately respects “less,” “stop flirting,” and reset commands.
 

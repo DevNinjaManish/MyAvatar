@@ -3,6 +3,7 @@ const path=require('node:path');
 const COMPACT_HEIGHT=520;
 const CHAT_HEIGHT=770;
 const PREFERENCES_HEIGHT=850;
+const WORKSPACE_WIDTH=610;
 
 // V1 voice is intentionally automatic after runtime readiness. Allow the
 // local widget to resume its AudioContext and play the greeting without a
@@ -20,7 +21,7 @@ const createWindow=()=>{
     width,height,
     x:area.x+area.width-width-24,
     y:area.y+Math.max(0,area.height-PREFERENCES_HEIGHT-24),
-    minWidth:width,minHeight:height,maxWidth:350,maxHeight:PREFERENCES_HEIGHT,
+    minWidth:width,minHeight:height,maxWidth:WORKSPACE_WIDTH,maxHeight:PREFERENCES_HEIGHT,
     frame:false,transparent:true,hasShadow:false,resizable:false,
     backgroundColor:'#00000000',title:'MyAvatar',
     webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}
@@ -43,7 +44,7 @@ else app.whenReady().then(()=>{
     if(event.sender!==mainWindow?.webContents)return;
     const nextHeight=[CHAT_HEIGHT,PREFERENCES_HEIGHT].includes(height)?height:COMPACT_HEIGHT;
     const bounds=mainWindow.getBounds();
-    const nextWidth=width===350?350:260;
+    const nextWidth=width===WORKSPACE_WIDTH?WORKSPACE_WIDTH:width===350?350:260;
     if(bounds.height===nextHeight&&bounds.width===nextWidth)return;
     // Keep the lower edge stable while a panel opens. A taller Preferences
     // sheet must grow upward rather than disappearing below the desktop.
