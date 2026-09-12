@@ -19,6 +19,7 @@ import {JsonWorker} from './json-worker.mjs';
 import {quickReply} from '../src/conversation/quick-replies.js';
 import {backchannelFor,shouldBackchannel} from '../src/conversation/backchannels.js';
 import {useFastVoiceModel} from '../src/conversation/voice-routing.js';
+import {languageInstruction,responseLanguageFor} from '../src/conversation/language-routing.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
@@ -62,10 +63,10 @@ providerRegistry.register('conversation','ollama',Object.freeze({
     if(!response.ok)return {available:false,reason:`Local model returned HTTP ${response.status}.`};
     return {available:true};
   },
-  async stream({text,signal,onToken,botId='nova',history=[],model=modelForProfile()}){
+  async stream({text,signal,onToken,botId='nova',history=[],model=modelForProfile(),replyLanguage='english'}){
     const profile=voiceProfiles[botId]||voiceProfiles.nova;
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal,
-      body:JSON.stringify({model,stream:true,think:false,options:{num_predict:profileSettings(performanceProfile).maxTokens},messages:[{role:'system',content:profile.systemPrompt+' Answer the actual request directly. For spoken requests, begin with one short natural sentence, ideally 4 to 12 words and ending in punctuation, before adding detail. Usually use one to three short spoken sentences. Use ordinary conversational language, no emojis, stage directions, or uninvited flirting. Follow the user’s requested length. Be honest about your capabilities.'},...history,{role:'user',content:text}]})});
+      body:JSON.stringify({model,stream:true,think:false,options:{num_predict:profileSettings(performanceProfile).maxTokens},messages:[{role:'system',content:profile.systemPrompt+' '+languageInstruction(replyLanguage)+' Answer the actual request directly. For spoken requests, begin with one short natural sentence, ideally 4 to 12 words and ending in punctuation, before adding detail. Usually use one to three short spoken sentences. Use ordinary conversational language, no emojis, stage directions, or uninvited flirting. Follow the user’s requested length. Be honest about your capabilities.'},...history,{role:'user',content:text}]})});
     if(!response.ok)throw Error(`Local model returned HTTP ${response.status}.`);
     const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';
     while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split('\n');buffer=lines.pop()||'';for(const line of lines){if(!line.trim())continue;const part=JSON.parse(line);const tokenText=part.message?.content||'';if(tokenText)onToken(tokenText);}}
@@ -173,7 +174,7 @@ server.on('connection',(socket,request)=>{
   };
   const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),voiceFastModel:fastVoiceModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
   recognizer.ready.then(sendConfig).catch(error=>{sendConfig();send({type:'speech_unavailable',message:`Local recognition unavailable: ${error.message}`});});
-  const answer=async(turn,text,{speak=false}={})=>{
+  const answer=async(turn,text,{speak=false,recognizedLanguage=''}={})=>{
     let spokenText='';const bot=activeBot;const history=histories.get(bot)||[];
     const quick=quickReply(text,bot);
     if(quick){
@@ -191,7 +192,8 @@ server.on('connection',(socket,request)=>{
       catch(error){if(!controller.signal.aborted)send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
     });};
     const model=useFastVoiceModel(text,{speaking:speak})?fastVoiceModel():modelForProfile();
-    try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:bot,history,model},onToken(tokenText){
+    const replyLanguage=responseLanguageFor(text,recognizedLanguage);
+    try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:bot,history,model,replyLanguage},onToken(tokenText){
       if(stopped.has(turn))return;
       spokenText+=tokenText;send({type:'token',turn,text:tokenText});
       if(speak)for(const sentence of segments.push(tokenText))queueSpeech(sentence);
@@ -228,11 +230,11 @@ server.on('connection',(socket,request)=>{
     const turn=message.turn;
     if(message.type==='turn'&&message.speak&&!quickReply(message.text,activeBot))scheduleAcknowledgement(turn,activeBot,message.text);
     try{
-      let text=message.text;
+      let text=message.text,recognizedLanguage='';
       if(message.type==='voice'){
         if(typeof message.audio!=='string'||!message.audio)throw Error('No microphone audio was received.');
         send({type:'recognizing',turn});
-        const recognition=await transcribeVoice(message.audio,message.mime);text=recognition.text;
+        const recognition=await transcribeVoice(message.audio,message.mime);text=recognition.text;recognizedLanguage=recognition.language;
         if(stopped.has(turn)||socket.readyState!==1){stopped.delete(turn);return;}
         send({type:'recognition',turn,text,language:recognition.language,durationMs:recognition.durationMs,uncertain:recognition.uncertain});
         if(recognition.uncertain||!text){
@@ -245,7 +247,7 @@ server.on('connection',(socket,request)=>{
         if(!quickReply(text,activeBot))scheduleAcknowledgement(turn,activeBot,text);
       }
       if(typeof text!=='string'||!text.trim())throw Error('Empty request.');
-      await answer(turn,text,{speak:message.type==='voice'||message.speak===true});
+      await answer(turn,text,{speak:message.type==='voice'||message.speak===true,recognizedLanguage});
     }catch(error){if(!stopped.has(turn)&&error?.name!=='AbortError')send({type:'error',turn,message:`${message.type==='voice'?'Voice':'Conversation'} unavailable: ${message.type==='voice'?voiceSetupError(error):error.message}`});stopped.delete(turn);}
   });
   socket.on('close',()=>{for(const controller of activeControllers.values())controller.abort();for(const timer of pendingAcknowledgements.values())clearTimeout(timer);pendingAcknowledgements.clear();});

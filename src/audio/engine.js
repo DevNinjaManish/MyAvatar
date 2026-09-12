@@ -96,8 +96,11 @@ export class AudioEngine{
     let calibrationReported=this.detector.calibrationRemainingMs>0;
     if(calibrationReported)settings.onCalibrationChange?.(true);
     const barge=settings?.bargeIn||{};
-    const bargeSettings={...settings,threshold:barge.threshold??Math.max(.014,(settings.threshold??.0055)*2.2),onsetMs:barge.onsetMs??180,minSpeechMs:barge.minSpeechMs??320,silenceMs:barge.silenceMs??300,preRollMs:barge.preRollMs??160,rejectCooldownMs:0};
-    delete bargeSettings.bargeIn;this.bargeDetector=new TurnDetector(this.ctx.sampleRate,bargeSettings);this.bargeInGuardMs=barge.guardMs??500;
+    const {bargeIn,onCalibrationChange,calibrationMs,...bargeBase}=settings;
+    // Barge-in is a separate live detector, not a new microphone session. It
+    // must never inherit startup calibration or it will ignore the interruption.
+    const bargeSettings={...bargeBase,calibrationMs:0,threshold:barge.threshold??Math.max(.010,(settings.threshold??.0055)*2),onsetMs:barge.onsetMs??120,minSpeechMs:barge.minSpeechMs??180,silenceMs:barge.silenceMs??360,preRollMs:barge.preRollMs??180,rejectCooldownMs:0};
+    this.bargeDetector=new TurnDetector(this.ctx.sampleRate,bargeSettings);this.bargeInGuardMs=barge.guardMs??300;
     const started=await this.record(null,frame=>{
       if(!this.captureActive)return;
       const generation=this.captureGeneration;

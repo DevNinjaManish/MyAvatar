@@ -102,7 +102,7 @@ async function startVoiceCapture({automatic=false}={}){
   try{
     const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:480,shortSilenceMs:360,shortTurnMs:850,preRollMs:260,calibrationMs:900,releaseRatio:.68,onCalibrationChange:calibrating=>{if(calibrating)setRuntimeStatus('Tuning microphone…');else if(liveVoiceEnabled&&!paused&&activeTurn===null)setRuntimeStatus('Listening');},onBargeIn:()=>{
       const turn=activeTurn??turnPlayback.activeTurn;if(turn!==null){runtimeSocket?.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);}stopSpeechPlayback();activeTurn=null;appState.set(STATES.LISTENING);setRuntimeStatus('Listening');
-    },bargeIn:{guardMs:420,threshold:.012,onsetMs:140,minSpeechMs:180,silenceMs:420,preRollMs:200,releaseRatio:.68}});
+    },bargeIn:{guardMs:260,threshold:.010,onsetMs:110,minSpeechMs:150,silenceMs:360,preRollMs:180,releaseRatio:.7}});
     if(!started||!audioEngine.setListening(true))throw Error('Microphone listening could not be started.');
     liveVoiceEnabled=true;setVoiceButton(true);appState.set(STATES.LISTENING);setRuntimeStatus(audioEngine.detector?.calibrationRemainingMs>0?'Tuning microphone…':'Listening');if(!automatic)showNotice('Listening…');return true;
   }catch(error){endActiveCapture();liveVoiceEnabled=false;setVoiceButton(false);showNotice(`Microphone unavailable: ${error.message}`,false,'warning');return false;}

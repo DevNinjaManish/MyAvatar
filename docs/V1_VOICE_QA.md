@@ -19,12 +19,15 @@ Implemented in this batch:
 - Microphone startup includes a 900 ms local room calibration before accepting
   a turn. Browser echo cancellation, noise suppression, and automatic gain are
   explicitly requested before the local detector sees audio.
+- Live barge-in uses its own detector and never performs startup calibration.
+  It may interrupt after 260 ms of reply playback when it hears 110 ms of user
+  speech; the shorter guard is supported by the browser echo-cancellation path.
 - Balanced uses local huihui_ai/qwen3.5-abliterated:4b; Fast uses huihui_ai/qwen3.5-abliterated:0.8b. An explicit model
   environment setting overrides both. Models must already be installed.
 
 Evidence:
 
-- 98 JavaScript tests, including ordered decoding, stale decode cancellation,
+- 101 JavaScript tests, including ordered decoding, stale decode cancellation,
   streamed sentence boundaries, and interruption onset with retained speech.
 - Production build passes (existing bundle-size warning remains).
 - Runtime smoke and recorded speech input integration passed.
@@ -74,3 +77,6 @@ persistent memory are not implemented. These are not implied by passing tests.
 - Repeated/hallucinated recognition and low-confidence segments trigger a
   clarification rather than normal answer generation; this heuristic will not
   catch every incorrect word.
+- Reply language follows the newest recognized turn, not prior conversation
+  history. An explicit “switch back to English” applies English-only output to
+  that response, even after a Hindi turn.

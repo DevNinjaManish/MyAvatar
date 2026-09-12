@@ -13,6 +13,7 @@ test('barge-in stops output at onset and retains speech until the user finishes'
   for(let i=0;i<40;i++)capture(frame(.08));for(let i=0;i<70;i++)capture(frame(0));
   assert.ok(utterance instanceof Float32Array);assert.ok(utterance.some(x=>x>.07));engine.endCapture();
 });
+test('barge-in never waits for the microphone startup calibration',async()=>{const engine=new AudioEngine(()=>{});engine.ctx={state:'running',sampleRate:16000};let capture,count=0;engine.record=async(_timer,onFrame)=>{capture=onFrame;};await engine.startLive(()=>{}, {calibrationMs:900,onBargeIn:()=>count++,bargeIn:{guardMs:0,threshold:.01,onsetMs:110,minSpeechMs:150,silenceMs:360}});engine.playing=true;engine.playbackStartedAt=0;for(let i=0;i<11;i++)capture(frame(.05));assert.equal(count,1);engine.endCapture();});
 test('silence stays bounded and never creates a turn',()=>{const v=new TurnDetector(16000);assert.equal(feed(v,6000,0).length,0);assert.ok(v.samples<=4160);});
 test('a short noise is discarded',()=>{const v=new TurnDetector(16000);assert.equal([...feed(v,15,.1),...feed(v,150,0)].length,0);});
 test('steady ambient noise raises the local floor without creating a turn',()=>{const v=new TurnDetector(16000,{threshold:.004});assert.equal(feed(v,500,.008).length,0);assert.ok(v.currentThreshold>.008);const turns=[...feed(v,50,.04),...feed(v,100,0)];assert.equal(turns.length,1);});
