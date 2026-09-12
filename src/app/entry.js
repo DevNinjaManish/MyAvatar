@@ -57,6 +57,12 @@ if(!Object.hasOwn(AVATAR_SCALES,avatarScale))avatarScale='normal';
 const presenceFallback={IDLE:'Ready',LISTENING:'Listening',THINKING:'Thinking',SPEAKING:'Speaking',WORKING:'Working',PAUSED:'Paused',SLEEPING:'Resting',ERROR:'Needs attention',RECOVERY:'Returning'};
 
 const desktop=globalThis.desktop;
+function applyCompanionTheme(companion){
+  const palette=companion?.palette;if(!palette)return;
+  document.body.dataset.companion=companion.id;
+  document.documentElement.style.setProperty('--accent',companion.accent);
+  for(const [name,value] of Object.entries(palette))document.documentElement.style.setProperty(`--${name}`,value);
+}
 const stopDrag=()=>{document.body.classList.remove('dragging');avatar.setDragging(false);desktop?.stopDrag?.();};
 stage.addEventListener('pointerdown',event=>{if(event.button!==0||(!event.target?.matches?.('canvas')&&event.target!==stage))return;document.body.classList.add('dragging');avatar.setDragging(true);desktop?.startDrag?.();stage.setPointerCapture?.(event.pointerId);});
 stage.addEventListener('pointerup',stopDrag);
@@ -251,7 +257,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
   if(detail?.type==='config'){
     setRuntimeReady(true);
     const current=companionById[detail.botId];
-    if(current){selected=current.id;$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);setPresenceLine();$('message').value=chat.draft(current.id);$('pause-toggle').querySelector('[data-control-label]').textContent=paused?'Resume':'Pause';$('workspace-toggle').disabled=current.id!=='nova';}
+    if(current){selected=current.id;$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);applyCompanionTheme(current);avatar.showRobot(current.id);setPresenceLine();$('message').value=chat.draft(current.id);$('pause-toggle').querySelector('[data-control-label]').textContent=paused?'Resume':'Pause';$('workspace-toggle').disabled=current.id!=='nova';}
     runtimeInfo=detail.runtime||runtimeInfo;
     applyProfileUi({profile:detail.runtime?.profile||activeProfile,selection:detail.runtime?.profileSelection||profileSelection,hardware:detail.runtime?.hardware,settings:detail.runtime?.profileSettings});
     setRuntimeStatus(appState.value===STATES.RECOVERY?'Recovering…':'Ready');
@@ -339,7 +345,7 @@ for(const companion of companions){
     if(activeTurn!==null){setOpen('companion-picker',false);showNotice('Finish or stop the current response before switching companions.',false,'warning');return;}
     chat.setDraft($('message').value,selected);
     setNovaWorkspaceOpen(false);
-    selected=companion.id;const current=companionById[selected];$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=selected;document.documentElement.style.setProperty('--accent',current.accent);setPresenceLine();
+    selected=companion.id;const current=companionById[selected];$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);applyCompanionTheme(current);setPresenceLine();
     $('workspace-toggle').disabled=current.id!=='nova';
     avatar.showRobot(selected);setOpen('companion-picker',false);
     if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'switch_bot',botId:selected}));
