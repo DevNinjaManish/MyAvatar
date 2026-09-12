@@ -55,7 +55,7 @@ function setOpen(id,open){
   if(id==='more-menu'){$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');if(changed)desktop?.resize?.(open?770:500);}
 }
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
-function setRuntimeStatus(text){$('runtime-status').textContent=text;}
+function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
 function setRuntimeReady(value){runtimeReady=Boolean(value);for(const id of ['mic-toggle','pause-toggle','send-message'])$(id).disabled=!runtimeReady;}
 setRuntimeReady(false);
 function applyProfileUi({profile='fast',selection='auto',hardware=null,settings=null}={}){
@@ -73,8 +73,8 @@ function selectProfile(selection){
   if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'set_profile',profile:selection}));
   else showNotice('Runtime unavailable. The profile will apply when it reconnects.',true,'warning');
 }
-function setPaused(value){if(!runtimeReady)return;paused=Boolean(value);if(paused){stopVoiceCapture();stopSpeechPlayback();turnPlayback.cancelTurn();}appState.set(paused?STATES.PAUSED:STATES.IDLE);$('pause-toggle').textContent=paused?'Resume':'Pause';$('pause-toggle').setAttribute('aria-label',paused?'Resume companion':'Pause companion');setRuntimeStatus(paused?'Paused':'Ready');if(!paused)startVoiceCapture({automatic:false});}
-function setVoiceButton(active){$('mic-toggle').textContent=active?'Stop':'Mic';$('mic-toggle').setAttribute('aria-label',active?'Stop microphone':'Start microphone');$('mic-toggle').setAttribute('aria-pressed',String(active));}
+function setPaused(value){if(!runtimeReady)return;paused=Boolean(value);if(paused){stopVoiceCapture();stopSpeechPlayback();turnPlayback.cancelTurn();}appState.set(paused?STATES.PAUSED:STATES.IDLE);$('pause-toggle').querySelector('[data-control-label]').textContent=paused?'Resume':'Pause';$('pause-toggle').setAttribute('aria-label',paused?'Resume companion':'Pause companion');setRuntimeStatus(paused?'Paused':'Ready');if(!paused)startVoiceCapture({automatic:false});}
+function setVoiceButton(active){$('mic-toggle').querySelector('[data-control-label]').textContent=active?'Stop':'Mic';$('mic-toggle').setAttribute('aria-label',active?'Stop microphone':'Start microphone');$('mic-toggle').setAttribute('aria-pressed',String(active));}
 function bytesToBase64(bytes){let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(binary);}
 function stopSpeechPlayback(){
   audioEngine.stop();
@@ -182,7 +182,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
   if(detail?.type==='config'){
     setRuntimeReady(true);
     const current=companionById[detail.botId];
-    if(current){selected=current.id;$('companion-name').textContent=current.name;stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);$('message').value=chat.draft(current.id);$('pause-toggle').textContent=paused?'Resume':'Pause';}
+    if(current){selected=current.id;$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);$('message').value=chat.draft(current.id);$('pause-toggle').querySelector('[data-control-label]').textContent=paused?'Resume':'Pause';}
     runtimeInfo=detail.runtime||runtimeInfo;
     applyProfileUi({profile:detail.runtime?.profile||activeProfile,selection:detail.runtime?.profileSelection||profileSelection,hardware:detail.runtime?.hardware,settings:detail.runtime?.profileSettings});
     setRuntimeStatus(appState.value===STATES.RECOVERY?'Recovering…':'Ready');
@@ -252,7 +252,7 @@ for(const companion of companions){
   button.addEventListener('click',()=>{
     if(activeTurn!==null){setOpen('companion-picker',false);showNotice('Finish or stop the current response before switching companions.',false,'warning');return;}
     chat.setDraft($('message').value,selected);
-    selected=companion.id;const current=companionById[selected];$('companion-name').textContent=current.name;stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=selected;document.documentElement.style.setProperty('--accent',current.accent);
+    selected=companion.id;const current=companionById[selected];$('companion-name').textContent=current.name;$('chat-companion').textContent=current.name.toUpperCase();stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=selected;document.documentElement.style.setProperty('--accent',current.accent);
     avatar.showRobot(selected);setOpen('companion-picker',false);
     if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'switch_bot',botId:selected}));
     else showNotice('Runtime unavailable. Bot switching will apply when it reconnects.',true,'warning');
