@@ -5,5 +5,5 @@ contextBridge.exposeInMainWorld('desktop',{
   stopDrag:()=>ipcRenderer.send('widget-drag-stop'),
   close:()=>ipcRenderer.send('window-close'),
   minimize:()=>ipcRenderer.send('window-minimize'),
-  resize:(height)=>ipcRenderer.send('window-resize',height)
+  resize:(height,width=260)=>ipcRenderer.send('window-resize',height,width)
 });

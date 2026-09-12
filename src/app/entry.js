@@ -63,6 +63,7 @@ function setOpen(id,open){
   if(id==='companion-picker')$('companion-toggle').setAttribute('aria-expanded',String(open));
   if(id==='more-menu'){$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');if(changed)desktop?.resize?.(open?850:500);}
 }
+function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){desktop?.resize?.(850,350);runtimeSocket?.send(JSON.stringify({type:'health'}));}else desktop?.resize?.($('more-menu').hidden?500:850,260);}
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
 function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
@@ -244,7 +245,8 @@ window.addEventListener('myavatar:runtime-event',event=>{
   if(detail?.type==='health'){
     const health=detail.health||{};
     const provider=health.provider||runtimeInfo?.provider||'unknown';
-    if(health.available)showNotice(`Runtime: ${provider} · ${runtimeInfo?.profile||'unknown'} · ready`,false,'info');
+    const metrics=detail.metrics||{};$('performance-state').textContent=health.available?'Healthy':'Unavailable';$('metric-memory').textContent=metrics.systemMemoryUsedMb?`${metrics.systemMemoryUsedMb} / ${metrics.systemMemoryTotalMb} MB`:'Unavailable';$('metric-context').textContent=metrics.contextWindow?`${metrics.contextUsed||0} / ${metrics.contextWindow} tok`:'—';$('metric-generation').textContent=metrics.tokensPerSecond?`${metrics.tokensPerSecond} tok/s`:'Awaiting a reply';$('metric-cpu').textContent=metrics.cpuPercent!==undefined?`${metrics.cpuPercent}% service`:'—';$('metric-model').textContent=metrics.model||runtimeInfo?.model||provider;
+    if(health.available&&!document.body.classList.contains('performance-open'))showNotice(`Runtime: ${provider} · ${runtimeInfo?.profile||'unknown'} · ready`,false,'info');
     else showNotice(`Runtime unavailable: ${health.reason||'provider health check failed.'}`,true,'warning');
   }
   if(detail?.type==='transcript')showNotice(`Heard: ${detail.text}`);
@@ -274,7 +276,7 @@ $('picker-close').addEventListener('click',()=>setOpen('companion-picker',false)
 $('more-toggle').addEventListener('click',()=>{setOpen('chat-panel',false);setOpen('companion-picker',false);setOpen('more-menu',$('more-menu').hidden);});
 $('more-close').addEventListener('click',()=>setOpen('more-menu',false));
 $('pause-toggle').addEventListener('click',()=>{if(activeTurn!==null){showNotice('Stop the current response before pausing the companion.',false,'warning');return;}setPaused(!paused);setOpen('more-menu',false);showNotice(paused?'Companion paused.':'Companion resumed.',false,'info');});
-$('runtime-health').addEventListener('click',()=>{setOpen('more-menu',false);if(runtimeSocket?.readyState!==WebSocket.OPEN){showNotice('Runtime unavailable. Reconnecting…',true,'warning');return;}showNotice('Checking runtime health…',false,'info');runtimeSocket.send(JSON.stringify({type:'health'}));});
+$('runtime-health').addEventListener('click',()=>{if(runtimeSocket?.readyState!==WebSocket.OPEN){showNotice('Runtime unavailable. Reconnecting…',true,'warning');return;}setPerformanceOpen($('performance-panel').hidden);});
 $('profile-auto').addEventListener('click',()=>selectProfile('auto'));
 $('profile-fast').addEventListener('click',()=>selectProfile('fast'));
 $('profile-balanced').addEventListener('click',()=>selectProfile('balanced'));

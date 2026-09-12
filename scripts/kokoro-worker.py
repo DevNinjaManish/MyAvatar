@@ -8,7 +8,7 @@ import numpy as np
 from kokoro_onnx import Kokoro, SAMPLE_RATE
 
 
-def synthesize(kokoro, text, voice, speed, lang):
+def synthesize(kokoro, text, voice, speed, lang, pause_ms=0):
     phonemes=kokoro.tokenizer.phonemize(text, lang)
     voice_style=kokoro.get_voice_style(voice)
     parts=[]
@@ -21,6 +21,8 @@ def synthesize(kokoro, text, voice, speed, lang):
         }
         parts.append(kokoro.sess.run(None,inputs)[0])
     samples=np.concatenate(parts) if parts else np.zeros(0,dtype=np.float32)
+    if pause_ms:
+        samples=np.concatenate([samples,np.zeros(round(SAMPLE_RATE*float(pause_ms)/1000),dtype=np.float32)])
     pcm=(np.clip(samples,-1,1)*32767).astype(np.int16).tobytes()
     output=io.BytesIO()
     with wave.open(output,'wb') as stream:
@@ -41,7 +43,7 @@ def main():
             continue
         request=json.loads(line)
         try:
-            audio=synthesize(kokoro,request['text'],request['voice'],request['speed'],request['lang'])
+            audio=synthesize(kokoro,request['text'],request['voice'],request['speed'],request['lang'],request.get('pauseMs',0))
             response={'id':request['id'],'audio':audio}
         except Exception as error:
             response={'id':request.get('id'),'error':str(error)}

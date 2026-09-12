@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {promises as fs} from 'node:fs';
 import {spawn,spawnSync} from 'node:child_process';
 import {tmpdir} from 'node:os';
-import {arch, totalmem, cpus} from 'node:os';
+import {arch, totalmem, freemem, cpus} from 'node:os';
 import {join} from 'node:path';
 import {existsSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
@@ -20,6 +20,7 @@ import {quickReply} from '../src/conversation/quick-replies.js';
 import {backchannelFor,shouldBackchannel} from '../src/conversation/backchannels.js';
 import {immediateVoiceCommand} from '../src/conversation/voice-routing.js';
 import {languageInstruction,responseLanguageFor} from '../src/conversation/language-routing.js';
+import {speechPlan} from '../src/conversation/speech-plan.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
@@ -159,12 +160,12 @@ async function transcribeVoice(audio,mime='audio/webm'){
   }finally{await fs.rm(dir,{recursive:true,force:true});}
 }
 
-async function synthesizeSpeech(text,botId='nova',emotion=null){
+async function synthesizeSpeech(text,botId='nova',emotion=null,{speed=1,pauseMs=0}={}){
   const dir=await fs.mkdtemp(join(tmpdir(),'myavatar-speech-'));
   try{
     const voice=bots[botId]?.voice||voiceProfiles.nova;
     const cleanText=spokenTextForSpeech(text);
-    const speed=voice.speed*(emotion==='happy'?1.02:emotion==='sad'?.96:emotion==='curious'?.99:1);
+    const voiceSpeed=voice.speed*(emotion==='happy'?1.02:emotion==='sad'?.96:emotion==='curious'?.99:1)*speed;
     const needsHindiVoice=/[\u0900-\u097f]/u.test(cleanText);
     if(kokoroReady){
       try{
@@ -172,7 +173,7 @@ async function synthesizeSpeech(text,botId='nova',emotion=null){
           const id=String(++kokoroRequestId);const timer=setTimeout(()=>{kokoroResponses.delete(id);reject(Error('Speech synthesis timed out.'));},30000);
           kokoroResponses.set(id,{resolve:value=>{clearTimeout(timer);resolveAudio(value);},reject:error=>{clearTimeout(timer);reject(error);}});
           const hindiVoice={nova:'hf_alpha',sterling:'hm_omega',rivet:'hm_psi',luma:'hf_beta'}[botId]||'hf_alpha';
-          kokoroWorker.stdin.write(`${JSON.stringify({id,text:cleanText,voice:needsHindiVoice?hindiVoice:voice.voiceId,speed,lang:needsHindiVoice?'hi':voice.lang})}\n`,error=>{if(error){kokoroResponses.delete(id);reject(error);}});
+          kokoroWorker.stdin.write(`${JSON.stringify({id,text:cleanText,voice:needsHindiVoice?hindiVoice:voice.voiceId,speed:voiceSpeed,lang:needsHindiVoice?'hi':voice.lang,pauseMs})}\n`,error=>{if(error){kokoroResponses.delete(id);reject(error);}});
         });
         return audio;
       }catch(error){throw Error(`Local Kokoro speech failed: ${error.message}`);}
@@ -185,6 +186,8 @@ async function synthesizeSpeech(text,botId='nova',emotion=null){
 // dependency and the profile-selected conversation route have initialized.
 // A 16 GB Mac keeps one Qwen route resident to avoid eviction churn.
 let runtimeBootstrap=null;
+let lastPerformance={tokensPerSecond:null,contextUsed:0};
+function performanceMetrics(){const memory=process.memoryUsage(),total=Math.round(totalmem()/1024/1024),used=Math.round((totalmem()-freemem())/1024/1024);return {systemMemoryUsedMb:used,systemMemoryTotalMb:total,serviceRssMb:Math.round(memory.rss/1024/1024),contextWindow:2048,contextUsed:lastPerformance.contextUsed,tokensPerSecond:lastPerformance.tokensPerSecond,model:modelForProfile(),cpuPercent:null};}
 function ensureRuntime(selection=profileSelection){
   if(runtimeBootstrap)return runtimeBootstrap;
   if(['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(selection)){
@@ -252,16 +255,19 @@ server.on('connection',(socket,request)=>{
       if(controller.signal.aborted||stopped.has(turn))return;
       const clean=spokenTextForSpeech(sentence);if(!clean)return;
       const emotion=responseEmotion(clean,bot);
-      try{const audio=await synthesizeSpeech(clean,bot,emotion);if(!controller.signal.aborted&&!stopped.has(turn))send({type:'audio',turn,audio,mime:'audio/wav',voice:bots[bot].voice,emotion});}
+      try{for(const phrase of speechPlan(clean,{bot,emotion})){const audio=await synthesizeSpeech(phrase.text,bot,emotion,phrase);if(!controller.signal.aborted&&!stopped.has(turn))send({type:'audio',turn,audio,mime:'audio/wav',voice:bots[bot].voice,emotion});}}
       catch(error){if(!controller.signal.aborted)send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
     });};
     const replyLanguage=responseLanguageFor(text,recognizedLanguage);
+    const generationStarted=Date.now(),contextText=[...history.map(item=>item.content),text].join(' ');let firstTokenAt=0;
     try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:bot,history,model,replyLanguage},onToken(tokenText){
+      firstTokenAt||=Date.now();
       if(stopped.has(turn))return;
       spokenText+=tokenText;send({type:'token',turn,text:tokenText});
       if(speak)for(const sentence of segments.push(tokenText))queueSpeech(sentence);
     }});
     if(speak)for(const sentence of segments.push('',true))queueSpeech(sentence);
+    const generationMs=Math.max(1,Date.now()-(firstTokenAt||generationStarted));lastPerformance={contextUsed:Math.min(2048,Math.ceil(contextText.length/4)),tokensPerSecond:Number(((spokenText.length/4)/(generationMs/1000)).toFixed(1))};
     await speechChain;
     if(stopped.has(turn)||controller.signal.aborted){stopped.delete(turn);return;}
     histories.set(bot,[...history,{role:'user',content:text},{role:'assistant',content:spokenText}].slice(-12));
@@ -303,7 +309,7 @@ server.on('connection',(socket,request)=>{
       return;
     }
     if(message.type==='health'){
-      send({type:'health',health:await checkProviderHealth(conversationProvider,{timeoutMs:1500})});
+      send({type:'health',health:await checkProviderHealth(conversationProvider,{timeoutMs:1500}),metrics:performanceMetrics()});
       return;
     }
     if(message.type==='greeting'){
