@@ -19,7 +19,7 @@ try{
   socket.on('message',data=>{
     const event=JSON.parse(data);
     if(event.type==='config'){
-      const expected={nova:['af_heart','Heart'],sterling:['bm_daniel','Daniel'],rivet:['am_onyx','Fred'],luma:['af_aoede','Karen']};
+      const expected={nova:['af_heart','Heart'],sterling:['bm_george','George'],rivet:['am_puck','Puck'],luma:['af_bella','Bella']};
       sawConfig=(!requestedProfile||event.runtime?.profileSelection===profile)&&Object.entries(expected).every(([id,[voiceId,voice]])=>event.config?.bots?.[id]?.voice?.provider==='kokoro'&&event.config?.bots?.[id]?.voice?.voiceId===voiceId&&event.config?.bots?.[id]?.voice?.name===voice);
       started=Date.now();socket.send(JSON.stringify({type:'voice',turn:1,audio,mime:'audio/wav'}));
     }

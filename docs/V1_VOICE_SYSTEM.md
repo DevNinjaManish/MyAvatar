@@ -93,7 +93,7 @@ Initial direction:
 - **Luma:** expressive, curious, fluid, emotionally colorful, and creatively enthusiastic
 
 The voice profile is part of the bot contract. The local Kokoro voice IDs are
-`af_nova`, `bm_daniel`, `am_onyx`, and `af_aoede` for Nova, Sterling, Rivit,
+`af_heart`, `bm_george`, `am_puck`, and `af_bella` for Nova, Sterling, Rivit,
 and Luma respectively. Hindi text routes to Kokoro's `hf_alpha`, `hm_omega`,
 `hm_psi`, and `hf_beta` respectively. Missing local speech assets surface an
 error; Apple system-voice fallback is disabled. Greetings and replies resolve through
