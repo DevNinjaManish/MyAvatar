@@ -1,8 +1,8 @@
 # MyAvatar
 
-MyAvatar is a local-first macOS companion that lives in one compact widget. The repository is now in V1 development: Nova is the default voice-first companion, with a local runtime, context-aware behavior, 2.5D presence, and QA-driven iteration.
+MyAvatar is a local-first macOS companion that lives in one compact widget. Nova is the default voice-first companion, with a local runtime, context-aware behavior, 2.5D presence, and QA-driven iteration.
 
-The MVP foundation is complete. V1 planning and implementation guidance live in the [V1 documentation index](docs/README.md).
+V1 planning and implementation guidance live in the [V1 documentation index](docs/README.md).
 
 ## Run the widget
 
@@ -19,7 +19,7 @@ For a production renderer build:
 npm run build
 ```
 
-The app is always widget-only. There is no full-screen mode, dashboard, coding workspace, calendar, terminal, or specialist window in the MVP foundation.
+The app remains widget-first: it has no full-screen dashboard. Chat and a companion workspace can open beside the avatar without changing its scale. Nova’s Today surface is a local focus, reminder, schedule, and plan workspace; it is not a connected calendar.
 
 ## Repository map
 
@@ -47,6 +47,8 @@ npm test
 npm run build
 npm run doctor
 npm run test:voice
+npm run test:streaming-voice
+npm run test:runtime
 ```
 
 Native smoke QA and the V1 acceptance checklist are required before calling a V1 slice complete.
@@ -75,8 +77,12 @@ npm run doctor
 
 Large model files live outside Git. Do not delete existing Ollama or Hugging Face
 models during setup. Kokoro and Zipformer assets are expected under `models/`.
-The selected profile's recognizer downloads and performs a real warm inference
-before the companion may show Ready. Changing Fast/Balanced warms the next
-profile before activating it; it does not make the first utterance pay setup cost.
+The selected profile's recognizer performs a real warm inference before the
+companion may show Ready. During boot, the widget shows truthful local-only
+progress for recognition, provisional captions, TTS, conversation warmup, and
+the final voice check; controls remain disabled and the avatar stays hidden.
+Changing Fast/Balanced warms the next profile before activating it; it does not
+make the first utterance pay setup cost. Spoken replies begin from an early
+natural clause while later text continues to stream into Chat.
 If an authoritative recognizer or TTS asset is unavailable, the widget keeps
 typed chat available and shows a recoverable voice warning.

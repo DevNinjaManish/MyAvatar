@@ -14,12 +14,15 @@ and validated product behavior.
 | Local conversation service integration | Implemented | MVP WebSocket path preserved; build/tests pass |
 | Provider timeout and cancellation | Implemented | Hard timeout/cancellation runner tests and runtime smoke pass |
 | Runtime health and reconnect recovery | Implemented | Typed health event, bounded provider probe, and automatic reconnect path pass |
-| Platform controls and compact geometry | Implemented | Pause/Resume, More, permanent local runtime rail, runtime health, hide, quit; native visual QA passes |
+| Platform controls and compact geometry | Implemented | Pause/Resume, More, permanent local runtime rail, runtime health, hide, quit; avatar/platform dragging and native visual QA pass |
 | V1 documentation consolidation | Implemented | Active docs are V1-only; former MVP docs are archived |
 | Structural wireframes | Complete | Ten V1 wireframes exist |
 | High-fidelity visual designs | Core batch complete; variants remain | Five-board UI gallery covers all ten wireframes; both four-bot state references exist; production layered assets and secondary failure variants remain |
 | Motion and behavior specifications | Core implementation complete | Nine shared states have deterministic transitions, runtime mapping, Fast/Balanced reduction, reduced-motion behavior, and four-bot visual fixtures |
-| Streaming voice turn manager | Implemented; human qualification pending | Continuous launch listening, provisional captions, clause streaming, Fast English / Balanced multilingual STT, bot TTS, and explicit Understanding state are connected; real-microphone Hinglish and repeated-turn soak remain |
+| Streaming voice turn manager | Implemented; human qualification pending | Continuous launch listening, provisional captions, earlier natural-clause TTS streaming, Fast English / Balanced multilingual STT, bot TTS, and explicit Understanding state are connected; real-microphone Hinglish and repeated-turn soak remain |
+| Truthful local boot | Implemented | ASR, Zipformer, Kokoro, conversation, and final voice-check milestones are shown before Ready; avatar and runtime controls remain unavailable until warm |
+| Companion visual theming | Implemented | Nova, Sterling, Rivit, and Luma each supply a full surface palette; active panel controls follow the selected companion |
+| Expanded panel layout | Implemented | Chat and Today/Preferences may coexist; system notices have their own strip and Chat remains within the native window bounds |
 | Memory and context systems | Not started | Implement local stores, collectors, permissions, and retrieval |
 | Nova Today workspace | Implemented locally | Persistent local focus, reminders, schedule entries, plan steps, and a left-side local month view; macOS Calendar integration remains permissioned future work |
 | Specialist panels and delegation | Contracts only | Build after core context and action boundaries |
@@ -39,7 +42,7 @@ and validated product behavior.
 - Batch 0: V1 foundation and documentation consolidation — complete (`0fa5fe7`)
 - Batch 1: Runtime resilience — complete (`64f7253`)
 - Batch 2: Continuous voice launch slice — implemented; native clean-launch and typed speech QA pass
-- Batch 3: Responsive multilingual voice and visual-state direction — implemented (`80f547c`); 92 tests and production build pass; real-microphone Hinglish and repeated-turn soak remain
+- Batch 3: Responsive multilingual voice and visual-state direction — implemented; 114 JavaScript tests and production build pass; real-microphone Hinglish and repeated-turn soak remain
 - Batch 4: Focused V1 design package — complete; core-surface HTML/PNG gallery, Working/Sleeping/Recovery character reference, asset manifest, wireframe links, and visual QA record added
 - Batch 5: Production companion-state foundation — complete; Ready, Listening, Understanding, Speaking, Working, Paused, Sleeping, Error, and Recovery are implemented and visually qualified across all four bots
 

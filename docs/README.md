@@ -3,6 +3,15 @@
 This directory has one active documentation set: the `V1_*.md` files. V1 is
 the current product plan, implementation scope, and quality source of truth.
 
+## Current implementation snapshot
+
+The desktop widget now has an honest warmup surface, selected-companion color
+palettes, an always-visible local runtime rail, draggable avatar/platform,
+simultaneous Chat plus a left-side Today/Preferences surface, and earlier
+clause-level TTS streaming. The avatar is never presented as alive until the
+selected local runtime is warmed. Nova Today is local-only; external calendar
+and reminder services remain out of scope until explicitly connected.
+
 ## Start here
 
 - [Vision](V1_VISION.md): why MyAvatar exists and what V1 is trying to prove.
