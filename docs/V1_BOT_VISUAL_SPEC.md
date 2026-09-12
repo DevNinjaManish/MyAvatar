@@ -1,5 +1,11 @@
 # MyAvatar V1 bot visual specification
 
+The generated V1 activity-state reference is
+[`design-references/v1-companion-state-reference.png`](design-references/v1-companion-state-reference.png).
+Rows map to Nova, Sterling, Rivit, and Luma; columns map to ready, listening,
+thinking, speaking, and recoverable error. It is a direction and QA reference,
+not a replacement for the current identity portraits or deterministic runtime motion.
+
 ## Direction
 
 V1 uses a shared premium robot-family language with distinct character silhouettes, faces, lighting, movement, and sound. Existing bust artwork is the starting point, not the final asset set.

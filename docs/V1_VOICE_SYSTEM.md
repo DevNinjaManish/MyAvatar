@@ -36,7 +36,7 @@ The bot should not require a rigid push-to-talk rhythm for ordinary conversation
 
 Listening is an active state, not an invisible recording mode. The avatar should show attention through gaze, posture, mouth stillness, listening light, and a subtle input visualizer.
 
-The bot may use short backchannels—such as an acknowledgment, breath, or small reaction—when they help the user feel heard. Backchannels must not cut off the user or compete with their speech.
+The bot may use short backchannels—such as an acknowledgment, breath, or small reaction—when they help the user feel heard. Backchannels must not cut off the user or compete with their speech. Spoken fallbacks are selected from the active bot's persona and the recognized turn context (question, task, or explanation), rotate between alternatives, and remain silent for short social turns.
 
 ## Speaking performance
 
@@ -87,7 +87,7 @@ small persona-specific speed and emotion adjustments, and synchronizes the
 avatar expression with the detected conversational emotion.
 
 Simple greetings and thanks have a direct-response path. Other slow turns may
-receive one cached acknowledgement after 3.5 seconds, cancelled when reply
+receive one cached, contextual persona acknowledgement after 3.5 seconds, cancelled when reply
 audio arrives or the turn stops. Recognition remains loaded between turns and
 low-confidence/repetitive output asks for clarification. Neither language
 detection nor the confidence heuristic guarantees correct code-switching.

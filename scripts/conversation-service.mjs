@@ -17,6 +17,7 @@ import {voiceProfiles} from '../src/app/voice-profiles.js';
 import {SpeechSegments} from '../src/conversation/speech-segments.js';
 import {JsonWorker} from './json-worker.mjs';
 import {quickReply} from '../src/conversation/quick-replies.js';
+import {backchannelFor,shouldBackchannel} from '../src/conversation/backchannels.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
@@ -80,10 +81,10 @@ function warmConversation(){
   fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(60000),body:JSON.stringify({model,messages:[],stream:false,keep_alive:'10m'})})
     .then(async response=>{await response.body?.cancel();if(!response.ok)warmedModels.delete(model);}).catch(()=>warmedModels.delete(model));
 }
-const acknowledgementText={nova:'One moment.',sterling:'One moment, please.',rivet:'Give me a moment.',luma:'Let me think.'};
-function getAcknowledgement(bot){
-  if(!acknowledgementAudio.has(bot))acknowledgementAudio.set(bot,synthesizeSpeech(acknowledgementText[bot],bot).catch(error=>{acknowledgementAudio.delete(bot);throw error;}));
-  return acknowledgementAudio.get(bot);
+function getAcknowledgement(bot,turn,text){
+  const phrase=backchannelFor(bot,turn,text);const key=`${bot}:${phrase}`;
+  if(!acknowledgementAudio.has(key))acknowledgementAudio.set(key,synthesizeSpeech(phrase,bot).catch(error=>{acknowledgementAudio.delete(key);throw error;}));
+  return acknowledgementAudio.get(key);
 }
 
 function spokenTextForSpeech(text){
@@ -152,8 +153,9 @@ server.on('connection',(socket,request)=>{
   const sessionId=randomUUID();let sequence=0;let stopped=new Set();const activeControllers=new Map();let activeBot='nova';
   const pendingAcknowledgements=new Map();
   const histories=new Map();
-  const scheduleAcknowledgement=(turn,bot)=>{
-    const cached=getAcknowledgement(bot);cached.catch(()=>{});
+  const scheduleAcknowledgement=(turn,bot,text)=>{
+    if(!shouldBackchannel(text))return;
+    const cached=getAcknowledgement(bot,turn,text);cached.catch(()=>{});
     const timer=setTimeout(async()=>{try{const audio=await cached;if(pendingAcknowledgements.get(turn)!==timer||stopped.has(turn))return;send({type:'audio',turn,audio,mime:'audio/wav',voice:bots[bot].voice,filler:true});}catch{}},3500);
     pendingAcknowledgements.set(turn,timer);
   };
@@ -211,17 +213,18 @@ server.on('connection',(socket,request)=>{
     if(message.type==='greeting'){
       warmConversation();
       const text=bots[activeBot]?.voice?.greeting||'Hi, I’m ready.';
-      try{send({type:'greeting',text,audio:await synthesizeSpeech(text,activeBot,'happy'),mime:'audio/wav',voice:bots[activeBot]?.voice,emotion:'happy'});getAcknowledgement(activeBot).catch(()=>{});quickSpeech(quickReply('how are you',activeBot),activeBot).catch(()=>{});}
+      try{send({type:'greeting',text,audio:await synthesizeSpeech(text,activeBot,'happy'),mime:'audio/wav',voice:bots[activeBot]?.voice,emotion:'happy'});getAcknowledgement(activeBot,0,'Please help me think through this carefully').catch(()=>{});quickSpeech(quickReply('how are you',activeBot),activeBot).catch(()=>{});}
       catch{send({type:'greeting',text});}
       return;
     }
     if(!['turn','voice'].includes(message.type)||!Number.isInteger(message.turn))return;
     const turn=message.turn;
-    if(message.type==='turn'&&message.speak&&!quickReply(message.text,activeBot))scheduleAcknowledgement(turn,activeBot);
+    if(message.type==='turn'&&message.speak&&!quickReply(message.text,activeBot))scheduleAcknowledgement(turn,activeBot,message.text);
     try{
       let text=message.text;
       if(message.type==='voice'){
         if(typeof message.audio!=='string'||!message.audio)throw Error('No microphone audio was received.');
+        send({type:'recognizing',turn});
         const recognition=await transcribeVoice(message.audio,message.mime);text=recognition.text;
         if(stopped.has(turn)||socket.readyState!==1){stopped.delete(turn);return;}
         send({type:'recognition',turn,text,language:recognition.language,durationMs:recognition.durationMs,uncertain:recognition.uncertain});
@@ -232,7 +235,7 @@ server.on('connection',(socket,request)=>{
         }
         if(!text)throw Error('No speech was recognized. Typed chat is available.');
         send({type:'transcript',turn,text});
-        if(!quickReply(text,activeBot))scheduleAcknowledgement(turn,activeBot);
+        if(!quickReply(text,activeBot))scheduleAcknowledgement(turn,activeBot,text);
       }
       if(typeof text!=='string'||!text.trim())throw Error('Empty request.');
       await answer(turn,text,{speak:message.type==='voice'||message.speak===true});

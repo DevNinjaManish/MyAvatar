@@ -93,9 +93,9 @@ async function startVoiceCapture({automatic=false}={}){
   const socket=runtimeSocket;
   if(!socket||socket.readyState!==WebSocket.OPEN){if(!automatic)showNotice('Conversation service unavailable. Typed chat is available.',true,'warning');return false;}
   try{
-    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0055,onsetMs:110,minSpeechMs:220,silenceMs:650,preRollMs:220,onBargeIn:()=>{
+    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:480,preRollMs:260,releaseRatio:.68,onBargeIn:()=>{
       const turn=activeTurn??turnPlayback.activeTurn;if(turn!==null){runtimeSocket?.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);}stopSpeechPlayback();activeTurn=null;appState.set(STATES.LISTENING);setRuntimeStatus('Listening');
-    },bargeIn:{guardMs:500,threshold:.014,onsetMs:180,minSpeechMs:220,silenceMs:650,preRollMs:160}});
+    },bargeIn:{guardMs:420,threshold:.012,onsetMs:140,minSpeechMs:180,silenceMs:420,preRollMs:200,releaseRatio:.68}});
     if(!started||!audioEngine.setListening(true))throw Error('Microphone listening could not be started.');
     liveVoiceEnabled=true;setVoiceButton(true);appState.set(STATES.LISTENING);setRuntimeStatus('Listening');if(!automatic)showNotice('Listening…');return true;
   }catch(error){endActiveCapture();liveVoiceEnabled=false;setVoiceButton(false);showNotice(`Microphone unavailable: ${error.message}`,false,'warning');return false;}
@@ -175,6 +175,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
     else showNotice(`Runtime unavailable: ${health.reason||'provider health check failed.'}`,true,'warning');
   }
   if(detail?.type==='transcript')showNotice(`Heard: ${detail.text}`);
+  if(detail?.type==='recognizing'){setRuntimeStatus('Understanding…');showNotice('Understanding…');}
   if(detail?.type==='audio'){setRuntimeStatus('Speaking…');if(detail.emotion)avatar.setExpression(detail.emotion);playSpeech(detail.audio,detail.turn).catch(error=>{avatar.setExpression('relaxed');appState.set(STATES.IDLE);showNotice(`Speech output unavailable: ${error.message}`,false,'warning');});}
   if(detail?.type==='speech_unavailable'){appState.set(STATES.IDLE);resumeLiveListening();showNotice(detail.message,false,'warning');}
   if(['done','error'].includes(detail?.type)){

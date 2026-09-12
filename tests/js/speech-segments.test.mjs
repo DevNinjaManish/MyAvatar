@@ -11,3 +11,8 @@ test('final partial sentence is not lost or duplicated',()=>{
   const s=new SpeechSegments();assert.deepEqual(s.push('One. Two? Three'),['One.','Two?']);
   assert.deepEqual(s.push('',true),['Three']);assert.deepEqual(s.push('',true),[]);
 });
+test('long clauses start speaking before the sentence is complete',()=>{
+  const s=new SpeechSegments({clauseThreshold:40});
+  assert.deepEqual(s.push('I understand what you mean, and I am working through the useful answer'),['I understand what you mean,']);
+  assert.deepEqual(s.push('.',true),['and I am working through the useful answer.']);
+});
