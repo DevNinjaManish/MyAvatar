@@ -5,5 +5,7 @@ contextBridge.exposeInMainWorld('desktop',{
   stopDrag:()=>ipcRenderer.send('widget-drag-stop'),
   close:()=>ipcRenderer.send('window-close'),
   minimize:()=>ipcRenderer.send('window-minimize'),
-  resize:(height,width=260)=>ipcRenderer.send('window-resize',height,width)
+  resize:(height,width=260)=>ipcRenderer.send('window-resize',height,width),
+  chooseProject:()=>ipcRenderer.invoke('project-choose'),
+  inspectProject:path=>ipcRenderer.invoke('project-inspect',path)
 });

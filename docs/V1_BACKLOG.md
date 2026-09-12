@@ -47,7 +47,7 @@ Use existing bot assets as provisional placeholders throughout this phase. Asset
 ## Phase 5: panels and delegation
 
 1. [x] Build shared local assistant panel for Nova and Sterling.
-2. [x] Build Rivit coding-panel UI with explicit folder scope and prepared-plan boundary.
+2. [x] Build Rivit coding-panel UI with explicit folder scope, bounded local Git/project summary, and prepared-plan boundary.
 3. [x] Build Luma image-panel UI with Generate/Edit routing and local upload preview.
 4. Add action broker and confirmation UI.
 5. Add interruptible background job queue.

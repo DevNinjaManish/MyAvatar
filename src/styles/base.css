@@ -1247,6 +1247,8 @@ body[data-avatar-glow="false"] #stage::after {
   font-size: 10px;
   font-weight: 800;
 }
+.rivet-recents { display: flex; flex-wrap: wrap; gap: 4px; }
+.rivet-recents button { min-height: 23px; max-width: 100%; padding: 3px 6px; overflow: hidden; border: 1px solid #ffffff16; border-radius: 7px; background: #ffffff08; color: var(--soft); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .luma-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 9px; }
 .luma-mode button { min-height: 31px; border-radius: 9px; background: #ffffff08; color: var(--soft); font-size: 10px; }
 .luma-mode button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 18%, var(--inset)); border-color: var(--accent); color: var(--accent); }

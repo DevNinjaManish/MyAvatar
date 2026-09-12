@@ -1,5 +1,7 @@
-const {app,BrowserWindow,ipcMain,screen,session}=require('electron');
+const {app,BrowserWindow,ipcMain,screen,session,dialog}=require('electron');
 const path=require('node:path');
+const {promises:fs}=require('node:fs');
+const {spawnSync}=require('node:child_process');
 // The compact card ends at roughly 500px; reserve a little space below it so
 // transient system notices are never clipped by the transparent window.
 const COMPACT_HEIGHT=550;
@@ -14,6 +16,7 @@ app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required');
 
 let mainWindow=null;
 let dragTimer=null;
+const approvedProjectPaths=new Set();
 const stopDragging=()=>{if(dragTimer){clearInterval(dragTimer);dragTimer=null;}};
 
 const createWindow=()=>{
@@ -69,6 +72,27 @@ else app.whenReady().then(()=>{
     },16);
   });
   ipcMain.on('widget-drag-stop',event=>{if(event.sender===mainWindow?.webContents)stopDragging();});
+  ipcMain.handle('project-choose',async event=>{
+    if(event.sender!==mainWindow?.webContents)return null;
+    const result=await dialog.showOpenDialog(mainWindow,{title:'Choose a project folder for Rivit',properties:['openDirectory']});
+    const selected=result.canceled?null:result.filePaths[0]||null;
+    if(selected)approvedProjectPaths.add(path.resolve(selected));
+    return selected;
+  });
+  ipcMain.handle('project-inspect',async(event,requestedPath)=>{
+    if(event.sender!==mainWindow?.webContents||typeof requestedPath!=='string')return null;
+    const projectPath=path.resolve(requestedPath);
+    if(!approvedProjectPaths.has(projectPath))return {error:'Choose this folder in Rivit before inspecting it.'};
+    try{
+      const stat=await fs.stat(projectPath);if(!stat.isDirectory())return {error:'That selection is not a folder.'};
+      const entries=await fs.readdir(projectPath,{withFileTypes:true});
+      const visibleEntries=entries.filter(entry=>!entry.name.startsWith('.')).slice(0,200);
+      const git=spawnSync('git',['-C',projectPath,'status','--porcelain=v1','-b'],{encoding:'utf8',timeout:3000});
+      const lines=git.status===0?git.stdout.trim().split('\n').filter(Boolean):[];
+      const branch=lines.find(line=>line.startsWith('## '))?.slice(3).split('...')[0]||null;
+      return {path:projectPath,name:path.basename(projectPath),fileCount:visibleEntries.length,hasMore:entries.length>visibleEntries.length,git:{available:git.status===0,branch,changes:lines.filter(line=>!line.startsWith('## ')).length}};
+    }catch{return {error:'Rivit could not inspect that folder.'};}
+  });
   createWindow();
 });
 
