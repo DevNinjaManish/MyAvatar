@@ -13,7 +13,7 @@ the corresponding item in `V1_ACCEPTANCE.md` complete.
 | Liveness states | Listening, thinking, speaking, working, sleeping, broken, recovery, and reduced motion are clear | Visual state fixtures | Core implementation passing; nine state captures cover all four bots in fixed geometry, native Nova smoke passes |
 | Seeing Eye and context | Off-by-default, scoped permission, provenance, freshness, revoke, and graceful failure | Context integration and native QA | Not started |
 | Action trust | Read, prepare, approve, deny, cancel, and retry boundaries are explicit | Action contract and UI tests | Not started |
-| Specialist panels | Nova/Sterling, Rivit, and Luma panels stay focused and connected to common chat | Panel integration and visual QA | Not started |
+| Specialist panels | Nova/Sterling, Rivit, and Luma panels stay focused and connected to common chat | Panel integration and visual QA | UI shell passing; provider, permission, and approval integration pending |
 | Delegation | Scoped task, visible status, cancellation, timeout, loop rejection, and result return | Delegation contract and soak tests | Foundation only |
 | Setup and repair | Clean install, interrupted download, dependency failure, repair, and resume | Native setup matrix | Not started |
 | Performance profiles | Fast works on 8 GB target; Balanced remains responsive on preferred hardware | Hardware benchmark and thermal logs | Auto RAM selection and More-menu switching implemented; hardware qualification remains |
