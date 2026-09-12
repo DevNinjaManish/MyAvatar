@@ -53,7 +53,9 @@ The bot visual designs are ready when each bot has:
 
 Use the current assets as provisional V1 placeholders. Build the renderer, state machine, voice equalizer, lights, animation timing, panels, and visual QA around stable asset slots. Do not invest in detailed asset polish during the current implementation cycle.
 
-The replacement pass is deferred until image-generation capacity is available. New assets must preserve the established bot identities and runtime contracts so replacement does not require a product rewrite.
+The final art pass is pending, but it is not blocked on a particular image
+generation tool. New assets must preserve the established bot identities and
+runtime contracts so replacement does not require a product rewrite.
 
 ## Recommendation for deferred art pass
 

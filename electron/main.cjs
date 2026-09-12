@@ -7,7 +7,7 @@ let dragTimer=null;
 const createWindow=()=>{
   const area=screen.getPrimaryDisplay().workArea;
   const width=260;
-  const height=470;
+  const height=500;
   const win=new BrowserWindow({
     width,height,
     x:area.x+area.width-width-24,
@@ -30,7 +30,10 @@ else app.whenReady().then(()=>{
   ipcMain.on('window-minimize',event=>{if(event.sender===mainWindow?.webContents) mainWindow.minimize();});
   ipcMain.on('window-resize',(event,height)=>{
     if(event.sender!==mainWindow?.webContents)return;
-    mainWindow.setSize(260,height===770?770:height===500?500:470);
+    const nextHeight=height===770?770:500;
+    const bounds=mainWindow.getBounds();
+    if(bounds.height===nextHeight)return;
+    mainWindow.setSize(260,nextHeight);
   });
   ipcMain.on('widget-drag-start',event=>{
     if(event.sender!==mainWindow?.webContents) return;

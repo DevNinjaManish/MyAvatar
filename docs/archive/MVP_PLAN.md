@@ -1,6 +1,6 @@
 # MyAvatar MVP Plan
 
-This document tracks the implementation milestones for the MyAvatar MVP. The detailed product definition lives in [`docs/mvp/`](mvp/); this file is the execution roadmap.
+This document tracks the implementation milestones for the MyAvatar MVP. The detailed product definition lives in [`archive/mvp/`](mvp/); this file is the historical execution roadmap.
 
 ## MVP outcome
 
@@ -9,7 +9,7 @@ On a clean supported Mac, a user can launch the compact widget, choose a compani
 ## Working rules
 
 - Build in small vertical slices that can be run and checked end to end.
-- Treat [`docs/mvp/SCOPE.md`](mvp/SCOPE.md) as the boundary for MVP feature work.
+- Treat [`archive/mvp/SCOPE.md`](mvp/SCOPE.md) as the boundary for MVP feature work.
 - Use the wireframes and [design reference](mvp/design/DESIGN_REFERENCE.md) before implementing or restyling a surface.
 - Run the native [visual QA workflow](mvp/VISUAL_QA.md) after every UI or layout change.
 - Treat visual QA as mandatory after every UI-affecting run, including small CSS or native-window changes.
@@ -32,7 +32,7 @@ Exit criteria:
 - The team can identify the primary user journey and what is explicitly out of scope.
 - New work can be tied to a documented requirement and acceptance item.
 
-References: [`docs/mvp/README.md`](mvp/README.md), [`docs/mvp/PRODUCT_BRIEF.md`](mvp/PRODUCT_BRIEF.md), [`docs/mvp/SCOPE.md`](mvp/SCOPE.md).
+References: [`archive/mvp/README.md`](mvp/README.md), [`archive/mvp/PRODUCT_BRIEF.md`](mvp/PRODUCT_BRIEF.md), [`archive/mvp/SCOPE.md`](mvp/SCOPE.md).
 
 ### 1. Functional shell and ready state
 

@@ -25,8 +25,32 @@ Rules:
 - `Mic` starts voice interaction and reflects listening/speaking state.
 - `Chat` opens the shared conversation surface.
 - `Bot` opens bot selection and switching.
-- The overflow control contains settings, memory, permissions, pause, and quit.
+- The overflow control opens the More menu defined below.
 - No control should imply a capability that is unavailable.
+
+## Control ownership
+
+```text
+More menu
+├── Runtime health
+├── Hide widget
+└── Quit MyAvatar
+```
+
+- `Pause` is a primary toolbar control, not an overflow item. It stops proactive behavior, listening,
+  speech, and background work; the avatar becomes visibly Paused.
+- More is intentionally compact and contains only implemented operational
+  controls. Future V1 surfaces appear in their own panels when ready, rather
+  than as disabled rows in this menu.
+- `Hide widget` hides the compact widget while leaving the app/runtime alive.
+- `Quit MyAvatar` closes the application and local runtime. It is visually
+  separated from routine controls and confirms when active work would be lost.
+- A panel `×` closes only that panel and returns to the compact widget. It is
+  not the same as hiding or quitting the app.
+- There is no prominent power button in the compact widget. The visual “power”
+  state is reserved for lifecycle animation and recovery, while user control is
+  expressed as Pause/Resume.
+- Opening More must not resize, reposition, or cover the avatar.
 
 ## Expanded common chat
 
@@ -59,6 +83,7 @@ Rules:
 - The transcript shows bot identity when a specialist contributes.
 - `Rivit ▸` is a lightweight specialist handoff cue, not an independent conversation.
 - The user can type, speak, interrupt, stop, clear, switch bots, or open a specialist panel.
+- Closing Chat returns to the compact widget without stopping the bot or runtime.
 - A long-running task shows a compact progress banner without blocking chat.
 - The input stays available while the bot thinks or a specialist works.
 

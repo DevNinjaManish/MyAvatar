@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {companions} from '../../src/app/companions.js';
 
 const config=JSON.parse(readFileSync(new URL('../../config.json',import.meta.url),'utf8'));
-const expectedBots=['rivet','nova','sterling','pixel','luma'];
+const expectedBots=['nova','sterling','rivet','luma'];
 
 test('companion configuration is complete and unique',()=>{
   assert.deepEqual(companions.map(companion=>companion.id),expectedBots);

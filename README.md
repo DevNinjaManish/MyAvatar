@@ -1,8 +1,8 @@
 # MyAvatar
 
-MyAvatar is a local-first macOS companion that lives in one compact widget. The repository is being rebuilt around a small MVP: choose a companion, open chat, send a message, and receive a clear response.
+MyAvatar is a local-first macOS companion that lives in one compact widget. The repository is now in V1 development: Nova is the default voice-first companion, with a local runtime, context-aware behavior, 2.5D presence, and QA-driven iteration.
 
-The current commit is the clean foundation for that rebuild. It contains the widget shell, companion picker, approved visual reference, MVP planning documents, and the small renderer modules needed to begin implementation. Conversation service integration, microphone support, and native qualification are intentionally next work.
+The MVP foundation is complete. V1 planning and implementation guidance live in the [V1 documentation index](docs/README.md).
 
 ## Run the widget
 
@@ -24,19 +24,21 @@ The app is always widget-only. There is no full-screen mode, dashboard, coding w
 ## Repository map
 
 ```text
-docs/mvp/          product scope, acceptance, wireframes, and design reference
+docs/V1_*.md       active V1 product, architecture, design, and QA documentation
+docs/v1-wireframes/ V1 structural wireframes
+docs/archive/      completed MVP documents retained for historical reference
 config.json        small local model and default-companion configuration
 models/            ignored local model assets with a checked-in README
-src/app/           renderer entry point and MVP interaction wiring
+src/app/           renderer entry point and interaction wiring
 src/avatar/        avatar rendering primitives
 src/audio/         microphone, voice activity, and playback contracts
 src/conversation/  chat state and event contracts
-src/styles/        the single MVP stylesheet
+src/styles/        widget styles
 electron/          one native widget window and minimal preload bridge
 tests/js/           focused JavaScript contract tests
 ```
 
-Start with [the MVP planning index](docs/mvp/README.md), then use [the scope](docs/mvp/SCOPE.md), [acceptance checklist](docs/mvp/ACCEPTANCE.md), and [design reference](docs/mvp/design/DESIGN_REFERENCE.md) as implementation constraints.
+Start with [the V1 documentation index](docs/README.md), especially the [scope](docs/V1_SCOPE.md), [backlog](docs/V1_BACKLOG.md), and [acceptance checklist](docs/V1_ACCEPTANCE.md).
 
 ## Validation
 
@@ -47,7 +49,7 @@ npm run doctor
 npm run test:voice
 ```
 
-Native smoke QA is required before calling the MVP stable: launch, drag, companion switching, chat open/close, typed send, stop, quit, and relaunch.
+Native smoke QA and the V1 acceptance checklist are required before calling a V1 slice complete.
 
 ## Local-first rules
 

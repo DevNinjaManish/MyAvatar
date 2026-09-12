@@ -116,4 +116,7 @@ For each V1 bot, create a visual mockup sheet containing:
 
 ## Current status
 
-The existing assets are approved as references and MVP-compatible source material. They are not yet approved as final V1 production art until the layered asset breakdown, expression set, voice visualization, and bot-specific motion direction are demonstrated.
+The existing assets are approved as provisional references and MVP-compatible
+source material. They are not final V1 production art. Final approval requires
+the mockup set above, a layered asset breakdown, expression states, voice
+visualization, bot-specific motion direction, and visual QA references.

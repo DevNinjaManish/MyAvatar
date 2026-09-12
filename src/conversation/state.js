@@ -1,4 +1,4 @@
-export const STATES=Object.freeze({IDLE:'IDLE',LISTENING:'LISTENING',THINKING:'THINKING',SPEAKING:'SPEAKING'});
+export const STATES=Object.freeze({IDLE:'IDLE',LISTENING:'LISTENING',THINKING:'THINKING',SPEAKING:'SPEAKING',PAUSED:'PAUSED'});
 export class AppState extends EventTarget{
   value=STATES.IDLE;
   set(value){

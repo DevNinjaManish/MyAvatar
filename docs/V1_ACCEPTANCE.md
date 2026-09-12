@@ -10,6 +10,10 @@
 - [ ] Activity history is summarized, visible, limited-retention, and never a raw surveillance log.
 - [ ] Proactive behavior feels alive without becoming annoying.
 - [ ] User can pause, mute, dismiss, or say “not now.”
+- [ ] Pause/Resume, panel close, widget hide, and Quit MyAvatar have distinct behavior.
+- [ ] More menu never contains a visible control that silently does nothing.
+- [ ] Pause/Resume is outside More and remains reachable without opening a menu.
+- [ ] More opens below the control card without resizing, repositioning, or covering the avatar.
 
 ## Voice and liveness
 

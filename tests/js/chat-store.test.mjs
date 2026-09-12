@@ -96,3 +96,12 @@ test('standalone action result becomes typed tool result when approval record is
   const store=new ChatStore();store.applyRuntimeEvent({type:'action_result',turn:5,requestId:'missing',ok:false});
   const item=store.snapshot()[0];assert.equal(item.type,'tool-result');assert.equal(item.meta.sideEffect,true);assert.equal(item.text,'Action failed.');
 });
+
+test('delegation and background work become visible chat banners',()=>{
+  const store=new ChatStore();
+  store.applyRuntimeEvent({type:'delegation',sequence:11,specialistBot:'rivit',goal:'Inspect the project',status:'working'});
+  store.applyRuntimeEvent({type:'job',sequence:12,message:'Rivit finished checking the project.',status:'complete'});
+  const items=store.snapshot();
+  assert.equal(items[0].type,'banner');assert.equal(items[0].meta.specialistBot,'rivit');
+  assert.equal(items[1].type,'banner');assert.match(items[1].text,/finished/);
+});

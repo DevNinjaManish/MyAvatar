@@ -2,11 +2,14 @@
 
 ## Medium decision
 
-V1 uses 2D animated companions. The visual system should make 2D feel expressive, responsive, and alive without depending on a 3D avatar pipeline.
+V1 uses layered 2.5D animated companions: 2D artwork assembled into depth-aware
+layers with parallax, lighting, and independent animation. V1 does not require
+a real-time 3D avatar or skeletal 3D pipeline.
 
-2D is the intended V1 medium, not a placeholder for 3D. Future 3D work may be considered separately after the 2D companion language is proven.
+2.5D is the intended V1 medium, not a placeholder for 3D. Future full-3D work
+may be considered separately after the companion language is proven.
 
-## 2D expression system
+## 2.5D expression system
 
 Each bot is assembled from layered visual parts that can animate independently:
 

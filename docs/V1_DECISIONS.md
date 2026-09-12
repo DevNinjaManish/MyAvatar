@@ -61,7 +61,7 @@ V1 supports the full planned context surface. Screen awareness is intermittent w
 
 ### Visual medium
 
-V1 uses 2D animated companions. The shared framework provides layered animation, audio-reactive voice visualization, lighting, effects, and performance adaptation; each bot provides its own art direction and expression language.
+V1 uses layered 2.5D animated companions. The shared framework provides depth-aware layers, audio-reactive voice visualization, lighting, effects, and performance adaptation; each bot provides its own art direction and expression language.
 
 ### Voice performance
 
@@ -89,6 +89,14 @@ Delegation is silent by default. Visual specialist cues and compact system banne
 ### Actions and trust
 
 Bots use tiered permissions. Observation and preparation are the default; low-risk local actions can become trusted; consequential actions require confirmation unless the user explicitly grants a narrower standing permission.
+
+### Presence and window controls
+
+Pause/Resume controls bot presence. Panel close returns to the compact widget;
+Hide widget changes window visibility while keeping the local runtime alive; Quit
+MyAvatar shuts down the application and runtime. V1 does not use a prominent
+power button for these different meanings, and the More menu must not expose
+placeholder controls that appear actionable but do nothing.
 
 ### Installation and onboarding
 
@@ -139,16 +147,20 @@ V1 is built in small vertical slices with contract, unit, integration, native sm
 - The compact widget remains the home of the relationship; new surfaces must earn their place.
 - V1 acceptance must measure repeated-use quality, not only whether a single conversation works.
 
-## Open decisions
+## Decisions to validate during implementation
 
-- What activity history, if any, should be retained beyond the current interaction, for how long, and with what visible controls?
-- What does “everything” mean operationally for relationship memory, how is it ranked, and how can the user inspect, correct, export, or delete it?
-- Which parts of appearance, voice, persona, and behavior are customizable?
-- What capabilities and specializations belong in V1?
-- What is the local model/runtime strategy and supported hardware baseline?
-- What data is stored locally, where, and how is it protected or deleted?
-- What is the minimum quality bar for calling V1 complete, even if public release waits for V2?
-- What latency, interruption, speech quality, and background-work targets define Fast and Balanced?
+These are validation questions, not competing product plans. The defaults below
+are the implementation direction until user testing or qualification shows that
+they need to change.
+
+- Activity history: retain summarized, meaningful events with a visible retention control; never retain raw screenshots as history.
+- Relationship memory: store user-approved or clearly useful facts locally, with source, confidence, edit, export, and forget controls.
+- Customization: allow voice, appearance, intimacy, proactivity, and notification preferences within each bot’s authored boundaries.
+- V1 capability scope: Nova/Sterling assistant, Rivit coding, Luma creative work, shared chat/voice, context, memory, permissions, and bounded delegation.
+- Runtime baseline: local provider adapter with Fast support for 8 GB Macs and Balanced support targeted at 16 GB Macs; Ollama remains replaceable.
+- Local data: store runtime state and memory locally, minimize retention, expose deletion controls, and document paths and protection before release.
+- V1 completion: all acceptance-matrix areas have implementation and QA evidence, plus successful creator daily-use qualification.
+- Performance targets: define measurable latency, interruption, speech, thermal, and background-work thresholds during the Fast/Balanced qualification pass.
 
 ### Resolved recommendations
 

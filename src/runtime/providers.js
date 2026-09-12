@@ -6,8 +6,23 @@ export class ProviderRegistry{
     this.#providers.set(`${kind}:${name}`,provider);return this;
   }
   get(kind,name){return this.#providers.get(`${kind}:${name}`);}
+  resolve(kind,{preferred,fallbacks=[]}={}){
+    const names=[preferred,...fallbacks].filter(Boolean);
+    for(const name of names){const provider=this.get(kind,name);if(provider)return provider;}
+    return undefined;
+  }
   has(kind,name){return this.#providers.has(`${kind}:${name}`);}
   list(kind){return [...this.#providers.keys()].filter(key=>key.startsWith(`${kind}:`)).map(key=>key.slice(kind.length+1));}
+}
+
+export async function checkProviderHealth(provider,{timeoutMs=3000}={}){
+  if(!provider)return {available:false,reason:'Provider is not registered.'};
+  if(typeof provider.health!=='function')return {available:true,provider:provider.name};
+  const timeout=AbortSignal.timeout(timeoutMs);
+  try{
+    const result=await provider.health({signal:timeout});
+    return {available:result!==false,provider:provider.name,...(result&&typeof result==='object'?result:{})};
+  }catch(error){return {available:false,provider:provider.name,reason:error?.message||'Health check failed.'};}
 }
 
 export function createFakeProvider({name='fake',respond=async()=>({})}={}){

@@ -12,7 +12,10 @@ Each major surface receives three artifacts:
 2. **High-fidelity mockup:** final visual direction, layout, typography, color, lighting, and controls.
 3. **Motion/behavior spec:** animation, sound, timing, interruption, reduced-motion behavior, and QA states.
 
-No surface enters implementation without all three, unless it is explicitly a temporary prototype.
+The ten structural wireframes are complete in `docs/v1-wireframes/`. No new
+surface enters final implementation without the other two artifacts, unless it
+is explicitly marked as a temporary prototype. See
+`V1_DESIGN_DELIVERABLES.md` for the tracking checklist.
 
 ## Design system foundations
 
@@ -76,6 +79,9 @@ No surface enters implementation without all three, unless it is explicitly a te
 - Simple settings home
 - Voice, companion, presence, memory, context, performance, and privacy settings
 - Repair, update, unavailable, and reset flows
+- Primary toolbar Pause/Resume control plus compact More menu with Hide widget,
+  Runtime health, and Quit MyAvatar
+- Panel close versus widget hide versus full application quit
 
 ## Mockup review criteria
 
@@ -96,17 +102,19 @@ Approved mockups become visual QA references. Any implementation change affectin
 
 ## Design sequence
 
-1. Lock shared companion geometry and common chat.
-2. Lock the shared liveness/state language.
-3. Audit and improve the current bot artwork for V1 animation readiness.
-4. Define bot-specific art and motion direction.
-5. Design specialist panels.
-6. Design onboarding, permissions, memory, and settings.
-7. Produce high-fidelity mockups and motion specifications.
-8. Build visual QA fixtures before implementation batches begin.
+1. Lock shared 2.5D geometry, common chat, and visual tokens.
+2. Lock the shared liveness/state and motion language.
+3. Produce the shared companion high-fidelity references and QA fixtures.
+4. Define bot-specific art, expression, voice visualization, and motion direction.
+5. Produce specialist panel, context, memory, setup, settings, and recovery references.
+6. Produce motion specifications for each approved surface.
+7. Build visual QA fixtures before each implementation batch.
 
 ## Current visual status
 
 The existing bot busts are provisional V1 assets. They are good enough to build and test the companion, animation states, voice visualization, panels, and QA fixtures. Do not spend the current implementation cycle polishing or redrawing them.
 
-The visual redesign is deferred to a dedicated replacement pass when ImageGen is available. That pass will improve differentiation, expression, layering, voice visualization, and motion readiness while preserving the runtime contracts and asset slots established during V1 development.
+The visual redesign is a dedicated V1 design pass. ImageGen may accelerate asset
+exploration, but it is not a prerequisite for defining the system or producing
+QA references. Replacement art must preserve the runtime contracts and asset
+slots established during V1 development.

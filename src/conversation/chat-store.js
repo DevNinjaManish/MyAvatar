@@ -12,7 +12,7 @@ function cleanFocus(text){
 }
 
 export class ChatStore extends EventTarget{
-  constructor(){super();this.botId='robot';this.botName='Rivet';this.messagesByBot=new Map();this.drafts=new Map();this.focusByBot=new Map();}
+  constructor(){super();this.botId='nova';this.botName='Nova';this.messagesByBot=new Map();this.drafts=new Map();this.focusByBot=new Map();}
   _messages(bot=this.botId){if(!this.messagesByBot.has(bot))this.messagesByBot.set(bot,[]);return this.messagesByBot.get(bot);}
   snapshot(bot=this.botId){return this._messages(bot).map(item=>({...item,meta:{...(item.meta||{})}}));}
   draft(bot=this.botId){return this.drafts.get(bot)||'';}
@@ -72,6 +72,11 @@ export class ChatStore extends EventTarget{
     }
     if(event.type==='done'&&turn!==null){const item=this._find(turn,'assistant');if(item&&!FINAL_STATUSES.has(item.status)){item.status='complete';this._emit('messages');}return;}
     if(event.type==='error'&&turn!==null){const item=this._find(turn,'assistant');if(item&&!FINAL_STATUSES.has(item.status)){item.status='failed';item.meta.error=String(event.message||'Response failed.');this._emit('messages');}return;}
+    if(['delegation','job'].includes(event.type)){
+      const id=`${event.type}-${event.requestId||event.jobId||event.sequence||Date.now()}`;
+      const text=String(event.message||event.goal||event.status||`${event.type==='delegation'?'Delegation':'Background work'} update.`);
+      this.addStructured({id,type:'banner',text,status:'complete',turn,meta:{eventType:event.type,state:event.status||'working',specialistBot:event.specialistBot||null}});return;
+    }
     if(event.type==='greeting'){
       const id=`greeting-${event.operationId||event.sequence||Date.now()}`;
       this._upsert({id,role:'assistant',text:String(event.text||''),status:'complete',meta:{emotion:'happy'}});return;

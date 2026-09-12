@@ -20,6 +20,7 @@ const whisperBinary=process.env.MYAVATAR_WHISPER_BIN||'whisper';
 const whisperModel=process.env.MYAVATAR_WHISPER_MODEL||'tiny';
 const sayBinary='/usr/bin/say';
 const ffmpegBinary=process.env.MYAVATAR_FFMPEG_BIN||'ffmpeg';
+const bots=Object.freeze({nova:{name:'Nova'},sterling:{name:'Sterling'},rivit:{name:'Rivit'},luma:{name:'Luma'}});
 const providerRegistry=new ProviderRegistry();
 providerRegistry.register('conversation','ollama',Object.freeze({
   name:'ollama',
@@ -63,16 +64,19 @@ function voiceSetupError(error){
 const server=new WebSocketServer({host:'127.0.0.1',port});
 server.on('connection',(socket,request)=>{
   if(new URL(request.url,'ws://127.0.0.1').searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
-  const sessionId=randomUUID();let sequence=0;let stopped=new Set();
-  const send=(event)=>socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:'nova',...event}));
-  send({type:'config',config:{conversation:{persona:'nova',provider:conversationProvider.name,profile:performanceProfile},bots:{nova:{name:'Nova'}}},runtime:{provider:conversationProvider.name,profile:performanceProfile,hardware:hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length})}});
+  const sessionId=randomUUID();let sequence=0;let stopped=new Set();const activeControllers=new Map();let activeBot='nova';
+  const send=(event)=>socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
+  const sendConfig=()=>send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider.name,profile:performanceProfile},bots},runtime:{provider:conversationProvider.name,profile:performanceProfile,hardware:hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length})}});
+  sendConfig();
   const answer=async(turn,text,{speak=false}={})=>{
     let spokenText='';
-    await conversationProvider.stream({text,signal:AbortSignal.timeout(30000),onToken(tokenText){
+    const controller=new AbortController();activeControllers.set(turn,controller);
+    const timeout=setTimeout(()=>controller.abort(new Error('Conversation timed out.')),30000);
+    try{await conversationProvider.stream({text,signal:controller.signal,onToken(tokenText){
       if(stopped.has(turn))return;
       spokenText+=tokenText;send({type:'token',turn,text:tokenText});
-    }});
-    if(stopped.has(turn)){stopped.delete(turn);return;}
+    }});}finally{clearTimeout(timeout);activeControllers.delete(turn);}
+    if(stopped.has(turn)||controller.signal.aborted){stopped.delete(turn);return;}
     if(speak){
       try{send({type:'audio',turn,audio:await synthesizeSpeech(spokenText),mime:'audio/wav'});}
       catch(error){send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
@@ -81,7 +85,8 @@ server.on('connection',(socket,request)=>{
   };
   socket.on('message',async raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{return;}
-    if(message.type==='stop'){stopped.add(message.turn);return;}
+    if(message.type==='stop'){stopped.add(message.turn);activeControllers.get(message.turn)?.abort(new Error('Turn stopped by user.'));return;}
+    if(message.type==='switch_bot'&&typeof message.botId==='string'&&bots[message.botId]){activeBot=message.botId;sendConfig();return;}
     if(!['turn','voice'].includes(message.type)||!Number.isInteger(message.turn))return;
     const turn=message.turn;
     try{
@@ -94,7 +99,7 @@ server.on('connection',(socket,request)=>{
       }
       if(typeof text!=='string'||!text.trim())throw Error('Empty request.');
       await answer(turn,text,{speak:message.type==='voice'});
-    }catch(error){if(!stopped.has(turn))send({type:'error',turn,message:`${message.type==='voice'?'Voice':'Conversation'} unavailable: ${message.type==='voice'?voiceSetupError(error):error.message}`});stopped.delete(turn);}
+    }catch(error){if(!stopped.has(turn)&&error?.name!=='AbortError')send({type:'error',turn,message:`${message.type==='voice'?'Voice':'Conversation'} unavailable: ${message.type==='voice'?voiceSetupError(error):error.message}`});stopped.delete(turn);}
   });
 });
 server.on('listening',()=>console.log(`Conversation service listening on ws://127.0.0.1:${port}`));

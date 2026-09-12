@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {createDelegationEnvelope,createRuntimeEvent,isRuntimeEvent} from '../../src/runtime/contracts.js';
 import {detectPerformanceProfile,hardwareSummary,PERFORMANCE_PROFILES} from '../../src/runtime/profiles.js';
-import {ProviderRegistry,createFakeProvider} from '../../src/runtime/providers.js';
+import {ProviderRegistry,checkProviderHealth,createFakeProvider} from '../../src/runtime/providers.js';
 
 test('runtime events have a typed identity and reject unknown types',()=>{
   const event=createRuntimeEvent('readiness',{readiness:'ready'},{sessionId:'s1',sequence:1,botId:'nova'});
@@ -32,4 +32,20 @@ test('provider registry allows model/runtime swapping without caller changes',as
   assert.deepEqual(registry.list('conversation'),['fake']);
   assert.deepEqual(await registry.get('conversation','fake').respond(),{text:'ok'});
   assert.throws(()=>registry.register('conversation','fake',provider),/already registered/);
+});
+
+test('provider resolution prefers the configured provider and supports fallback',()=>{
+  const registry=new ProviderRegistry();
+  const fallback=createFakeProvider({name:'fallback'});
+  registry.register('conversation','fallback',fallback);
+  assert.equal(registry.resolve('conversation',{preferred:'missing',fallbacks:['fallback']}),fallback);
+  assert.equal(registry.resolve('conversation',{preferred:'missing'}),undefined);
+});
+
+test('provider health is bounded and reports failures without throwing',async()=>{
+  const healthy=await checkProviderHealth({name:'fake',health:async()=>({latencyMs:4})});
+  assert.deepEqual(healthy,{available:true,provider:'fake',latencyMs:4});
+  const failed=await checkProviderHealth({name:'offline',health:async()=>{throw Error('offline');}});
+  assert.equal(failed.available,false);
+  assert.match(failed.reason,/offline/);
 });
