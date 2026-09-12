@@ -23,6 +23,8 @@ Rules:
 - The bot remains visible and expressive when chat is closed.
 - `Eye` is the Seeing Eye toggle and visibly changes when active.
 - `Mic` starts voice interaction and reflects listening/speaking state.
+- After microphone consent, `Mic` may start automatically when the local runtime
+  becomes ready; this is a continuous listening session, not push-to-talk.
 - `Chat` opens the shared conversation surface.
 - `Bot` opens bot selection and switching.
 - The overflow control opens the More menu defined below.
@@ -39,6 +41,8 @@ More menu
 
 - `Pause` is a primary toolbar control, not an overflow item. It stops proactive behavior, listening,
   speech, and background work; the avatar becomes visibly Paused.
+- Nova gives one brief ready greeting per app session after runtime readiness;
+  reconnects do not repeat the greeting.
 - More is intentionally compact and contains only implemented operational
   controls. Future V1 surfaces appear in their own panels when ready, rather
   than as disabled rows in this menu.

@@ -10,6 +10,8 @@
 - [ ] Activity history is summarized, visible, limited-retention, and never a raw surveillance log.
 - [ ] Proactive behavior feels alive without becoming annoying.
 - [ ] User can pause, mute, dismiss, or say “not now.”
+- [ ] After first-run microphone consent, the app can start continuous listening when the runtime becomes ready.
+- [ ] Nova gives one short ready greeting per app session without greeting on every reconnect.
 - [ ] Pause/Resume, panel close, widget hide, and Quit MyAvatar have distinct behavior.
 - [ ] More menu never contains a visible control that silently does nothing.
 - [ ] Pause/Resume is outside More and remains reachable without opening a menu.
@@ -18,6 +20,7 @@
 ## Voice and liveness
 
 - [ ] User can complete repeated voice turns without the bot becoming stuck.
+- [ ] Mic remains armed across automatic turns and clearly shows Listening when re-armed after a transient voice error.
 - [ ] Listening, thinking, speaking, interruption, and recovery are visually clear.
 - [ ] User can interrupt speech and receive immediate cancellation.
 - [ ] Speech feels natural in pace, pauses, emphasis, and emotion.

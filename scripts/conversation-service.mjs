@@ -97,6 +97,12 @@ server.on('connection',(socket,request)=>{
       send({type:'health',health:await checkProviderHealth(conversationProvider,{timeoutMs:1500})});
       return;
     }
+    if(message.type==='greeting'){
+      const text='Hi, I’m ready.';
+      try{send({type:'greeting',text,audio:await synthesizeSpeech(text),mime:'audio/wav'});}
+      catch{send({type:'greeting',text});}
+      return;
+    }
     if(!['turn','voice'].includes(message.type)||!Number.isInteger(message.turn))return;
     const turn=message.turn;
     try{
