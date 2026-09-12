@@ -130,7 +130,8 @@ else app.whenReady().then(()=>{
     const image=typeof request.image==='string'?request.image:'';
     if(!prompt||prompt.length>600)return {error:'Describe the image in 600 characters or fewer.'};
     if(image&&(!/^data:image\/(?:png|jpeg|webp);base64,/.test(image)||image.length>16*1024*1024))return {error:'Choose a PNG, JPEG, or WebP image up to 12 MB.'};
-    return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image});
+    const strength=Math.max(.32,Math.min(.76,Number(request.strength)||.46));
+    return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image,strength});
   });
   ipcMain.handle('luma-model-status',async event=>event.sender===mainWindow?.webContents?lumaModelStatus():null);
   ipcMain.handle('luma-model-repair',async event=>{
