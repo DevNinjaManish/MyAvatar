@@ -40,6 +40,7 @@ let activeProfile='fast';
 let recoveryTimer=null;
 let streamingVoiceId=null,streamingFrames=[],streamingSamples=0,nextStreamingVoice=0;
 let runtimeReady=false;
+let bootHideTimer=null;
 let bargePending=false;
 let healthRequested=false;
 const NOVA_WORKSPACE_STORAGE_KEY='myavatar-nova-workspace-v1';
@@ -86,7 +87,10 @@ function showNotice(text,retry=false,variant='info'){const visible=Boolean(text)
 function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
 function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
 function setRuntimeReady(value){
-  runtimeReady=Boolean(value);document.body.classList.toggle('runtime-ready',runtimeReady);stage.setAttribute('aria-busy',String(!runtimeReady));
+  runtimeReady=Boolean(value);clearTimeout(bootHideTimer);const boot=$('boot-progress');
+  if(!runtimeReady){boot.hidden=false;boot.setAttribute('aria-hidden','false');}
+  document.body.classList.toggle('runtime-ready',runtimeReady);stage.setAttribute('aria-busy',String(!runtimeReady));
+  if(runtimeReady){boot.setAttribute('aria-hidden','true');bootHideTimer=setTimeout(()=>{if(runtimeReady)boot.hidden=true;},350);}
   for(const id of ['companion-toggle','mic-toggle','pause-toggle','chat-toggle','workspace-toggle','more-toggle','send-message','message'])$(id).disabled=!runtimeReady;
 }
 function setBootProgress({step=0,total=5,message='Starting local services…'}={}){const percent=Math.max(0,Math.min(100,Math.round((step/Math.max(1,total))*100)));$('boot-detail').textContent=message;$('boot-meter-fill').style.width=`${percent}%`;$('boot-step').textContent=`${percent}% · local only`;}
