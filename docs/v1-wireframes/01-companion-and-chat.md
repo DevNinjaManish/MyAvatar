@@ -15,7 +15,8 @@ Journey: launch → presence → conversation → specialist work → return to 
 │                                │
 │  ┌──────────────────────────┐  │
 │  │ Nova          ● Ready    │  │
-│  │ [Eye] [Mic] [Chat] [Bot] │  │
+│  │ [Mic] [Chat] [Pause] [•••]│ │
+│  │ MODE FAST · RAM · CTX · RATE · CPU │
 │  └──────────────────────────┘  │
 └────────────────────────────────┘
 ```
@@ -31,6 +32,12 @@ Rules:
 - `Bot` opens bot selection and switching.
 - The overflow control opens the More menu defined below.
 - No control should imply a capability that is unavailable.
+- The compact platform always shows five local, live metrics: active profile,
+  system RAM, conversation context, last measured generation rate, and service
+  CPU. A value is shown as `—` until it is actually available; the compact
+  surface does not fabricate an estimate.
+- The rail is operational feedback, not remote telemetry: all values are read
+  from the local runtime and remain on the device.
 
 ## Control ownership
 
@@ -43,8 +50,9 @@ More menu
 
 - `Pause` is a primary toolbar control, not an overflow item. It stops proactive behavior, listening,
   speech, and background work; the avatar becomes visibly Paused.
-- Nova gives one brief ready greeting per app session after runtime readiness;
-  reconnects do not repeat the greeting.
+- Nova gives one brief, locally generated ready greeting per app session after
+  runtime readiness; reconnects do not repeat it. Its wording varies by local
+  time of day and can offer to resume the most recent user topic saved locally.
 - More is intentionally compact and contains only implemented operational
   controls. Future V1 surfaces appear in their own panels when ready, rather
   than as disabled rows in this menu.

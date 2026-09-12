@@ -21,6 +21,7 @@ import {backchannelFor,shouldBackchannel} from '../src/conversation/backchannels
 import {immediateVoiceCommand} from '../src/conversation/voice-routing.js';
 import {languageInstruction,responseLanguageFor} from '../src/conversation/language-routing.js';
 import {speechPlan} from '../src/conversation/speech-plan.js';
+import {contextualGreeting} from '../src/conversation/greeting.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
@@ -187,7 +188,9 @@ async function synthesizeSpeech(text,botId='nova',emotion=null,{speed=1,pauseMs=
 // A 16 GB Mac keeps one Qwen route resident to avoid eviction churn.
 let runtimeBootstrap=null;
 let lastPerformance={tokensPerSecond:null,contextUsed:0};
-function performanceMetrics(){const memory=process.memoryUsage(),total=Math.round(totalmem()/1024/1024),used=Math.round((totalmem()-freemem())/1024/1024);return {systemMemoryUsedMb:used,systemMemoryTotalMb:total,serviceRssMb:Math.round(memory.rss/1024/1024),contextWindow:2048,contextUsed:lastPerformance.contextUsed,tokensPerSecond:lastPerformance.tokensPerSecond,model:modelForProfile(),cpuPercent:null};}
+let cpuSample={usage:process.cpuUsage(),at:process.hrtime.bigint()};
+function sampledCpuPercent(){const now=process.hrtime.bigint(),elapsedMs=Number(now-cpuSample.at)/1e6,delta=process.cpuUsage(cpuSample.usage);cpuSample={usage:process.cpuUsage(),at:now};return elapsedMs>0?Math.round(((delta.user+delta.system)/1000/elapsedMs)*100):0;}
+function performanceMetrics(){const memory=process.memoryUsage(),total=Math.round(totalmem()/1024/1024),used=Math.round((totalmem()-freemem())/1024/1024);return {systemMemoryUsedMb:used,systemMemoryTotalMb:total,serviceRssMb:Math.round(memory.rss/1024/1024),contextWindow:2048,contextUsed:lastPerformance.contextUsed,tokensPerSecond:lastPerformance.tokensPerSecond,model:modelForProfile(),cpuPercent:sampledCpuPercent()};}
 function ensureRuntime(selection=profileSelection){
   if(runtimeBootstrap)return runtimeBootstrap;
   if(['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(selection)){
@@ -271,6 +274,7 @@ server.on('connection',(socket,request)=>{
     await speechChain;
     if(stopped.has(turn)||controller.signal.aborted){stopped.delete(turn);return;}
     histories.set(bot,[...history,{role:'user',content:text},{role:'assistant',content:spokenText}].slice(-12));
+    send({type:'health',health:{available:true,provider:conversationProvider?.name||'unknown'},metrics:performanceMetrics()});
     send({type:'done',turn});
     }finally{controller.abort();activeControllers.delete(turn);}
   };
@@ -313,7 +317,7 @@ server.on('connection',(socket,request)=>{
       return;
     }
     if(message.type==='greeting'){
-      const text=bots[activeBot]?.voice?.greeting||'Hi, I’m ready.';
+      const text=contextualGreeting({recentTopic:message.recentTopic,previousGreeting:message.previousGreeting});
       try{send({type:'greeting',text,audio:await synthesizeSpeech(text,activeBot,'happy'),mime:'audio/wav',voice:bots[activeBot]?.voice,emotion:'happy'});getAcknowledgement(activeBot,0,'Please help me think through this carefully').catch(()=>{});}
       catch{send({type:'greeting',text});}
       return;

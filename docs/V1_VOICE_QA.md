@@ -2,6 +2,13 @@
 
 Implemented in this batch:
 
+- The compact platform has an always-visible local runtime rail for profile,
+  system RAM, context use, last measured generation rate, and sampled service
+  CPU. Values remain unavailable rather than becoming synthetic placeholders.
+- The initial ready greeting is time-aware and rotates phrasing. The renderer
+  keeps only the most recent concise user topic locally so a later app launch
+  can offer to resume it; reconnects still do not produce another greeting.
+
 - Recent dialogue (six exchanges) retained per bot for the runtime connection;
   Clear conversation removes it. Reconnection does not restore this history.
 - Sentence generation and synthesis overlap. Audio is decoded in arrival order,

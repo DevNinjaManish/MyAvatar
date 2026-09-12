@@ -14,7 +14,7 @@ and validated product behavior.
 | Local conversation service integration | Implemented | MVP WebSocket path preserved; build/tests pass |
 | Provider timeout and cancellation | Implemented | Hard timeout/cancellation runner tests and runtime smoke pass |
 | Runtime health and reconnect recovery | Implemented | Typed health event, bounded provider probe, and automatic reconnect path pass |
-| Platform controls and compact geometry | Implemented | Pause/Resume, More, runtime health, hide, quit; native visual QA passes |
+| Platform controls and compact geometry | Implemented | Pause/Resume, More, permanent local runtime rail, runtime health, hide, quit; native visual QA passes |
 | V1 documentation consolidation | Implemented | Active docs are V1-only; former MVP docs are archived |
 | Structural wireframes | Complete | Ten V1 wireframes exist |
 | High-fidelity visual designs | Core batch complete; variants remain | Five-board UI gallery covers all ten wireframes; both four-bot state references exist; production layered assets and secondary failure variants remain |

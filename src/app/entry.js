@@ -40,6 +40,7 @@ let recoveryTimer=null;
 let streamingVoiceId=null,streamingFrames=[],streamingSamples=0,nextStreamingVoice=0;
 let runtimeReady=false;
 let bargePending=false;
+let healthRequested=false;
 const MAX_RECONNECT_ATTEMPTS=Infinity;
 const PROFILE_IDS=['auto','fast','balanced'];
 const AVATAR_SCALES={small:.9,normal:1,large:1.08};
@@ -63,7 +64,7 @@ function setOpen(id,open){
   if(id==='companion-picker')$('companion-toggle').setAttribute('aria-expanded',String(open));
   if(id==='more-menu'){$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');if(changed)desktop?.resize?.(open?850:500);}
 }
-function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){desktop?.resize?.(850,350);runtimeSocket?.send(JSON.stringify({type:'health'}));}else desktop?.resize?.($('more-menu').hidden?500:850,260);}
+function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){desktop?.resize?.(850,350);healthRequested=true;runtimeSocket?.send(JSON.stringify({type:'health'}));}else desktop?.resize?.($('more-menu').hidden?500:850,260);}
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
 function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
@@ -94,6 +95,20 @@ function applyProfileUi({profile='fast',selection='auto',hardware=null,settings=
   for(const id of PROFILE_IDS){const button=$(`profile-${id}`);if(button)button.setAttribute('aria-pressed',String(id===selection));}
   const ram=hardware?.memoryGb?` (${hardware.memoryGb} GB RAM)`:'';
   $('profile-summary').textContent=selection==='auto'?`Auto · ${profile[0].toUpperCase()+profile.slice(1)}${ram}`:`${profile[0].toUpperCase()+profile.slice(1)} · selected manually`;
+  $('deck-profile').textContent=profile.toUpperCase();
+}
+function compactGigabytes(megabytes){return Number.isFinite(megabytes)?`${Math.round(megabytes/1024)}G`:'—';}
+function renderPerformance(metrics={},provider='unknown'){
+  const memory=metrics.systemMemoryUsedMb?`${compactGigabytes(metrics.systemMemoryUsedMb)}/${compactGigabytes(metrics.systemMemoryTotalMb)}`:'—';
+  const context=metrics.contextWindow?`${metrics.contextUsed||0}/${Math.round(metrics.contextWindow/1000)}K`:'—';
+  const generation=Number.isFinite(metrics.tokensPerSecond)?`${metrics.tokensPerSecond}/s`:'—';
+  const cpu=Number.isFinite(metrics.cpuPercent)?`${metrics.cpuPercent}%`:'—';
+  $('deck-memory').textContent=memory;$('deck-context').textContent=context;$('deck-generation').textContent=generation;$('deck-cpu').textContent=cpu;
+  $('metric-memory').textContent=metrics.systemMemoryUsedMb?`${metrics.systemMemoryUsedMb} / ${metrics.systemMemoryTotalMb} MB`:'Unavailable';
+  $('metric-context').textContent=metrics.contextWindow?`${metrics.contextUsed||0} / ${metrics.contextWindow} tok`:'—';
+  $('metric-generation').textContent=Number.isFinite(metrics.tokensPerSecond)?`${metrics.tokensPerSecond} tok/s`:'Awaiting a reply';
+  $('metric-cpu').textContent=Number.isFinite(metrics.cpuPercent)?`${metrics.cpuPercent}% service`:'Sampling…';
+  $('metric-model').textContent=metrics.model||runtimeInfo?.model||provider;
 }
 function selectProfile(selection){
   if(!PROFILE_IDS.includes(selection))return;
@@ -210,7 +225,7 @@ function renderMessages(){
   }
   messages.scrollTop=messages.scrollHeight;
 }
-chat.addEventListener('change',renderMessages);
+chat.addEventListener('change',()=>{renderMessages();const focus=chat.focus();if(focus)localStorage.setItem('myavatar-last-topic',focus);});
  $('messages').addEventListener('click',event=>{const button=event.target.closest('[data-retry-turn]');if(!button||activeTurn!==null)return;const text=chat.userTextForTurn(Number(button.dataset.retryTurn));$('message').value=text;$('chat-form').requestSubmit();});
 window.addEventListener('myavatar:runtime-event',event=>{
   const detail=event.detail;chat.applyRuntimeEvent(detail);const nextPresence=presenceStateForEvent(detail,appState.value);
@@ -222,7 +237,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
     runtimeInfo=detail.runtime||runtimeInfo;
     applyProfileUi({profile:detail.runtime?.profile||activeProfile,selection:detail.runtime?.profileSelection||profileSelection,hardware:detail.runtime?.hardware,settings:detail.runtime?.profileSettings});
     setRuntimeStatus(appState.value===STATES.RECOVERY?'Recovering…':'Ready');
-    if(!greetingSent){greetingSent=true;clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>startVoiceCapture({automatic:true}),8000);if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'greeting'}));}
+    if(!greetingSent){greetingSent=true;clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>startVoiceCapture({automatic:true}),8000);if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'greeting',recentTopic:localStorage.getItem('myavatar-last-topic')||'',previousGreeting:localStorage.getItem('myavatar-last-greeting')||''}));}
     else if(!liveVoiceEnabled&&!paused)startVoiceCapture({automatic:true});
   }
   if(detail?.type==='readiness'){
@@ -240,14 +255,14 @@ window.addEventListener('myavatar:runtime-event',event=>{
   if(['job','delegation'].includes(detail?.type)&&['started','queued','running','working'].includes(detail.status))setRuntimeStatus('Working');
   if(detail?.type==='greeting'){
     clearTimeout(greetingTimer);greetingTimer=null;
+    if(detail.text)localStorage.setItem('myavatar-last-greeting',detail.text);
     if(detail.audio)playGreeting(detail.audio).catch(()=>startVoiceCapture({automatic:true}));else{showNotice(detail.text||'Ready');startVoiceCapture({automatic:true});setTimeout(()=>showNotice(''),1600);}
   }
   if(detail?.type==='health'){
     const health=detail.health||{};
     const provider=health.provider||runtimeInfo?.provider||'unknown';
-    const metrics=detail.metrics||{};$('performance-state').textContent=health.available?'Healthy':'Unavailable';$('metric-memory').textContent=metrics.systemMemoryUsedMb?`${metrics.systemMemoryUsedMb} / ${metrics.systemMemoryTotalMb} MB`:'Unavailable';$('metric-context').textContent=metrics.contextWindow?`${metrics.contextUsed||0} / ${metrics.contextWindow} tok`:'—';$('metric-generation').textContent=metrics.tokensPerSecond?`${metrics.tokensPerSecond} tok/s`:'Awaiting a reply';$('metric-cpu').textContent=metrics.cpuPercent!==undefined?`${metrics.cpuPercent}% service`:'—';$('metric-model').textContent=metrics.model||runtimeInfo?.model||provider;
-    if(health.available&&!document.body.classList.contains('performance-open'))showNotice(`Runtime: ${provider} · ${runtimeInfo?.profile||'unknown'} · ready`,false,'info');
-    else showNotice(`Runtime unavailable: ${health.reason||'provider health check failed.'}`,true,'warning');
+    const metrics=detail.metrics||{};$('performance-state').textContent=health.available?'Healthy':'Unavailable';renderPerformance(metrics,provider);
+    if(healthRequested){healthRequested=false;if(health.available&&!document.body.classList.contains('performance-open'))showNotice(`Runtime: ${provider} · ${runtimeInfo?.profile||'unknown'} · ready`,false,'info');else if(!health.available)showNotice(`Runtime unavailable: ${health.reason||'provider health check failed.'}`,true,'warning');}
   }
   if(detail?.type==='transcript')showNotice(`Heard: ${detail.text}`);
   if(detail?.type==='partial_transcript'){setRuntimeStatus('Hearing…');showNotice(`Hearing: ${detail.text}`);}
@@ -308,3 +323,4 @@ renderMessages();
 window.addEventListener('myavatar:socket-close',()=>stopSpeechPlayback());
 $('clear-chat').addEventListener('click',()=>{if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'clear_history'}));});
 connectRuntime();
+setInterval(()=>{if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'health'}));},5000);
