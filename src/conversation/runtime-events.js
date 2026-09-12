@@ -29,7 +29,7 @@ export function noteClientMessage(data,win){
   if(typeof data!=='string')return;
   try{
     const message=JSON.parse(data);
-    if(message?.type==='turn'){
+    if(['turn','voice'].includes(message?.type)){
       // Voice capture stays allocated in live mode, but its gate must close for
       // every outgoing turn, including typed turns. This prevents background
       // audio from starting a second turn while the first is still processing.

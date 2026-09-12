@@ -57,6 +57,15 @@ test('outgoing turns suspend an existing live listening gate before processing',
   turnPlayback.cancelTurn();engine.endCapture();
 });
 
+test('outgoing voice turns register audio playback coordination',()=>{
+  const win=new EventTarget();
+  noteClientMessage(JSON.stringify({type:'voice',turn:78,audio:'encoded',mime:'audio/wav'}),win);
+  assert.equal(turnPlayback.activeTurn,78);
+  assert.equal(turnPlayback.noteServerEvent({type:'audio',turn:78}),true);
+  assert.equal(turnPlayback.snapshot().expected,1);
+  turnPlayback.cancelTurn();
+});
+
 test('approval decisions accept only the narrow allow-once or deny contract',()=>{
   assert.equal(validApprovalDecision({requestId:'abc',decision:'allow_once'}),true);
   assert.equal(validApprovalDecision({requestId:'abc',decision:'deny'}),true);
