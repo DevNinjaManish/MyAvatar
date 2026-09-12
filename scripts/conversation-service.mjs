@@ -187,6 +187,12 @@ async function synthesizeSpeech(text,botId='nova',emotion=null,{speed=1,pauseMs=
 // dependency and the profile-selected conversation route have initialized.
 // A 16 GB Mac keeps one Qwen route resident to avoid eviction churn.
 let runtimeBootstrap=null;
+let runtimeWarmup={state:'warming',ready:false,step:0,total:5,message:'Starting local services…'};
+const warmupSubscribers=new Set();
+function publishWarmup(step,message){
+  runtimeWarmup={state:'warming',ready:false,step,total:5,message};
+  for(const notify of warmupSubscribers)notify(runtimeWarmup);
+}
 let lastPerformance={tokensPerSecond:null,contextUsed:0};
 let cpuSample={usage:process.cpuUsage(),at:process.hrtime.bigint()};
 function sampledCpuPercent(){const now=process.hrtime.bigint(),elapsedMs=Number(now-cpuSample.at)/1e6,delta=process.cpuUsage(cpuSample.usage);cpuSample={usage:process.cpuUsage(),at:now};return elapsedMs>0?Math.round(((delta.user+delta.system)/1000/elapsedMs)*100):0;}
@@ -198,17 +204,21 @@ function ensureRuntime(selection=profileSelection){
     performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),modelIdentifier:macModelIdentifier,requested:profileSelection});
   }
   whisperModel=whisperModelForProfile(performanceProfile);
+  publishWarmup(0,'Starting local voice services…');
   recognizer=createRecognizer(whisperModel);
-  runtimeBootstrap=Promise.all([
-    recognizer.ready,
-    streamingRecognizer?.ready||Promise.reject(Error('Local Zipformer model is unavailable.')),
-    kokoroWorkerReady,
-  ]).then(async()=>{
+  let completedStages=0;
+  const markWarmupStage=message=>publishWarmup(++completedStages,message);
+  const recognitionReady=recognizer.ready.then(()=>markWarmupStage('Multilingual speech recognition is ready…'));
+  const captionsReady=(streamingRecognizer?.ready||Promise.reject(Error('Local Zipformer model is unavailable.'))).then(()=>markWarmupStage('Live captions and voice commands are ready…'));
+  const voiceReady=kokoroWorkerReady.then(()=>markWarmupStage('Your companion’s voice is ready…'));
+  runtimeBootstrap=Promise.all([recognitionReady,captionsReady,voiceReady]).then(async()=>{
     const selectedModel=modelForProfile();
+    publishWarmup(4,`Warming ${performanceProfile} conversation…`);
     await warmConversation(selectedModel);
     const inactiveModel=performanceProfile===PERFORMANCE_PROFILES.BALANCED?fastConversationModel():balancedConversationModel();
     if(inactiveModel!==selectedModel)await unloadConversation(inactiveModel);
     await synthesizeSpeech('Ready.','nova');
+    publishWarmup(5,'Final voice check…');
   });
   runtimeBootstrap.catch(()=>{});
   return runtimeBootstrap;
@@ -241,7 +251,10 @@ server.on('connection',(socket,request)=>{
     if(socket.readyState===1)socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
   };
   const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),fastModel:fastConversationModel(),balancedModel:balancedConversationModel(),recognitionProvider,recognitionModel:whisperModel,recognitionLanguage,streamingRecognition:streamingReady?'zipformer-provisional-en':'unavailable',voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
-  send({type:'readiness',readiness:{state:'warming',ready:false,message:'Warming local models…'}});
+  const sendWarmup=readiness=>send({type:'readiness',readiness});
+  warmupSubscribers.add(sendWarmup);
+  sendWarmup(runtimeWarmup);
+  socket.once('close',()=>warmupSubscribers.delete(sendWarmup));
   bootstrap.then(sendConfig).catch(error=>send({type:'readiness',readiness:{state:'unavailable',ready:false,message:`Runtime warmup failed: ${error.message}`}}));
   const answer=async(turn,text,{speak=false,recognizedLanguage=''}={})=>{
     let spokenText='';const bot=activeBot;const history=histories.get(bot)||[];

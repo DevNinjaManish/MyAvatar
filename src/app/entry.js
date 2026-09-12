@@ -86,6 +86,7 @@ function showNotice(text,retry=false,variant='info'){const visible=Boolean(text)
 function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
 function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
 function setRuntimeReady(value){runtimeReady=Boolean(value);document.body.classList.toggle('runtime-ready',runtimeReady);stage.setAttribute('aria-busy',String(!runtimeReady));for(const id of ['mic-toggle','pause-toggle','send-message'])$(id).disabled=!runtimeReady;}
+function setBootProgress({step=0,total=5,message='Starting local services…'}={}){const percent=Math.max(0,Math.min(100,Math.round((step/Math.max(1,total))*100)));$('boot-detail').textContent=message;$('boot-meter-fill').style.width=`${percent}%`;$('boot-step').textContent=`${percent}% · local only`;}
 function loadNovaWorkspace(){try{return normalizeNovaWorkspace(JSON.parse(localStorage.getItem(NOVA_WORKSPACE_STORAGE_KEY)||'{}'));}catch{return emptyNovaWorkspace();}}
 function saveNovaWorkspace(){localStorage.setItem(NOVA_WORKSPACE_STORAGE_KEY,JSON.stringify(novaWorkspace));renderNovaWorkspace();}
 function localDateLabel(value){if(!value)return 'Any time';const date=new Date(value);return Number.isNaN(date.valueOf())?'Any time':new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(date);}
@@ -266,8 +267,8 @@ window.addEventListener('myavatar:runtime-event',event=>{
   }
   if(detail?.type==='readiness'){
     setRuntimeReady(detail.readiness?.ready===true);
-    if(detail.readiness?.state==='warming'){appState.set(STATES.SLEEPING);setRuntimeStatus(detail.readiness.message||'Warming…');}
-    if(detail.readiness?.state==='unavailable'){appState.set(STATES.ERROR);setRuntimeStatus('Unavailable');showNotice(detail.readiness.message||'Runtime warmup failed.',true,'warning');}
+    if(detail.readiness?.state==='warming'){appState.set(STATES.SLEEPING);setRuntimeStatus(detail.readiness.message||'Warming…');setBootProgress(detail.readiness);}
+    if(detail.readiness?.state==='unavailable'){appState.set(STATES.ERROR);setRuntimeStatus('Unavailable');$('boot-title').textContent='Setup needs attention';setBootProgress({step:0,message:'Local runtime unavailable'});showNotice(detail.readiness.message||'Runtime warmup failed.',true,'warning');}
   }
   if(detail?.type==='profile'){
     runtimeInfo={...runtimeInfo,profile:detail.profile,profileSelection:detail.selection,profileSettings:detail.settings,hardware:detail.hardware};

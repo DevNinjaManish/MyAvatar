@@ -13,6 +13,13 @@
           <span id="glance-date"></span><strong id="glance-time"></strong><span id="glance-city" hidden></span>
         </aside>
         <div id="stage" aria-label="Companion avatar" aria-busy="true"></div>
+        <div id="boot-progress" class="boot-progress" role="status" aria-live="polite">
+          <div class="boot-orbit" aria-hidden="true"><i></i></div>
+          <strong id="boot-title">Starting MyAvatar</strong>
+          <span id="boot-detail">Starting local services…</span>
+          <div class="boot-meter" aria-hidden="true"><i id="boot-meter-fill"></i></div>
+          <small id="boot-step">0% · local only</small>
+        </div>
         <div class="presence-chip" aria-live="polite"><i></i><span id="stage-status">Warming…</span><small id="barge-hint" hidden>Speak to interrupt</small></div>
       </div>
       <section class="widget-card" aria-label="Companion controls">
