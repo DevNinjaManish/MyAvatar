@@ -172,7 +172,7 @@ textarea:focus-visible {
   font-weight: 580;
 }
 .identity-state {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 5px;
   max-width: 92px;
@@ -230,11 +230,11 @@ textarea:focus-visible {
 .chat-panel {
   position: absolute;
   z-index: 5;
-  top: 480px;
+  top: 510px;
   left: 0;
   width: 240px;
-  height: 270px;
-  min-height: 270px;
+  height: 250px;
+  min-height: 250px;
   padding: 10px;
   border-radius: 18px;
 }
@@ -292,8 +292,8 @@ textarea:focus-visible {
   font-weight: 700;
 }
 .messages {
-  min-height: 160px;
-  max-height: 160px;
+  min-height: 140px;
+  max-height: 140px;
   overflow: auto;
   padding: 12px 2px 8px;
   color: var(--soft);
@@ -411,8 +411,8 @@ textarea:focus-visible {
   font-weight: 500;
 }
 .more-menu {
-  top: 318px;
-  max-height: 430px;
+  top: 510px;
+  max-height: 330px;
   overflow: auto;
 }
 .more-menu header {
@@ -778,7 +778,7 @@ body[data-avatar-glow="false"] #stage::after {
   transform: translateY(7px) scale(var(--avatar-scale, 1));
 }
 .mvp-widget:has(#more-menu:not([hidden])) main {
-  height: 810px;
+  height: 500px;
 }
 .more-menu {
   max-height: 500px;
@@ -956,26 +956,48 @@ body[data-avatar-glow="false"] #stage::after {
 }
 .workspace-open.mvp-widget,
 .workspace-open .mvp-widget {
-  width: 610px;
+  width: 630px;
 }
 .workspace-open.mvp-widget main {
-  width: 590px;
+  width: 610px;
 }
 .workspace-open .stage-frame {
   position: absolute;
   top: 0;
-  left: 350px;
+  left: 370px;
   width: 240px;
 }
 .workspace-open .widget-card {
-  left: 350px;
+  left: 370px;
+}
+.more-open.mvp-widget,
+.more-open .mvp-widget {
+  width: 630px;
+}
+.more-open.mvp-widget main {
+  width: 610px;
+}
+.more-open .stage-frame {
+  position: absolute;
+  top: 0;
+  left: 370px;
+  width: 240px;
+}
+.more-open .widget-card {
+  left: 370px;
+}
+.more-open .more-menu {
+  top: 10px;
+  left: 0;
+  width: 350px;
+  max-height: 500px;
 }
 .nova-workspace {
   position: absolute;
   z-index: 8;
   top: 10px;
   left: 0;
-  width: 330px;
+  width: 350px;
   max-height: 500px;
   overflow: auto;
   padding: 11px;

@@ -3,7 +3,7 @@ const path=require('node:path');
 const COMPACT_HEIGHT=520;
 const CHAT_HEIGHT=770;
 const PREFERENCES_HEIGHT=850;
-const WORKSPACE_WIDTH=610;
+const WORKSPACE_WIDTH=630;
 
 // V1 voice is intentionally automatic after runtime readiness. Allow the
 // local widget to resume its AudioContext and play the greeting without a
@@ -46,11 +46,11 @@ else app.whenReady().then(()=>{
     const bounds=mainWindow.getBounds();
     const nextWidth=width===WORKSPACE_WIDTH?WORKSPACE_WIDTH:width===350?350:260;
     if(bounds.height===nextHeight&&bounds.width===nextWidth)return;
-    // Keep the lower edge stable while a panel opens. A taller Preferences
-    // sheet must grow upward rather than disappearing below the desktop.
+    // The companion itself is the visual anchor. Expand panels below it where
+    // possible, so opening Chat or More never appears to make the bot jump.
     const display=screen.getDisplayMatching(bounds).workArea;
-    const bottom=Math.min(bounds.y+bounds.height,display.y+display.height-24);
-    const nextY=Math.max(display.y,bottom-nextHeight),right=Math.min(bounds.x+bounds.width,display.x+display.width-24);
+    const nextY=Math.max(display.y,Math.min(bounds.y,display.y+display.height-nextHeight-24));
+    const right=Math.min(bounds.x+bounds.width,display.x+display.width-24);
     mainWindow.setBounds({x:Math.max(display.x,right-nextWidth),y:nextY,width:nextWidth,height:nextHeight});
   });
   ipcMain.on('widget-drag-start',event=>{
