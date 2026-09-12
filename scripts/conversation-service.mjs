@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {promises as fs} from 'node:fs';
-import {execFile,spawn} from 'node:child_process';
+import {execFile,spawn,spawnSync} from 'node:child_process';
 import {promisify} from 'node:util';
 import {tmpdir} from 'node:os';
 import {arch, totalmem, cpus} from 'node:os';
@@ -19,18 +19,19 @@ import {JsonWorker} from './json-worker.mjs';
 import {JsonEventWorker} from './json-event-worker.mjs';
 import {quickReply} from '../src/conversation/quick-replies.js';
 import {backchannelFor,shouldBackchannel} from '../src/conversation/backchannels.js';
-import {immediateVoiceCommand,useComplexConversationModel} from '../src/conversation/voice-routing.js';
+import {immediateVoiceCommand} from '../src/conversation/voice-routing.js';
 import {languageInstruction,responseLanguageFor} from '../src/conversation/language-routing.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
 const requestedProfile=process.env.MYAVATAR_PERFORMANCE_PROFILE||'auto';
-const machine=hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length});
+const macModelIdentifier=process.platform==='darwin'?spawnSync('sysctl',['-n','hw.model'],{encoding:'utf8'}).stdout.trim():'';
+const machine=hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length,modelIdentifier:macModelIdentifier});
 let profileSelection=['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(requestedProfile)?requestedProfile:'auto';
-let performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:profileSelection});
-const normalConversationModel=()=>process.env.MYAVATAR_CONVERSATION_MODEL||'huihui_ai/qwen3.5-abliterated:4b';
-const complexConversationModel=()=>process.env.MYAVATAR_COMPLEX_MODEL||'huihui_ai/qwen3.5-abliterated:9b';
-const modelForRequest=text=>useComplexConversationModel(text)?complexConversationModel():normalConversationModel();
+let performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),modelIdentifier:macModelIdentifier,requested:profileSelection});
+const fastConversationModel=()=>process.env.MYAVATAR_FAST_MODEL||'huihui_ai/qwen3.5-abliterated:4b';
+const balancedConversationModel=()=>process.env.MYAVATAR_BALANCED_MODEL||'huihui_ai/qwen3.5-abliterated:9b';
+const modelForProfile=()=>performanceProfile===PERFORMANCE_PROFILES.BALANCED?balancedConversationModel():fastConversationModel();
 const requestedProvider=process.env.MYAVATAR_CONVERSATION_PROVIDER||'ollama';
 const ollamaUrl='http://127.0.0.1:11434/api/chat';
 const exec=promisify(execFile);
@@ -72,7 +73,7 @@ providerRegistry.register('conversation','ollama',Object.freeze({
     if(!response.ok)return {available:false,reason:`Local model returned HTTP ${response.status}.`};
     return {available:true};
   },
-  async stream({text,signal,onToken,botId='nova',history=[],model=normalConversationModel(),replyLanguage='english'}){
+  async stream({text,signal,onToken,botId='nova',history=[],model=fastConversationModel(),replyLanguage='english'}){
     const profile=voiceProfiles[botId]||voiceProfiles.nova;
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal,
       body:JSON.stringify({model,stream:true,think:false,options:{num_predict:profileSettings(performanceProfile).maxTokens},messages:[{role:'system',content:profile.systemPrompt+' '+languageInstruction(replyLanguage)+' Answer the actual request directly. For spoken requests, begin with one short natural sentence, ideally 4 to 12 words and ending in punctuation, before adding detail. Usually use one to three short spoken sentences. Use ordinary conversational language, no emojis, stage directions, or uninvited flirting. Follow the user’s requested length. Be honest about your capabilities.'},...history,{role:'user',content:text}]})});
@@ -87,8 +88,8 @@ const acknowledgementAudio=new Map();
 const quickAudio=new Map();
 function quickSpeech(text,bot){const key=bot+text;if(!quickAudio.has(key))quickAudio.set(key,synthesizeSpeech(text,bot).catch(error=>{quickAudio.delete(key);throw error;}));return quickAudio.get(key);}
 const warmedModels=new Set();
-async function warmConversation(model=normalConversationModel()){
-  if(warmedModels.has(model))return;
+async function warmConversation(model=fastConversationModel(),{force=false}={}){
+  if(!force&&warmedModels.has(model))return;
   warmedModels.add(model);
   try{
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(60000),body:JSON.stringify({model,messages:[],stream:false,keep_alive:'10m'})});
@@ -161,16 +162,14 @@ async function synthesizeSpeech(text,botId='nova',emotion=null){
 }
 
 // A companion may present itself as alive only after every mandatory local
-// dependency has initialized and both conversation routes have been exercised.
-// Ollama remains free to evict a route later under memory pressure; the startup
-// gate verifies that each requested route is installed and can load successfully.
+// dependency and the profile-selected conversation route have initialized.
+// A 16 GB Mac keeps one Qwen route resident to avoid eviction churn.
 const runtimeBootstrap=Promise.all([
   recognizer.ready,
   streamingRecognizer?.ready||Promise.reject(Error('Local Zipformer model is unavailable.')),
   kokoroWorkerReady,
 ]).then(async()=>{
-  await warmConversation(normalConversationModel());
-  await warmConversation(complexConversationModel());
+  await warmConversation(modelForProfile());
   await synthesizeSpeech('Ready.','nova');
 });
 runtimeBootstrap.catch(()=>{});
@@ -199,7 +198,7 @@ server.on('connection',(socket,request)=>{
     }
     if(socket.readyState===1)socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
   };
-  const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:normalConversationModel(),complexModel:complexConversationModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,streamingRecognition:streamingReady?'zipformer-provisional-en':'unavailable',voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
+  const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),fastModel:fastConversationModel(),balancedModel:balancedConversationModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,streamingRecognition:streamingReady?'zipformer-provisional-en':'unavailable',voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
   send({type:'readiness',readiness:{state:'warming',ready:false,message:'Warming local models…'}});
   runtimeBootstrap.then(sendConfig).catch(error=>send({type:'readiness',readiness:{state:'unavailable',ready:false,message:`Runtime warmup failed: ${error.message}`}}));
   const answer=async(turn,text,{speak=false,recognizedLanguage=''}={})=>{
@@ -210,6 +209,7 @@ server.on('connection',(socket,request)=>{
       if(speak){const audio=await quickSpeech(quick,bot);if(stopped.has(turn))return;send({type:'audio',turn,audio,mime:'audio/wav',voice:bots[bot].voice});}
       histories.set(bot,[...history,{role:'user',content:text},{role:'assistant',content:quick}].slice(-12));send({type:'done',turn});return;
     }
+    const model=modelForProfile();
     const segments=new SpeechSegments({clauseThreshold:speak?62:88});let speechChain=Promise.resolve();
     const controller=new AbortController();activeControllers.set(turn,controller);
     const queueSpeech=sentence=>{speechChain=speechChain.then(async()=>{
@@ -219,7 +219,6 @@ server.on('connection',(socket,request)=>{
       try{const audio=await synthesizeSpeech(clean,bot,emotion);if(!controller.signal.aborted&&!stopped.has(turn))send({type:'audio',turn,audio,mime:'audio/wav',voice:bots[bot].voice,emotion});}
       catch(error){if(!controller.signal.aborted)send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
     });};
-    const model=modelForRequest(text);
     const replyLanguage=responseLanguageFor(text,recognizedLanguage);
     try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:bot,history,model,replyLanguage},onToken(tokenText){
       if(stopped.has(turn))return;
@@ -256,7 +255,10 @@ server.on('connection',(socket,request)=>{
     if(message.type==='clear_history'){histories.delete(activeBot);return;}
     if(message.type==='switch_bot'&&typeof message.botId==='string'&&bots[message.botId]){activeBot=message.botId;sendConfig();return;}
     if(message.type==='set_profile'&&['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(message.profile)){
-      profileSelection=message.profile;performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:profileSelection});
+      const nextSelection=message.profile;const nextProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),modelIdentifier:macModelIdentifier,requested:nextSelection});
+      const nextModel=nextProfile===PERFORMANCE_PROFILES.BALANCED?balancedConversationModel():fastConversationModel();
+      await warmConversation(nextModel,{force:true});
+      profileSelection=nextSelection;performanceProfile=nextProfile;
       send({type:'profile',profile:performanceProfile,selection:profileSelection,settings:profileSettings(performanceProfile),hardware:machine});
       return;
     }

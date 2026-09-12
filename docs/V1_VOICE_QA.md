@@ -34,9 +34,9 @@ Implemented in this batch:
 - Live barge-in uses its own detector and never performs startup calibration.
   It may interrupt after 260 ms of reply playback when it hears 110 ms of user
   speech; the shorter guard is supported by the browser echo-cancellation path.
-- Normal replies use local `huihui_ai/qwen3.5-abliterated:4b`; complex requests
-  use `huihui_ai/qwen3.5-abliterated:9b`. Environment settings can override each
-  role. The 0.8B model is not exposed in user-facing reply routing.
+- Fast uses local `huihui_ai/qwen3.5-abliterated:4b` for every reply; Balanced
+  uses `huihui_ai/qwen3.5-abliterated:9b` for every reply. The selected model is
+  warmed before the profile becomes active. The 0.8B model is not exposed.
 
 Evidence:
 
@@ -78,10 +78,8 @@ persistent memory are not implemented. These are not implied by passing tests.
   waiting for final sentence punctuation. Spoken generation is instructed to
   lead with a short complete sentence, and uses a lower clause threshold so the
   first WAV can begin sooner.
-- Short social and ordinary spoken requests use the 4B conversation model.
-  Requests that imply explanation, planning, code, analysis, research, design,
-  or other substantial work use 9B. Both routes stream output and remain
-  interruptible.
+- Fast uses 4B for all spoken and typed replies; Balanced uses 9B for all spoken
+  and typed replies. Both routes stream output and remain interruptible.
 - 2026-09-12 benchmark on the target 16GB Apple Silicon Mac: warm Ollama first
   token was 172 ms for 4B and 303 ms for 9B. Cold model-load first token was
   4,750 ms and 7,112 ms respectively. Total generation depends on requested
@@ -95,6 +93,9 @@ persistent memory are not implemented. These are not implied by passing tests.
   produced awkward code-switching that the uncertainty heuristic did not flag.
   Real-microphone Hinglish and noisy-room latency remain human-QA requirements;
   the synthetic benchmark is not evidence that those cases are fully qualified.
+- On this 16 GB Mac, switching from 9B back to Fast took 3,853 ms to restore
+  4B, after which a reply reached first token in 986 ms. That explicit switch is
+  preferable to hidden per-request model eviction and reloads.
 - Repeated/hallucinated recognition and low-confidence segments trigger a
   clarification rather than normal answer generation; this heuristic will not
   catch every incorrect word.

@@ -23,7 +23,8 @@ def normalize_transcript(text):
         repaired = repaired.replace(heard, intended)
     return repaired
 
-model = WhisperModel(sys.argv[1], device='cpu', compute_type='int8', cpu_threads=4)
+CPU_THREADS = max(1, int(os.environ.get('MYAVATAR_WHISPER_CPU_THREADS', '4')))
+model = WhisperModel(sys.argv[1], device='cpu', compute_type='int8', cpu_threads=CPU_THREADS)
 BEAM_SIZE = max(1, int(os.environ.get('MYAVATAR_WHISPER_BEAM_SIZE', '2')))
 
 def decode(path, language=None, beam_size=BEAM_SIZE, prompt=None):

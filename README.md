@@ -61,8 +61,8 @@ MyAvatar is released under the [MIT License](LICENSE).
 
 Create the project virtual environment, install the checked-in voice dependencies,
 and install Ollama. The configured V1 stack uses Faster-Whisper
-`large-v3-turbo`, Zipformer provisional captions, the 4B/9B Qwen conversation
-routes, and Kokoro persona voices:
+`large-v3-turbo`, Zipformer provisional captions, Fast 4B / Balanced 9B Qwen
+profiles, and Kokoro persona voices:
 
 ```sh
 python3 -m venv .venv

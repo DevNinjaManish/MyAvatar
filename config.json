@@ -2,8 +2,8 @@
   "models": {
     "conversation": {
       "provider": "ollama",
-      "model": "huihui_ai/qwen3.5-abliterated:4b",
-      "complexModel": "huihui_ai/qwen3.5-abliterated:9b",
+      "fastModel": "huihui_ai/qwen3.5-abliterated:4b",
+      "balancedModel": "huihui_ai/qwen3.5-abliterated:9b",
       "url": "http://127.0.0.1:11434",
       "context": 2048
     },

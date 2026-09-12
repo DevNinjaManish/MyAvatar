@@ -16,10 +16,13 @@ export const PERFORMANCE_PROFILE_SETTINGS=Object.freeze({
 
 const GB=1024**3;
 
-export function detectPerformanceProfile({arch=process.arch,totalMemoryBytes=0,requested='auto'}={}){
+export function detectPerformanceProfile({arch=process.arch,totalMemoryBytes=0,modelIdentifier='',requested='auto'}={}){
   if(requested===PERFORMANCE_PROFILES.FAST||requested===PERFORMANCE_PROFILES.BALANCED)return requested;
-  // RAM is the primary signal. Architecture remains available in the hardware
-  // summary, but should not unexpectedly force a capable Intel Mac into Fast.
+  const model=String(modelIdentifier).toLowerCase();
+  // Airs default to responsiveness. Pros with adequate memory default to the
+  // richer route; every user may still explicitly choose Fast.
+  if(model.startsWith('macbookair'))return PERFORMANCE_PROFILES.FAST;
+  if(model.startsWith('macbookpro'))return totalMemoryBytes>=16*GB?PERFORMANCE_PROFILES.BALANCED:PERFORMANCE_PROFILES.FAST;
   if(totalMemoryBytes>0&&totalMemoryBytes>=16*GB)return PERFORMANCE_PROFILES.BALANCED;
   return PERFORMANCE_PROFILES.FAST;
 }
@@ -28,12 +31,13 @@ export function profileSettings(profile){
   return PERFORMANCE_PROFILE_SETTINGS[profile]||PERFORMANCE_PROFILE_SETTINGS[PERFORMANCE_PROFILES.FAST];
 }
 
-export function hardwareSummary({arch=process.arch,totalMemoryBytes=0,cpuCount=0}={}){
+export function hardwareSummary({arch=process.arch,totalMemoryBytes=0,cpuCount=0,modelIdentifier=''}={}){
   return Object.freeze({
     architecture:arch,
     supportedArchitecture:arch==='arm64'||arch==='x64',
     memoryGb:totalMemoryBytes?Math.round(totalMemoryBytes/GB):null,
     cpuCount,
+    modelIdentifier:modelIdentifier||null,
     minimumMemoryTargetGb:8,
     preferredMemoryTargetGb:16
   });

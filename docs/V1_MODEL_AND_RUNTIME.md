@@ -42,18 +42,17 @@ selection is retained locally for the next launch. Profile changes affect the
 conversation response budget and avatar rendering load without changing bot
 identity or voice mapping.
 
-Normal conversation uses `huihui_ai/qwen3.5-abliterated:4b`. Requests that imply
-explanation, planning, analysis, research, coding, design, or other substantial
-work route to `huihui_ai/qwen3.5-abliterated:9b`; very long requests do as well.
-`MYAVATAR_CONVERSATION_MODEL` and `MYAVATAR_COMPLEX_MODEL` override those two
-roles. Both models must be present in Ollama. The 0.8B model is not used in
-user-facing replies. Fast and Balanced remain rendering/response-budget
-profiles and no longer trade away conversation quality by selecting 0.8B.
+Fast uses `huihui_ai/qwen3.5-abliterated:4b` for every reply. Balanced uses
+`huihui_ai/qwen3.5-abliterated:9b` for every reply. `MYAVATAR_FAST_MODEL` and
+`MYAVATAR_BALANCED_MODEL` override those two profiles. Both models must be
+present in Ollama. The 0.8B model is not used in user-facing replies.
 
-The configured active stack is approximately 12 GB of model weights on disk
+The configured stack is approximately 12 GB of model weights on disk
 (4B + 9B Qwen, 1.5 GB Whisper, 342 MB Zipformer, and 337 MB Kokoro/voices),
-inside the approximately 20 GB active-model budget. Ollama may evict one Qwen
-route from memory when macOS memory pressure requires it.
+inside the approximately 20 GB active-model budget. Only the selected profile's
+Qwen model is loaded and warmed at a time. Switching profiles warms the next
+model before the profile becomes active, avoiding hidden model swaps during a
+conversation.
 
 Voice inference uses local open-source Faster-Whisper `large-v3-turbo` (int8 CPU) for
 multilingual recognition and Kokoro for English/Hindi speech. It does not use
@@ -72,13 +71,17 @@ immediate-command allowlist (`stop`, `cancel`, `stop talking`, `be quiet`, or
 
 ### Fast
 
-Fast is optimized for slower or resource-constrained Macs. It uses smaller models, shorter context windows, lighter memory retrieval, and reduced visual effects to keep voice interaction responsive.
+Fast is optimized for slower or resource-constrained Macs. It uses 4B for every
+conversation, shorter context windows, lighter memory retrieval, and reduced
+visual effects to keep voice interaction responsive. Auto selects Fast on a
+MacBook Air, and users may always choose it manually on a MacBook Pro.
 
 The Fast conversational model should remain warm in memory where possible so a user can begin speaking without waiting for model startup. When quality and responsiveness conflict, Fast chooses responsiveness.
 
 ### Balanced
 
-Balanced uses additional reasoning depth and richer context when hardware allows, but it must not feel sluggish. The system should stream an early response or provide a truthful conversational acknowledgement while deeper work continues.
+Balanced uses 9B for every reply, richer context, and more visual detail. Auto
+selects it on MacBook Pro hardware with 16 GB or more memory.
 
 Natural filler is allowed when it reflects a real state:
 

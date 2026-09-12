@@ -21,6 +21,9 @@ test('automatic performance selection stays conservative',()=>{
   assert.equal(detectPerformanceProfile({arch:'x64',totalMemoryBytes:32*1024**3}),PERFORMANCE_PROFILES.BALANCED);
   assert.equal(detectPerformanceProfile({arch:'arm64',totalMemoryBytes:16*1024**3}),PERFORMANCE_PROFILES.BALANCED);
   assert.equal(detectPerformanceProfile({arch:'x64',totalMemoryBytes:8*1024**3}),PERFORMANCE_PROFILES.FAST);
+  assert.equal(detectPerformanceProfile({arch:'arm64',totalMemoryBytes:32*1024**3,modelIdentifier:'MacBookAir10,1'}),PERFORMANCE_PROFILES.FAST);
+  assert.equal(detectPerformanceProfile({arch:'arm64',totalMemoryBytes:16*1024**3,modelIdentifier:'MacBookPro18,3'}),PERFORMANCE_PROFILES.BALANCED);
+  assert.equal(detectPerformanceProfile({arch:'arm64',totalMemoryBytes:8*1024**3,modelIdentifier:'MacBookPro18,3'}),PERFORMANCE_PROFILES.FAST);
   assert.equal(detectPerformanceProfile({requested:'fast',arch:'arm64',totalMemoryBytes:64*1024**3}),PERFORMANCE_PROFILES.FAST);
   assert.equal(profileSettings(PERFORMANCE_PROFILES.FAST).maxTokens,192);
   assert.equal(profileSettings(PERFORMANCE_PROFILES.BALANCED).maxTokens,256);
