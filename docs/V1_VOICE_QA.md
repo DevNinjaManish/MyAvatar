@@ -16,12 +16,15 @@ Implemented in this batch:
   uses 420 ms. Room-noise calibration and release hysteresis remain active.
   This is still an energy-based detector, not semantic understanding of whether
   a sentence is finished.
+- Microphone startup includes a 900 ms local room calibration before accepting
+  a turn. Browser echo cancellation, noise suppression, and automatic gain are
+  explicitly requested before the local detector sees audio.
 - Balanced uses local huihui_ai/qwen3.5-abliterated:4b; Fast uses huihui_ai/qwen3.5-abliterated:0.8b. An explicit model
   environment setting overrides both. Models must already be installed.
 
 Evidence:
 
-- 97 JavaScript tests, including ordered decoding, stale decode cancellation,
+- 98 JavaScript tests, including ordered decoding, stale decode cancellation,
   streamed sentence boundaries, and interruption onset with retained speech.
 - Production build passes (existing bundle-size warning remains).
 - Runtime smoke and recorded speech input integration passed.

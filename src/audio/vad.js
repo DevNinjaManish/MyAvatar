@@ -1,17 +1,18 @@
 /** Adaptive, energy-based local turn detector. No model download or network required. */
 export class TurnDetector {
   constructor(sampleRate,{
-    threshold=.009,silenceMs=600,shortSilenceMs=null,shortTurnMs=850,minSpeechMs=280,maxSpeechMs=20000,preRollMs=250,
+    threshold=.009,silenceMs=600,shortSilenceMs=null,shortTurnMs=850,minSpeechMs=280,maxSpeechMs=20000,preRollMs=250,calibrationMs=0,
     onsetMs=140,onsetGraceMs=30,noiseMultiplier=2.2,noiseMargin=.0015,maxThreshold=.035,
     releaseRatio=.72,rejectCooldownMs=0
   }={}){
-    Object.assign(this,{sampleRate,threshold,silenceMs,shortSilenceMs,shortTurnMs,minSpeechMs,maxSpeechMs,preRollMs,onsetMs,onsetGraceMs,noiseMultiplier,noiseMargin,maxThreshold,releaseRatio,rejectCooldownMs});
+    Object.assign(this,{sampleRate,threshold,silenceMs,shortSilenceMs,shortTurnMs,minSpeechMs,maxSpeechMs,preRollMs,calibrationMs,onsetMs,onsetGraceMs,noiseMultiplier,noiseMargin,maxThreshold,releaseRatio,rejectCooldownMs});
     // Begin below the fixed floor, then learn the room while the user is quiet.
     // The estimate survives turn resets so a fan or air conditioner does not
     // repeatedly reopen the microphone gate.
     this.noiseFloor=Math.max(.0004,threshold*.45);
     this.currentThreshold=threshold;
     this.cooldownMs=0;
+    this.calibrationRemainingMs=Math.max(0,calibrationMs);
     this.reset();
   }
   reset(){
@@ -32,6 +33,18 @@ export class TurnDetector {
       sum+=sample*sample;peak=Math.max(peak,Math.abs(sample));
     }
     const rms=Math.sqrt(sum/frame.length);
+    // At microphone start, learn the actual room before accepting a turn. This
+    // prevents a fan, air conditioner, or laptop noise from becoming the first
+    // "speaker". Calibration is intentionally brief and only runs once.
+    if(!this.started&&this.calibrationRemainingMs>0){
+      this.updateNoiseFloor(rms,.14);
+      this.currentThreshold=Math.max(this.threshold,Math.min(this.maxThreshold,this.noiseFloor*this.noiseMultiplier+this.noiseMargin));
+      this.calibrationRemainingMs=Math.max(0,this.calibrationRemainingMs-ms);
+      this.calibrating=this.calibrationRemainingMs>0;
+      while(this.samples>this.sampleRate*this.preRollMs/1000+frame.length){this.samples-=this.frames.shift().length;}
+      return null;
+    }
+    this.calibrating=false;
     this.currentThreshold=Math.max(this.threshold,Math.min(this.maxThreshold,this.noiseFloor*this.noiseMultiplier+this.noiseMargin));
     // A one-sample click has a very high peak-to-average ratio. Treat it as a
     // transient even if it is loud enough to cross the energy threshold.

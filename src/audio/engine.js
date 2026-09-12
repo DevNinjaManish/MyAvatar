@@ -72,7 +72,9 @@ export class AudioEngine{
     const captureGeneration=this._claimCapture(mode);
     await this.ready();if(!this._isCaptureCurrent(captureGeneration))return false;
     let timedOut=false,timeout;
-    const request=navigator.mediaDevices.getUserMedia({audio:{channelCount:{ideal:1},echoCancellation:{ideal:true},noiseSuppression:{ideal:true},autoGainControl:{ideal:true}}});
+    // These are handled by Chromium/the selected device before the local VAD.
+    // Use required booleans rather than hints where the platform supports them.
+    const request=navigator.mediaDevices.getUserMedia({audio:{channelCount:{ideal:1},echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
     request.then(stream=>{if(timedOut||!this._isCaptureCurrent(captureGeneration))this._stopStream(stream);},()=>{});
     let stream;
     try{stream=await Promise.race([request,new Promise((_,reject)=>{timeout=setTimeout(()=>{timedOut=true;reject(Error('Microphone permission is pending. Allow microphone access for Electron in macOS System Settings → Privacy & Security → Microphone, then try again.'));},15000);})]);}
@@ -91,6 +93,8 @@ export class AudioEngine{
   }
   async startLive(onUtterance,settings={}){
     await this.ready();this.detector=new TurnDetector(this.ctx.sampleRate,settings);
+    let calibrationReported=this.detector.calibrationRemainingMs>0;
+    if(calibrationReported)settings.onCalibrationChange?.(true);
     const barge=settings?.bargeIn||{};
     const bargeSettings={...settings,threshold:barge.threshold??Math.max(.014,(settings.threshold??.0055)*2.2),onsetMs:barge.onsetMs??180,minSpeechMs:barge.minSpeechMs??320,silenceMs:barge.silenceMs??300,preRollMs:barge.preRollMs??160,rejectCooldownMs:0};
     delete bargeSettings.bargeIn;this.bargeDetector=new TurnDetector(this.ctx.sampleRate,bargeSettings);this.bargeInGuardMs=barge.guardMs??500;
@@ -99,6 +103,7 @@ export class AudioEngine{
       const generation=this.captureGeneration;
       if(this.liveGate){
         const utterance=this.detector.push(frame);
+        if(calibrationReported&&!this.detector.calibrating){calibrationReported=false;settings.onCalibrationChange?.(false);}
         if(utterance&&this._isCaptureCurrent(generation)){this.liveGate=false;emitInputLevel(0);onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.detector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:false});}
         return;
       }

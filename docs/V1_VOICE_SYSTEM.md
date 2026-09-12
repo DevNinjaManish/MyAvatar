@@ -32,6 +32,12 @@ The voice loop should support:
 
 The bot should not require a rigid push-to-talk rhythm for ordinary conversation. Voice activity detection, endpointing, and user-controlled interruption are core interaction behavior.
 
+At microphone start, the runtime briefly calibrates against the local room so
+steady fan, AC, and device noise do not open the speech gate. Chromium's local
+echo cancellation, noise suppression, and automatic gain controls are enabled
+before the VAD. These measures improve common background noise; they do not
+magically separate nearby human speech or loud television audio from the user.
+
 ## Listening performance
 
 Listening is an active state, not an invisible recording mode. The avatar should show attention through gaze, posture, mouth stillness, listening light, and a subtle input visualizer.
