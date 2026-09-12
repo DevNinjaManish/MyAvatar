@@ -86,3 +86,13 @@ make the first utterance pay setup cost. Spoken replies begin from an early
 natural clause while later text continues to stream into Chat.
 If an authoritative recognizer or TTS asset is unavailable, the widget keeps
 typed chat available and shows a recoverable voice warning.
+
+## Local Luma images
+
+On an Apple Silicon Mac, Luma can generate one 512×512 image at a time or
+transform one uploaded PNG, JPEG, or WebP image. The first Luma request installs
+the SD 1.5 weights under MyAvatar application support; the repository remains
+free of image-model assets. The worker uses Metal with attention slicing for
+16 GB Macs, and both source images and generated PNGs stay on-device. V1 edit
+mode transforms the full image; mask-based object replacement is not yet part
+of the product.

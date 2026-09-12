@@ -48,7 +48,7 @@ Use existing bot assets as provisional placeholders throughout this phase. Asset
 
 1. [x] Build shared local assistant panel for Nova and Sterling.
 2. [x] Build Rivit coding-panel UI with explicit folder scope, bounded local Git/project summary, selected-file evidence, and prepared-plan boundary.
-3. [x] Build Luma image-panel UI with Generate/Edit routing and local upload preview.
+3. [x] Build Luma image-panel UI with Generate/Edit routing, local upload preview, and local Apple-Silicon SD 1.5 generation/whole-image transformation.
 4. Add action broker and confirmation UI.
 5. Add interruptible background job queue.
 6. Add bounded bot delegation envelopes and routing.

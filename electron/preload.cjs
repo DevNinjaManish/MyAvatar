@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('desktop',{
   chooseProject:()=>ipcRenderer.invoke('project-choose'),
   inspectProject:path=>ipcRenderer.invoke('project-inspect',path),
   listProjectFiles:path=>ipcRenderer.invoke('project-list-files',path),
-  readProjectFile:(path,file)=>ipcRenderer.invoke('project-read-file',path,file)
+  readProjectFile:(path,file)=>ipcRenderer.invoke('project-read-file',path,file),
+  createImage:request=>ipcRenderer.invoke('luma-create',request)
 });

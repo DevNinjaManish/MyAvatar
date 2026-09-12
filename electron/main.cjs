@@ -1,7 +1,7 @@
 const {app,BrowserWindow,ipcMain,screen,session,dialog}=require('electron');
 const path=require('node:path');
 const {promises:fs}=require('node:fs');
-const {spawnSync}=require('node:child_process');
+const {spawn,spawnSync}=require('node:child_process');
 // The compact card ends at roughly 500px; reserve a little space below it so
 // transient system notices are never clipped by the transparent window.
 const COMPACT_HEIGHT=550;
@@ -21,6 +21,20 @@ const SKIPPED_PROJECT_DIRECTORIES=new Set(['.git','node_modules','dist','models'
 const TEXT_EXTENSIONS=new Set(['.c','.cc','.cjs','.cpp','.css','.go','.h','.html','.java','.js','.json','.jsx','.md','.mjs','.py','.rs','.sh','.sql','.svg','.toml','.ts','.tsx','.txt','.yaml','.yml']);
 const isApprovedProject=projectPath=>approvedProjectPaths.has(path.resolve(projectPath));
 const safeProjectFile=(projectPath,relativePath)=>{if(typeof relativePath!=='string'||!relativePath||path.isAbsolute(relativePath))return null;const resolved=path.resolve(projectPath,relativePath);return resolved.startsWith(projectPath+path.sep)?resolved:null;};
+const projectRoot=path.resolve(__dirname,'..');
+const imagePython=process.env.MYAVATAR_IMAGE_PYTHON||path.join(projectRoot,'.venv/bin/python');
+const imageWorker=path.join(projectRoot,'scripts/luma-image-worker.py');
+let lumaJob=null;
+const runLumaWorker=request=>new Promise(resolve=>{
+  if(lumaJob)return resolve({error:'Luma is already creating one image.'});
+  const modelPath=path.join(app.getPath('userData'),'models','stable-diffusion-v1-5');
+  const outputPath=path.join(app.getPath('userData'),'creations');
+  const child=spawn(imagePython,[imageWorker,modelPath,outputPath],{stdio:['pipe','pipe','pipe'],env:{...process.env,HF_HUB_DISABLE_XET:'1'}});let stdout='',stderr='',settled=false;
+  const finish=value=>{if(settled)return;settled=true;clearTimeout(timer);lumaJob=null;resolve(value);};
+  const timer=setTimeout(()=>{child.kill('SIGTERM');finish({error:'Luma took too long. Try again after closing other memory-heavy apps.'});},600000);
+  lumaJob=child;child.stdout.on('data',chunk=>{stdout+=chunk;});child.stderr.on('data',chunk=>{stderr+=chunk;});child.on('error',()=>finish({error:'Luma’s local image worker could not start. Run setup for image support.'}));child.on('close',()=>{try{const result=JSON.parse(stdout);finish(result.error?{error:result.error}:result);}catch{finish({error:stderr.trim()||'Luma could not finish that image.'});}});
+  child.stdin.end(JSON.stringify(request));
+});
 const stopDragging=()=>{if(dragTimer){clearInterval(dragTimer);dragTimer=null;}};
 
 const createWindow=()=>{
@@ -107,6 +121,14 @@ else app.whenReady().then(()=>{
     if(event.sender!==mainWindow?.webContents||typeof requestedPath!=='string')return null;
     const projectPath=path.resolve(requestedPath),filePath=isApprovedProject(projectPath)?safeProjectFile(projectPath,relativePath):null;if(!filePath)return {error:'Choose the project and a listed file before reading it.'};
     try{const stat=await fs.stat(filePath);if(!stat.isFile()||stat.size>120000||!TEXT_EXTENSIONS.has(path.extname(filePath).toLowerCase()))return {error:'Rivit can only read listed text files up to 120 KB.'};return {path:relativePath,text:await fs.readFile(filePath,'utf8')};}catch{return {error:'Rivit could not read that file.'};}
+  });
+  ipcMain.handle('luma-create',async(event,request)=>{
+    if(event.sender!==mainWindow?.webContents||!request||typeof request!=='object')return null;
+    const prompt=typeof request.prompt==='string'?request.prompt.trim():'';
+    const image=typeof request.image==='string'?request.image:'';
+    if(!prompt||prompt.length>600)return {error:'Describe the image in 600 characters or fewer.'};
+    if(image&&(!/^data:image\/(?:png|jpeg|webp);base64,/.test(image)||image.length>16*1024*1024))return {error:'Choose a PNG, JPEG, or WebP image up to 12 MB.'};
+    return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image});
   });
   createWindow();
 });
