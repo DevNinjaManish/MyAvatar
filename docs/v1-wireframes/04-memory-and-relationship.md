@@ -1,5 +1,7 @@
 # V1 Wireframe 04 — Memory and relationship
 
+High-fidelity reference: [Memory, context and trust](../design-mockups/v1-core-surfaces.html#trust).
+
 Journey: inspect → correct or forget → confirm retrieval removal.
 
 ## Memory home

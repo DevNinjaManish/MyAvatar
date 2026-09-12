@@ -5,42 +5,42 @@ design work required before each surface is considered design-ready.
 
 ## Shared visual foundation
 
-- [ ] Final compact-widget geometry and responsive expanded-chat geometry
-- [ ] Shared typography, spacing, controls, banners, status labels, and focus states
-- [ ] Fast and Balanced visual reduction rules
-- [ ] Reduced-motion and muted-audio rules
-- [ ] Error, unavailable, recovery, and permission visual language
+- [x] High-fidelity compact-widget and expanded-chat geometry reference
+- [x] Shared typography, spacing, controls, banners, and status labels
+- [x] Fast/Balanced and reduced-motion asset rules documented in `V1_ASSET_MANIFEST.md`
+- [x] Error, recovery, runtime health, and permission visual language represented
 
 ## Companion and voice
 
 - [x] Shared high-fidelity reference for Ready, Listening, Thinking, Speaking, and recoverable Error across all four bots
-- [ ] Extend the shared reference with Working, Sleeping, and Recovery
-- [ ] Motion timing and interruption specification for each state
+- [x] Extend the shared reference with Working, Sleeping, and Recovery
+- [x] Motion timing and interruption specification for each state in `V1_MOTION_SPEC.md`
 - [ ] Audio-reactive mouth and equalizer behavior reference
 - [ ] Nova, Sterling, Rivit, and Luma expression and lighting parameters
 - [ ] Layered asset breakdown and final asset slots
 
 ## Context, memory, and trust
 
-- [ ] Context status and Seeing Eye permission screens
-- [ ] Memory list, detail, edit, forget, and clear flows
-- [ ] Action approval, denial, cancellation, and retry states
+- [x] Context status and Seeing Eye permission core screens
+- [x] Memory home/list visual direction
+- [ ] Memory detail, edit, forget, clear, and action denial/cancellation/retry high-fidelity variants
 - [ ] Provenance, freshness, and degraded-source indicators
 
 ## Specialist surfaces
 
-- [ ] Nova/Sterling assistant panel
-- [ ] Rivit coding panel with safe-command review
-- [ ] Luma creative panel with reference and output states
+- [x] Nova/Sterling assistant panel core state
+- [x] Rivit coding panel with safe-command review core state
+- [x] Luma creative panel with output-selection core state
 - [ ] Delegation banner, detail, question, permission, completion, and failure states
 
 ## Setup and recovery
 
 - [ ] First-run welcome and local-processing explanation
-- [ ] Hardware/profile selection and model download progress
+- [x] Hardware/profile selection and model download progress
 - [ ] Microphone/speaker test and typed fallback
 - [ ] Settings home and category screens
-- [ ] Runtime health, repair, reset, and migration states
+- [x] Runtime health and repair entry state
+- [ ] Reset and migration high-fidelity variants
 
 ## Required artifact for every surface
 
@@ -54,4 +54,7 @@ Each surface needs:
 The existing provisional bot art remains usable for implementation and QA while
 the final layered visual replacement pass is pending. The approved direction
 reference is [`design-references/v1-companion-state-reference.png`](design-references/v1-companion-state-reference.png);
-it is not itself a production spritesheet.
+the extended state reference is
+[`design-references/v1-companion-extended-states.png`](design-references/v1-companion-extended-states.png).
+Neither is itself a production spritesheet. The UI gallery and QA capture are in
+[`design-mockups/`](design-mockups/).

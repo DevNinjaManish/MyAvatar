@@ -1,5 +1,7 @@
 # V1 Wireframe 08 — Delegation and banners
 
+High-fidelity reference: [Conversation background-work banner](../design-mockups/v1-core-surfaces.html#conversation).
+
 Journey: primary bot explains handoff → specialist works → result returns or fails.
 
 ## Compact banner

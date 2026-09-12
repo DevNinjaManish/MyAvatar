@@ -18,6 +18,9 @@ This folder contains the structural wireframes for V1. Wireframes define layout,
 All ten structural wireframes are now complete. They define layout, state,
 interaction, failure/recovery, accessibility, and QA coverage.
 
-High-fidelity mockups and motion/behavior specifications are still a separate
-design phase. They should be linked here as each surface is approved; the
-structural wireframes remain the implementation contract until then.
+The focused high-fidelity core-surface gallery is complete at
+[`../design-mockups/v1-core-surfaces.html`](../design-mockups/v1-core-surfaces.html),
+with a stable PNG QA capture beside it. The gallery covers all ten wireframes at
+the core/default-state level. Structural wireframes remain the interaction and
+failure-state contract; remaining high-fidelity variants are tracked in
+`V1_DESIGN_DELIVERABLES.md`.

@@ -1,5 +1,7 @@
 # V1 Wireframe 02 — Voice and liveness states
 
+High-fidelity reference: [Companion states](../design-mockups/v1-core-surfaces.html#companion).
+
 Purpose: define how voice, animation, lighting, sound, and state communicate a natural live companion.
 
 ## State strip

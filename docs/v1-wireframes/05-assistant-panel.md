@@ -1,5 +1,7 @@
 # V1 Wireframe 05 — Assistant panel
 
+High-fidelity reference: [Specialist surfaces](../design-mockups/v1-core-surfaces.html#specialists).
+
 Journey: request → focused planning task → confirmation → return to companion.
 
 ```text

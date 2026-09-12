@@ -1,5 +1,7 @@
 # V1 Wireframe 03 — Context and Seeing Eye
 
+High-fidelity reference: [Memory, context and trust](../design-mockups/v1-core-surfaces.html#trust).
+
 Journey: permission → context use → explanation → revoke.
 
 ## Context status

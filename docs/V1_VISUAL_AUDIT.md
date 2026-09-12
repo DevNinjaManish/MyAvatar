@@ -1,5 +1,19 @@
 # MyAvatar V1 visual audit
 
+## Focused design batch — 2026-09-12
+
+- Rendered `design-mockups/v1-core-surfaces.html` at 1600 px and retained
+  `design-mockups/v1-core-surfaces.png` as the stable inspection artifact.
+- Verified five boards with no overlapping or clipped controls, missing bot
+  portraits, or unreadable labels.
+- Confirmed compact Ready, Listening, Understanding, and Paused mockups use
+  identical widget and control geometry.
+- Inspected the generated Working, Sleeping, and Recovery reference for Nova,
+  Sterling, Rivit, and Luma. Identity, row/column consistency, state contrast,
+  gutters, and crop are acceptable as design direction.
+- Concept sheets remain non-production references; layered alpha assets and
+  runtime state fixtures must pass a separate implementation audit.
+
 ## Current asset assessment
 
 The current Nova, Rivit, Sterling, and Luma busts provide a coherent robot-family foundation and are useful MVP assets. They are not yet final V1 visual designs.

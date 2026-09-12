@@ -1,5 +1,7 @@
 # V1 Wireframe 09 — Onboarding and setup
 
+High-fidelity reference: [Setup and settings](../design-mockups/v1-core-surfaces.html#setup).
+
 Journey: welcome → hardware/profile → runtime and voice checks → permissions → first conversation.
 
 ```text

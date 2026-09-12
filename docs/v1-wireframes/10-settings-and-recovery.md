@@ -1,5 +1,7 @@
 # V1 Wireframe 10 — Settings and recovery
 
+High-fidelity reference: [Setup and settings](../design-mockups/v1-core-surfaces.html#setup).
+
 Journey: inspect status → change a bounded preference → repair or reset safely.
 
 ```text

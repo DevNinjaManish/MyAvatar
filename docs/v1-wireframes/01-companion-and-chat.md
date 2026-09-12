@@ -1,5 +1,7 @@
 # V1 Wireframe 01 — Shared companion and common chat
 
+High-fidelity reference: [Companion states and Conversation](../design-mockups/v1-core-surfaces.html#companion).
+
 Journey: launch → presence → conversation → specialist work → return to relationship.
 
 ## Compact widget

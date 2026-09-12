@@ -17,7 +17,7 @@ and validated product behavior.
 | Platform controls and compact geometry | Implemented | Pause/Resume, More, runtime health, hide, quit; native visual QA passes |
 | V1 documentation consolidation | Implemented | Active docs are V1-only; former MVP docs are archived |
 | Structural wireframes | Complete | Ten V1 wireframes exist |
-| High-fidelity visual designs | In progress | Four-bot Ready/Listening/Thinking/Speaking/Error reference exists; remaining surfaces and production assets are tracked in `V1_DESIGN_DELIVERABLES.md` |
+| High-fidelity visual designs | Core batch complete; variants remain | Five-board UI gallery covers all ten wireframes; both four-bot state references exist; production layered assets and secondary failure variants remain |
 | Motion and behavior specifications | Documented; implementation partial | Shared state timing is specified; production state animation and bot-specific fixtures remain |
 | Streaming voice turn manager | Implemented; human qualification pending | Continuous launch listening, interruption, clause streaming, contextual persona fallbacks, local multilingual STT, bot TTS, and explicit Understanding state are connected; real-microphone Hinglish and repeated-turn soak remain |
 | Memory and context systems | Not started | Implement local stores, collectors, permissions, and retrieval |
@@ -39,6 +39,7 @@ and validated product behavior.
 - Batch 1: Runtime resilience — complete (`64f7253`)
 - Batch 2: Continuous voice launch slice — implemented; native clean-launch and typed speech QA pass
 - Batch 3: Responsive multilingual voice and visual-state direction — implemented (`80f547c`); 92 tests and production build pass; real-microphone Hinglish and repeated-turn soak remain
+- Batch 4: Focused V1 design package — complete; core-surface HTML/PNG gallery, Working/Sleeping/Recovery character reference, asset manifest, wireframe links, and visual QA record added
 
 ## Next recommended batch
 

@@ -1,5 +1,7 @@
 # V1 Wireframe 07 — Luma creative panel
 
+High-fidelity reference: [Specialist surfaces](../design-mockups/v1-core-surfaces.html#specialists).
+
 Journey: describe idea → explore variants → inspect result → revise or save.
 
 ```text

@@ -1,5 +1,7 @@
 # V1 Wireframe 06 — Rivit coding panel
 
+High-fidelity reference: [Specialist surfaces](../design-mockups/v1-core-surfaces.html#specialists).
+
 Journey: inspect project → explain → prepare safe check or patch → user approval.
 
 ```text

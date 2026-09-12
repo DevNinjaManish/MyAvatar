@@ -13,7 +13,9 @@ the current product plan, implementation scope, and quality source of truth.
 - [Acceptance](V1_ACCEPTANCE.md): the V1 completion checklist.
 - [Status and execution plan](V1_STATUS.md): what is documented, implemented, and next.
 - [Acceptance matrix](V1_ACCEPTANCE_MATRIX.md): required evidence for each quality area.
-- [Design deliverables](V1_DESIGN_DELIVERABLES.md): remaining mockup and motion work.
+- [Design deliverables](V1_DESIGN_DELIVERABLES.md): completed references and remaining variants.
+- [High-fidelity mockups](design-mockups/README.md): core surface gallery and visual QA capture.
+- [Asset manifest](V1_ASSET_MANIFEST.md): runtime assets, design references, and production slots.
 
 ## By area
 
