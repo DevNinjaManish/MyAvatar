@@ -960,7 +960,7 @@ body[data-avatar-glow="false"] #stage::after {
   top: 10px;
   left: 0;
   width: 350px;
-  height: 785px;
+  height: auto;
   max-height: 785px;
 }
 .nova-workspace {

@@ -89,6 +89,10 @@ persistent memory are not implemented. These are not implied by passing tests.
   waiting for final sentence punctuation. Spoken generation is instructed to
   lead with a short complete sentence, and uses a lower clause threshold so the
   first WAV can begin sooner.
+- A completed terminal sentence now releases to TTS in the same stream update;
+  it no longer waits for a following model token merely to prove the sentence is
+  complete. In practice this removes one token-interval of avoidable first-audio
+  latency while keeping incomplete text buffered.
 - Fast uses 4B for all spoken and typed replies; Balanced uses 9B for all spoken
   and typed replies. Both routes stream output and remain interruptible.
 - 2026-09-12 benchmark on the target 16GB Apple Silicon Mac: warm Ollama first
