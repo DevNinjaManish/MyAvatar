@@ -7,5 +7,7 @@ contextBridge.exposeInMainWorld('desktop',{
   minimize:()=>ipcRenderer.send('window-minimize'),
   resize:(height,width=260)=>ipcRenderer.send('window-resize',height,width),
   chooseProject:()=>ipcRenderer.invoke('project-choose'),
-  inspectProject:path=>ipcRenderer.invoke('project-inspect',path)
+  inspectProject:path=>ipcRenderer.invoke('project-inspect',path),
+  listProjectFiles:path=>ipcRenderer.invoke('project-list-files',path),
+  readProjectFile:(path,file)=>ipcRenderer.invoke('project-read-file',path,file)
 });

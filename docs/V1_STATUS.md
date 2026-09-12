@@ -25,7 +25,7 @@ and validated product behavior.
 | Expanded panel layout | Implemented | Chat and Today/Preferences may coexist; system notices have their own strip, including in compact mode, and Chat remains within the native window bounds |
 | Memory and context systems | Not started | Implement local stores, collectors, permissions, and retrieval |
 | Nova Today / Sterling Briefing | Implemented locally | One shared local planner surface with companion-specific language and ordering; focus, reminders, local schedule, plan steps, and month view remain local-only |
-| Rivit Build / Luma Create | Partial local capability | Rivit has an Electron-native folder picker, bounded local Git/project summary, and recent local scopes; Luma has Generate/Edit routing and local upload preview. File-content inspection, image engines, approvals, and delegation remain unconnected |
+| Rivit Build / Luma Create | Partial local capability | Rivit has an Electron-native folder picker, bounded local Git/project summary, recent local scopes, and explicit selected-text-file evidence for local plan requests; Luma has Generate/Edit routing and local upload preview. Edit execution, image engines, approvals, and delegation remain unconnected |
 | V1 acceptance qualification | Not started | Track evidence in `V1_ACCEPTANCE_MATRIX.md` |
 
 ## Execution order

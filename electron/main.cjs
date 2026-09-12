@@ -17,6 +17,10 @@ app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required');
 let mainWindow=null;
 let dragTimer=null;
 const approvedProjectPaths=new Set();
+const SKIPPED_PROJECT_DIRECTORIES=new Set(['.git','node_modules','dist','models','data','coverage']);
+const TEXT_EXTENSIONS=new Set(['.c','.cc','.cjs','.cpp','.css','.go','.h','.html','.java','.js','.json','.jsx','.md','.mjs','.py','.rs','.sh','.sql','.svg','.toml','.ts','.tsx','.txt','.yaml','.yml']);
+const isApprovedProject=projectPath=>approvedProjectPaths.has(path.resolve(projectPath));
+const safeProjectFile=(projectPath,relativePath)=>{if(typeof relativePath!=='string'||!relativePath||path.isAbsolute(relativePath))return null;const resolved=path.resolve(projectPath,relativePath);return resolved.startsWith(projectPath+path.sep)?resolved:null;};
 const stopDragging=()=>{if(dragTimer){clearInterval(dragTimer);dragTimer=null;}};
 
 const createWindow=()=>{
@@ -92,6 +96,17 @@ else app.whenReady().then(()=>{
       const branch=lines.find(line=>line.startsWith('## '))?.slice(3).split('...')[0]||null;
       return {path:projectPath,name:path.basename(projectPath),fileCount:visibleEntries.length,hasMore:entries.length>visibleEntries.length,git:{available:git.status===0,branch,changes:lines.filter(line=>!line.startsWith('## ')).length}};
     }catch{return {error:'Rivit could not inspect that folder.'};}
+  });
+  ipcMain.handle('project-list-files',async(event,requestedPath)=>{
+    if(event.sender!==mainWindow?.webContents||typeof requestedPath!=='string')return null;
+    const projectPath=path.resolve(requestedPath);if(!isApprovedProject(projectPath))return {error:'Choose this folder in Rivit before listing files.'};
+    const files=[];const visit=async(directory,depth=0)=>{if(files.length>=80||depth>2)return;let entries;try{entries=await fs.readdir(directory,{withFileTypes:true});}catch{return;}for(const entry of entries){if(files.length>=80)break;if(entry.name.startsWith('.'))continue;const absolute=path.join(directory,entry.name),relative=path.relative(projectPath,absolute);if(entry.isDirectory()){if(!SKIPPED_PROJECT_DIRECTORIES.has(entry.name))await visit(absolute,depth+1);}else if(entry.isFile()&&TEXT_EXTENSIONS.has(path.extname(entry.name).toLowerCase())){const stat=await fs.stat(absolute);if(stat.size<=120000)files.push({path:relative,size:stat.size});}}};
+    await visit(projectPath);return {files,hasMore:files.length>=80};
+  });
+  ipcMain.handle('project-read-file',async(event,requestedPath,relativePath)=>{
+    if(event.sender!==mainWindow?.webContents||typeof requestedPath!=='string')return null;
+    const projectPath=path.resolve(requestedPath),filePath=isApprovedProject(projectPath)?safeProjectFile(projectPath,relativePath):null;if(!filePath)return {error:'Choose the project and a listed file before reading it.'};
+    try{const stat=await fs.stat(filePath);if(!stat.isFile()||stat.size>120000||!TEXT_EXTENSIONS.has(path.extname(filePath).toLowerCase()))return {error:'Rivit can only read listed text files up to 120 KB.'};return {path:relativePath,text:await fs.readFile(filePath,'utf8')};}catch{return {error:'Rivit could not read that file.'};}
   });
   createWindow();
 });

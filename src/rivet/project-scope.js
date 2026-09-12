@@ -11,3 +11,8 @@ export function addRecentProject(recent,scope,max=5){
   const next=normalizeProjectScope(scope);if(!next)return Array.isArray(recent)?recent.map(normalizeProjectScope).filter(Boolean):[];
   return [next,...(Array.isArray(recent)?recent:[]).map(normalizeProjectScope).filter(item=>item&&item.path!==next.path)].slice(0,max);
 }
+
+export function clipProjectEvidence(value,maxChars=24000){
+  const text=String(value||''),limit=Math.max(1,Number(maxChars)||24000);
+  return {text:text.slice(0,limit),truncated:text.length>limit};
+}
