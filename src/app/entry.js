@@ -61,7 +61,7 @@ const stopDrag=()=>{document.body.classList.remove('dragging');avatar.setDraggin
 stage.addEventListener('pointerdown',event=>{if(event.button!==0||(!event.target?.matches?.('canvas')&&event.target!==stage))return;document.body.classList.add('dragging');avatar.setDragging(true);desktop?.startDrag?.();stage.setPointerCapture?.(event.pointerId);});
 stage.addEventListener('pointerup',stopDrag);
 stage.addEventListener('pointercancel',stopDrag);
-const platform=$('.widget-card');
+const platform=document.querySelector('.widget-card');
 platform.addEventListener('pointerdown',event=>{if(event.button!==0||event.target.closest('button,input,textarea,select,label'))return;document.body.classList.add('dragging');avatar.setDragging(true);desktop?.startDrag?.();platform.setPointerCapture?.(event.pointerId);});
 platform.addEventListener('pointerup',stopDrag);
 platform.addEventListener('pointercancel',stopDrag);
