@@ -116,31 +116,38 @@ export class PortraitFace {
     const portraitRadius=.565;
     this.portrait=new THREE.Mesh(new THREE.CircleGeometry(portraitRadius,48),new THREE.MeshBasicMaterial({map,transparent:true}));
     this.portrait.position.z=-.015;this.root.add(this.portrait);
-    // Dedicated transparent busts sit behind the live circular face. The circle
-    // masks their centre while each companion's shoulders and chest escape the
-    // frame without obscuring animated eyes or speaker hardware.
-    this.bust=null;this.bustShadow=null;
-    const bustProfiles={
-      rivet:{asset:'rivet/bust.png',fade:[.44,.59],size:1.48,y:-.15},
-      nova:{asset:'nova/bust.png',fade:[.47,.62],size:1.48,y:-.145},
-      sterling:{asset:'sterling/bust.png',fade:[.43,.58],size:1.46,y:-.15},
-      pixel:{asset:'pixel/bust.png',fade:[.46,.61],size:1.49,y:-.15},
-      luma:{asset:'luma/bust.png',fade:[.42,.57],size:1.48,y:-.15}
+    // One canonical asset pack is used at runtime: portrait.png owns the live
+    // face hardware, body.png supplies transparent depth, and hands.png is an
+    // optional foreground gesture layer. Stable names keep release labels out
+    // of the artwork contract.
+    this.body=null;this.bodyShadow=null;this.hands=null;
+    const bodyProfiles={
+      rivet:{asset:'rivet/body.png',hands:'hands.png',fade:[.44,.59],size:1.48,y:-.15},
+      nova:{asset:'nova/body.png',hands:'hands.png',fade:[.47,.62],size:1.48,y:-.145},
+      sterling:{asset:'sterling/body.png',hands:'hands.png',fade:[.43,.58],size:1.46,y:-.15},
+      pixel:{asset:'pixel/body.png',hands:'hands.png',fade:[.46,.61],size:1.49,y:-.15},
+      luma:{asset:'luma/body.png',hands:'hands.png',fade:[.42,.57],size:1.48,y:-.15}
     };
-    this.bustProfile=bustProfiles[bot]||null;
-    if(this.bustProfile){
-      const bustMap=new THREE.TextureLoader().load(`/assets/bots/${this.bustProfile.asset}`);
-      bustMap.colorSpace=THREE.SRGBColorSpace;bustMap.generateMipmaps=false;bustMap.minFilter=THREE.LinearFilter;bustMap.magFilter=THREE.LinearFilter;
+    this.bodyProfile=bodyProfiles[bot]||null;
+    if(this.bodyProfile){
+      const bodyMap=new THREE.TextureLoader().load(`/assets/bots/${this.bodyProfile.asset}`);
+      bodyMap.colorSpace=THREE.SRGBColorSpace;bodyMap.generateMipmaps=false;bodyMap.minFilter=THREE.LinearFilter;bodyMap.magFilter=THREE.LinearFilter;
       const maskCanvas=document.createElement('canvas');maskCanvas.width=4;maskCanvas.height=256;
       const maskContext=maskCanvas.getContext('2d'),maskGradient=maskContext.createLinearGradient(0,0,0,256);
-      maskGradient.addColorStop(0,'#000');maskGradient.addColorStop(this.bustProfile.fade[0],'#000');maskGradient.addColorStop(this.bustProfile.fade[1],'#fff');maskGradient.addColorStop(.91,'#fff');maskGradient.addColorStop(1,'#000');
+      maskGradient.addColorStop(0,'#000');maskGradient.addColorStop(this.bodyProfile.fade[0],'#000');maskGradient.addColorStop(this.bodyProfile.fade[1],'#fff');maskGradient.addColorStop(.91,'#fff');maskGradient.addColorStop(1,'#000');
       maskContext.fillStyle=maskGradient;maskContext.fillRect(0,0,4,256);
-      const bustMask=new THREE.CanvasTexture(maskCanvas);bustMask.generateMipmaps=false;bustMask.minFilter=THREE.LinearFilter;bustMask.magFilter=THREE.LinearFilter;
-      const bustGeometry=new THREE.PlaneGeometry(this.bustProfile.size,this.bustProfile.size);
-      this.bustShadow=new THREE.Mesh(bustGeometry.clone(),new THREE.MeshBasicMaterial({map:bustMap,alphaMap:bustMask,color:'#120b12',opacity:.48,transparent:true,depthWrite:false}));
-      this.bustShadow.position.set(.018,this.bustProfile.y-.025,-.045);this.bustShadow.scale.setScalar(1.025);this.bustShadow.renderOrder=-2;this.root.add(this.bustShadow);
-      this.bust=new THREE.Mesh(bustGeometry,new THREE.MeshBasicMaterial({map:bustMap,alphaMap:bustMask,transparent:true,depthWrite:false}));
-      this.bust.position.set(0,this.bustProfile.y,-.03);this.bust.renderOrder=-1;this.root.add(this.bust);
+      const bodyMask=new THREE.CanvasTexture(maskCanvas);bodyMask.generateMipmaps=false;bodyMask.minFilter=THREE.LinearFilter;bodyMask.magFilter=THREE.LinearFilter;
+      const bodyGeometry=new THREE.PlaneGeometry(this.bodyProfile.size,this.bodyProfile.size);
+      this.bodyShadow=new THREE.Mesh(bodyGeometry.clone(),new THREE.MeshBasicMaterial({map:bodyMap,alphaMap:bodyMask,color:'#120b12',opacity:.48,transparent:true,depthWrite:false}));
+      this.bodyShadow.position.set(.018,this.bodyProfile.y-.025,-.045);this.bodyShadow.scale.setScalar(1.025);this.bodyShadow.renderOrder=-2;this.root.add(this.bodyShadow);
+      this.body=new THREE.Mesh(bodyGeometry,new THREE.MeshBasicMaterial({map:bodyMap,alphaMap:bodyMask,transparent:true,depthWrite:false}));
+      this.body.position.set(0,this.bodyProfile.y,-.03);this.body.renderOrder=-1;this.root.add(this.body);
+      if(this.bodyProfile.hands){
+        const handsMap=new THREE.TextureLoader().load(`/assets/bots/${bot}/${this.bodyProfile.hands}`);
+        handsMap.colorSpace=THREE.SRGBColorSpace;handsMap.generateMipmaps=false;handsMap.minFilter=THREE.LinearFilter;handsMap.magFilter=THREE.LinearFilter;
+        this.hands=new THREE.Mesh(bodyGeometry.clone(),new THREE.MeshBasicMaterial({map:handsMap,opacity:0,transparent:true,depthWrite:false}));
+        this.hands.position.set(0,this.bodyProfile.y-.1,.01);this.hands.scale.setScalar(.84);this.hands.renderOrder=2;this.root.add(this.hands);
+      }
     }
     // Source-pixel maps place the live effects within each illustrated device.
     this.hardware={
@@ -152,7 +159,7 @@ export class PortraitFace {
     }[bot]||null;
     this.character=characters[bot]||characters.rivet;this.visualProfile='balanced';this.reduceEffects=false;
     this.profile=expressiveProfiles[bot]||expressiveProfiles.rivet;
-    this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.lastEmotion='relaxed';this.mouthValue=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.expressionKick=0;this.nextGaze=1.8;this.gaze=0;this.gazeTarget=0;this.transitionKick=0;this.dragKick=0;this.ambientKick=0;this.nextAmbient=2;this.ambientTarget={lift:0,roll:0};this.surpriseJump=0;this.nextMicroGesture=1.2;this.microGesture={lift:0,yaw:0,roll:0,scale:0};this.microTarget={...this.microGesture};this.nextIdleLightPaintAt=0;
+    this.texture=map;this.lastLevel=-1;this.lastBlink=-1;this.lastState='';this.lastEmotion='relaxed';this.mouthValue=0;this.handOpacity=0;this.imageReady=false;this.lastPaintAt=0;this.lastTime=0;this.reaction=0;this.expressionKick=0;this.nextGaze=1.8;this.gaze=0;this.gazeTarget=0;this.transitionKick=0;this.dragKick=0;this.ambientKick=0;this.nextAmbient=2;this.ambientTarget={lift:0,roll:0};this.surpriseJump=0;this.nextMicroGesture=1.2;this.microGesture={lift:0,yaw:0,roll:0,scale:0};this.microTarget={...this.microGesture};this.nextIdleLightPaintAt=0;
     this.image=new Image();this.image.decoding='async';
     this.image.onload=()=>{this.imageReady=true;this.paintHardware(0,0);};
     this.image.src=`/assets/bots/${portraits[bot]||'rivet'}/portrait.png`;
@@ -193,8 +200,9 @@ export class PortraitFace {
     const stateBreath=sleeping?.002:working?.004:.006;
     const tint=sleeping?'#59636a':state==='PAUSED'?'#818b90':errored?'#ff9ca1':recovering?'#b8f3f5':working?'#fff1d0':'#ffffff';
     this.portrait.material.color.set(tint);
-    if(this.bust)this.bust.material.color.set(tint);
-    if(this.bustShadow)this.bustShadow.material.opacity=sleeping?.68:errored?.56:.48;
+    if(this.body)this.body.material.color.set(tint);
+    if(this.hands)this.hands.material.color.set(tint);
+    if(this.bodyShadow)this.bodyShadow.material.opacity=sleeping?.68:errored?.56:.48;
     this.root.position.y=1.30+(breath*(speaking ? .011 : stateBreath)+pose.lift+signature.lift+speechBeat*.006+expression.lift+this.transitionKick*.01+this.expressionKick*.006+this.ambientKick*this.ambientTarget.lift+this.microGesture.lift+this.surpriseJump*.02-attention.y*.008*proximity+this.dragKick*.01)*motion;
     this.root.scale.setScalar(1+(pose.scale+signature.scale+Math.sin(t*.8*temperament)*.0018+speechBeat*.003+this.microGesture.scale+this.dragKick*.006)*motion);
     this.root.rotation.set(
@@ -202,15 +210,28 @@ export class PortraitFace {
       (pose.yaw+signature.yaw+this.gaze*.03+attentive+thoughtful+characterGesture+expression.yaw+this.microGesture.yaw+attention.x*.038*proximity)*motion,
       (pose.roll+signature.roll+Math.sin(t*.56*temperament)*.006+(listening ? .008 : 0)+expression.roll+this.microGesture.roll+this.ambientKick*this.ambientTarget.roll)*motion
     );
-    if(this.bust){
+    if(this.body){
       // A small counter-shift separates the torso from the face like two
       // physical depth planes. The circular portrait hides their join.
-      this.bust.position.x=-attention.x*.016*motion;
-      this.bust.position.y=this.bustProfile.y+breath*.005*motion;
-      this.bust.rotation.z=-this.root.rotation.z*.12;
-      this.bustShadow.position.x=.018-attention.x*.009*motion;
-      this.bustShadow.position.y=this.bustProfile.y-.025+breath*.002*motion;
-      this.bustShadow.rotation.z=-this.root.rotation.z*.06;
+      this.body.position.x=-attention.x*.016*motion;
+      this.body.position.y=this.bodyProfile.y+breath*.005*motion;
+      this.body.rotation.z=-this.root.rotation.z*.12;
+      this.bodyShadow.position.x=.018-attention.x*.009*motion;
+      this.bodyShadow.position.y=this.bodyProfile.y-.025+breath*.002*motion;
+      this.bodyShadow.rotation.z=-this.root.rotation.z*.06;
+      if(this.hands){
+        // Hands are a bounded foreground cue, never a permanent idle layer.
+        // Fast/reduced-motion profiles omit them completely; Balanced fades
+        // them in only while listening or speaking.
+        const handTarget=this.reduceEffects?0:speaking?.52:listening?.14:0;
+        this.handOpacity=THREE.MathUtils.lerp(this.handOpacity,handTarget,ease(handTarget>this.handOpacity?4.2:6.5,dt));
+        this.hands.material.opacity=this.handOpacity;
+        this.hands.visible=this.handOpacity>.01;
+        const gesture=speaking?Math.sin(t*2.1)*.006:listening?Math.sin(t*1.2)*.002:0;
+        this.hands.position.x=-attention.x*.01*motion;
+        this.hands.position.y=this.bodyProfile.y-.1+gesture*motion;
+        this.hands.rotation.z=-this.root.rotation.z*.05;
+      }
     }
 
     this.mouthValue=THREE.MathUtils.lerp(this.mouthValue,mouth,ease(18,dt));

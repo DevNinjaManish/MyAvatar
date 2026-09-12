@@ -7,7 +7,7 @@ design work required before each surface is considered design-ready.
 
 - [x] High-fidelity compact-widget and expanded-chat geometry reference
 - [x] Shared typography, spacing, controls, banners, and status labels
-- [x] Fast/Balanced and reduced-motion asset rules documented in `V1_ASSET_MANIFEST.md`
+- [x] Fast/Balanced and reduced-motion asset rules documented in `BOT_ASSET_PACK.md`
 - [x] Error, recovery, runtime health, and permission visual language represented
 
 ## Companion and voice
@@ -16,8 +16,8 @@ design work required before each surface is considered design-ready.
 - [x] Extend the shared reference with Working, Sleeping, and Recovery
 - [x] Motion timing and interruption specification for each state in `V1_MOTION_SPEC.md`
 - [x] Audio-reactive mouth and equalizer implementation plus Speaking fixture
-- [ ] Nova, Sterling, Rivit, and Luma expression and lighting parameters
-- [x] Layered asset breakdown and final asset slots in `V1_ASSET_MANIFEST.md`
+- [x] Nova, Sterling, Rivit, and Luma expression and lighting parameters
+- [x] Layered asset breakdown and final asset slots in `BOT_ASSET_PACK.md`
 
 ## Context, memory, and trust
 
@@ -51,8 +51,8 @@ Each surface needs:
 3. A visual QA fixture with a stable name and expected state.
 4. A link from the corresponding structural wireframe.
 
-The existing provisional bot art remains usable for implementation and QA while
-the final layered visual replacement pass is pending. The approved direction
+The canonical portrait/body/hands bot pack is used for implementation and QA.
+The approved direction
 reference is [`design-references/v1-companion-state-reference.png`](design-references/v1-companion-state-reference.png);
 the extended state reference is
 [`design-references/v1-companion-extended-states.png`](design-references/v1-companion-extended-states.png).

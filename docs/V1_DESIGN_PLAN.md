@@ -112,9 +112,8 @@ Approved mockups become visual QA references. Any implementation change affectin
 
 ## Current visual status
 
-The existing bot busts are provisional V1 assets. They are good enough to build and test the companion, animation states, voice visualization, panels, and QA fixtures. Do not spend the current implementation cycle polishing or redrawing them.
-
-The visual redesign is a dedicated V1 design pass. ImageGen may accelerate asset
-exploration, but it is not a prerequisite for defining the system or producing
-QA references. Replacement art must preserve the runtime contracts and asset
-slots established during V1 development.
+The project now uses one canonical asset pack per bot: `portrait.png`,
+transparent `body.png`, and transparent `hands.png`. The portraits preserve the
+established identities and coordinate-mapped eye, light, and speaker hardware;
+the optional hand layer adds bounded Balanced-mode gestures. Fast and reduced
+motion omit hands. Previous artwork remains recoverable through Git history.

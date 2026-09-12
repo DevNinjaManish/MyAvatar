@@ -14,6 +14,8 @@ export function installDualSpeakerEqualizers(){
     const hardware=this.hardware;
     if(!hardware||!equalizerActive(state,level))return;
     const [x,y,width,height,mode,color]=hardware.speaker;
+    // Hardware coordinates use the pack's stable 627-unit reference space,
+    // independent of the source PNG resolution.
     const size=this.canvas.width,scale=size/627,ctx=this.context;
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false;
     const levels=dualSpeakerLevels(level,t,{reducedMotion:reduced});

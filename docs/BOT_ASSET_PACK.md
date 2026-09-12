@@ -1,14 +1,34 @@
-# MyAvatar V1 asset manifest
+# MyAvatar bot asset pack
 
-This manifest separates current runtime assets, approved design references, and
-future production assets so concept art is never mistaken for an animation-ready
-deliverable.
+This is the single runtime asset contract for every bot. Release and milestone
+labels never appear in asset filenames.
 
-## Current runtime identity assets
+## Canonical bot asset pack
 
-Each bot currently has `portrait.png` and `bust.png` under
-`public/assets/bots/<bot>/`. These remain the canonical runtime identity sources
-until a layered replacement passes visual and performance QA.
+There is one runtime pack under `public/assets/bots/<bot>/`. Asset filenames do
+not contain release, milestone, or draft suffixes. Git history preserves prior
+artwork.
+
+| File | Purpose |
+| --- | --- |
+| `portrait.png` | Canonical face artwork and coordinate-mapped live hardware |
+| `body.png` | Canonical transparent upper-body layer |
+| `hands.png` | Optional transparent foreground gesture layer |
+
+Every current bot ships all three files. `hands.png` remains optional in the
+loader so a future character can launch safely before authored gestures exist.
+
+## Runtime behavior
+
+- `portrait.png` is the only layer repainted for eyes, blinking, presence
+  lights, and speech equalizers. Those effects stay aligned to the illustrated
+  hardware rather than becoming generic face animation.
+- `body.png` provides stable transparent shoulder and torso depth.
+- `hands.png` is hidden while idle, thinking, working, paused, sleeping,
+  recovering, or in error. Balanced mode fades it in below the face for
+  listening and speaking. Fast and reduced-motion modes omit it.
+- Hands never control readiness. The bot remains visually inactive until the
+  selected voice and conversation stack has finished warming.
 
 ## Approved design references
 
@@ -26,7 +46,7 @@ Every future layered companion package must provide the same named slots:
 
 | Slot | Purpose |
 | --- | --- |
-| `base` | Stable bust silhouette and material identity |
+| `base` | Stable body silhouette and material identity |
 | `eyes` | Gaze, blink, sleep, focus, and error expression |
 | `mouth-primary` / `mouth-secondary` | Audio-reactive speaking channels |
 | `accent-left` / `accent-right` | State and emotion lighting |

@@ -15,7 +15,7 @@ the current product plan, implementation scope, and quality source of truth.
 - [Acceptance matrix](V1_ACCEPTANCE_MATRIX.md): required evidence for each quality area.
 - [Design deliverables](V1_DESIGN_DELIVERABLES.md): completed references and remaining variants.
 - [High-fidelity mockups](design-mockups/README.md): core surface gallery and visual QA capture.
-- [Asset manifest](V1_ASSET_MANIFEST.md): runtime assets, design references, and production slots.
+- [Bot asset pack](BOT_ASSET_PACK.md): canonical runtime assets, layer names, and production slots.
 
 ## By area
 

@@ -35,7 +35,10 @@
 
 ## Current asset assessment
 
-The current Nova, Rivit, Sterling, and Luma busts provide a coherent robot-family foundation and are useful MVP assets. They are not yet final V1 visual designs.
+Nova, Rivit, Sterling, Luma, and the retained Pixel asset now share one canonical
+three-layer pack. The polished portraits and existing transparent bodies keep
+their established robot-family identity; transparent hands add optional body
+language without changing face hardware.
 
 ## What already works
 
@@ -54,7 +57,10 @@ The bots currently share a similar front-facing mechanical bust language. V1 sho
 
 ### Animation readiness
 
-Each bot needs separable layers or animation-ready variants for eyes, mouth, lights, face plates, neck, shoulders, and effects. A single flattened bust image cannot deliver the required liveness system.
+The runtime separates portrait, body, and hands, then paints eyes, mouth,
+presence lights, and effects into the portrait hardware at runtime. Further
+separation is needed only when a state requires independent face plates or
+character-specific props.
 
 ### Expressive faces
 
@@ -84,12 +90,7 @@ The bot visual designs are ready when each bot has:
 
 ## Current implementation decision
 
-Use the current assets as provisional V1 placeholders. Build the renderer, state machine, voice equalizer, lights, animation timing, panels, and visual QA around stable asset slots. Do not invest in detailed asset polish during the current implementation cycle.
-
-The final art pass is pending, but it is not blocked on a particular image
-generation tool. New assets must preserve the established bot identities and
-runtime contracts so replacement does not require a product rewrite.
-
-## Recommendation for deferred art pass
-
-When the art pass begins, keep the current assets as visual references but improve the parts that affect identity, expression, layering, and motion first. Do not redraw everything automatically.
+Use the canonical asset pack directly. Keep eye, speaker, and light behavior in
+the runtime; keep hands optional and below the live face. Future art changes
+replace stable filenames only after compact visual QA, alpha validation, Fast
+mode review, and Git-backed comparison.
