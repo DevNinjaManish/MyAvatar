@@ -74,9 +74,9 @@ Initial direction:
 
 The voice profile is part of the bot contract. The local Kokoro voice IDs are
 `af_nova`, `bm_daniel`, `am_onyx`, and `af_aoede` for Nova, Sterling, Rivit,
-and Luma respectively. If the local model bundle is unavailable, the verified
-macOS fallback uses Samantha, Daniel, Fred, and Karen at authored per-bot
-rates. Greetings, normal replies, and future nonverbal assets resolve through
+and Luma respectively. Hindi text routes to Kokoro's `hf_alpha`, `hm_omega`,
+`hm_psi`, and `hf_beta` respectively. Missing local speech assets surface an
+error; Apple system-voice fallback is disabled. Greetings and replies resolve through
 the same profile rather than a global default.
 
 The profile also supplies a persona behavior prompt. TTS changes how a bot
@@ -85,6 +85,12 @@ initiative, and boundary behavior. Both layers are required for a believable
 bot identity. Spoken output removes markdown and stage directions, applies
 small persona-specific speed and emotion adjustments, and synchronizes the
 avatar expression with the detected conversational emotion.
+
+Simple greetings and thanks have a direct-response path. Other slow turns may
+receive one cached acknowledgement after 3.5 seconds, cancelled when reply
+audio arrives or the turn stops. Recognition remains loaded between turns and
+low-confidence/repetitive output asks for clarification. Neither language
+detection nor the confidence heuristic guarantees correct code-switching.
 
 ## Nonverbal vocalizations
 

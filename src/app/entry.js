@@ -113,6 +113,7 @@ async function playGreeting(audioData){
 async function playSpeech(audioData,turn){
   return audioEngine.enqueue(audioData,()=>{appState.set(STATES.SPEAKING);setRuntimeStatus('Speaking…');showNotice('');},()=>{
     if(turnPlayback.canResumeListening()){avatar.setExpression('relaxed');appState.set(STATES.IDLE);setRuntimeStatus('Ready');resumeLiveListening();showNotice('');$('send-message').hidden=false;$('stop-response').hidden=true;}
+    else if(!audioEngine.queue.length){appState.set(STATES.THINKING);setRuntimeStatus('Thinking…');}
   });
 }
 function scheduleRuntimeReconnect(){
@@ -173,7 +174,7 @@ window.addEventListener('myavatar:runtime-event',event=>{
     if(health.available)showNotice(`Runtime: ${provider} · ${runtimeInfo?.profile||'unknown'} · ready`,false,'info');
     else showNotice(`Runtime unavailable: ${health.reason||'provider health check failed.'}`,true,'warning');
   }
-  if(detail?.type==='transcript')showNotice('Thinking…');
+  if(detail?.type==='transcript')showNotice(`Heard: ${detail.text}`);
   if(detail?.type==='audio'){setRuntimeStatus('Speaking…');if(detail.emotion)avatar.setExpression(detail.emotion);playSpeech(detail.audio,detail.turn).catch(error=>{avatar.setExpression('relaxed');appState.set(STATES.IDLE);showNotice(`Speech output unavailable: ${error.message}`,false,'warning');});}
   if(detail?.type==='speech_unavailable'){appState.set(STATES.IDLE);resumeLiveListening();showNotice(detail.message,false,'warning');}
   if(['done','error'].includes(detail?.type)){

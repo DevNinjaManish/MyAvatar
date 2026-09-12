@@ -13,7 +13,7 @@ Implemented in this batch:
 - Listening resumes only after server completion and all audio settles.
 - Endpoint silence is 650 ms; this remains an energy-based detector, not semantic
   understanding of whether a sentence is finished.
-- Balanced uses local qwen3.5:4b; Fast uses qwen3.5:0.8b. An explicit model
+- Balanced uses local huihui_ai/qwen3.5-abliterated:4b; Fast uses huihui_ai/qwen3.5-abliterated:0.8b. An explicit model
   environment setting overrides both. Models must already be installed.
 
 Evidence:
@@ -35,3 +35,22 @@ Still unqualified: extended real-microphone noisy-room interruption, all target
 hardware, and subjective naturalness. Per-sentence speed/emotion remains basic;
 authored laughs/breaths/backchannels, pitch control, semantic endpointing, and
 persistent memory are not implemented. These are not implied by passing tests.
+
+## Recognition and response latency follow-up
+
+- Active recognizer: persistent Faster-Whisper small, int8 CPU, automatic
+  language detection for Hindi–English. No MLX or Apple system voices in the
+  runtime. Kokoro supplies Hindi and English voice models locally.
+- Simple greetings/thanks bypass generation; cached delayed acknowledgement
+  is only scheduled for nontrivial requests after recognition, at 3.5 seconds.
+  It is cancelled on reply audio, stop, completion, or disconnect.
+- The direct spoken `How are you?` fixture was recognized exactly and returned
+  reply audio at 1,446 ms with zero filler. This excludes microphone endpointing
+  and uses a synthetic WAV; real-room latency can differ.
+- Clear English recognition was exact in the isolated fixture. Strict Hindi
+  recognition evaluation still fails word accuracy on the synthesized fixture
+  (for example, फोन becomes पून). Mixed-language natural recordings remain
+  unqualified. Do not call recognition fully fixed based on these tests.
+- Repeated/hallucinated recognition and low-confidence segments trigger a
+  clarification rather than normal answer generation; this heuristic will not
+  catch every incorrect word.

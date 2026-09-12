@@ -1,7 +1,7 @@
 export const RUNTIME_EVENT_VERSION=1;
 
 export const EVENT_TYPES=Object.freeze([
-  'config','profile','readiness','health','greeting','token','transcript','audio','speech_unavailable','done','error',
+  'config','profile','readiness','health','greeting','recognition','token','transcript','audio','speech_unavailable','done','error',
   'context','memory','capability','delegation','job','action_request','action_result'
 ]);
 

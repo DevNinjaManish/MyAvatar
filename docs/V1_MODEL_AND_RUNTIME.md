@@ -42,10 +42,16 @@ selection is retained locally for the next launch. Profile changes affect the
 conversation response budget and avatar rendering load without changing bot
 identity or voice mapping.
 
-Current conversation defaults are `qwen3.5:0.8b` for Fast and `qwen3.5:4b`
+Current conversation defaults are `huihui_ai/qwen3.5-abliterated:0.8b` for Fast and `huihui_ai/qwen3.5-abliterated:4b`
 for Balanced; `MYAVATAR_CONVERSATION_MODEL` overrides both. These models
 must be present in the local Ollama installation. The profile changes apply
 to subsequent requests.
+
+Voice inference uses local open-source Faster-Whisper small (int8 CPU) for
+multilingual recognition and Kokoro for English/Hindi speech. It does not use
+Apple system voices or MLX. Recognition detects language automatically by
+default for Hindi–English use; `MYAVATAR_SPEECH_LANGUAGE` can explicitly select
+a language. Install Python dependencies from `requirements-voice.txt`.
 
 ### Fast
 
