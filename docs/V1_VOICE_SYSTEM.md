@@ -2,6 +2,11 @@
 
 ## Voice decision
 
+Implementation evidence and explicit limitations are tracked in
+[V1_VOICE_QA.md](V1_VOICE_QA.md). The performance goals below describe the
+full V1 target; they are not a claim that authored nonverbal sounds or nuanced
+prosody are already implemented.
+
 V1 is voice-first. Listening, thinking, speaking, interruption, silence, and nonverbal expression must feel like a natural live interaction. Each bot has a unique voice performance based on persona, not merely a different pitch or voice preset.
 
 V1 uses a hybrid local voice stack:

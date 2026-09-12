@@ -67,6 +67,7 @@ export function installRuntimeEventGuard(win=window){
         let payload;
         try{payload=JSON.parse(event.data);}catch{return;}
         if(!gate.accept(payload)){event.stopImmediatePropagation();return;}
+        if(Number.isInteger(payload.turn)&&payload.turn!==turnPlayback.activeTurn){event.stopImmediatePropagation();return;}
         turnPlayback.noteServerEvent(payload);
         win.dispatchEvent(new CustomEvent('myavatar:runtime-event',{detail:payload}));
         if(payload.readiness&&typeof payload.readiness==='object'){

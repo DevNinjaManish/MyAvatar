@@ -4,6 +4,15 @@ import {TurnDetector} from '../../src/audio/vad.js';
 import {AudioEngine} from '../../src/audio/engine.js';
 const frame=(v)=>new Float32Array(160).fill(v); // 10 ms at 16k
 const feed=(vad,n,v)=>Array.from({length:n},()=>vad.push(frame(v))).filter(Boolean);
+test('barge-in stops output at onset and retains speech until the user finishes',async()=>{
+  const engine=new AudioEngine(()=>{});engine.ctx={state:'running',sampleRate:16000};let capture,count=0,utterance;
+  engine.record=async(_timer,onFrame)=>{capture=onFrame;};
+  await engine.startLive(pcm=>{utterance=pcm;},{onBargeIn:()=>{count++;engine.stop();},bargeIn:{guardMs:0,onsetMs:180,minSpeechMs:220,silenceMs:650}});
+  engine.playing=true;engine.playbackStartedAt=0;
+  for(let i=0;i<25;i++)capture(frame(.08));assert.equal(count,1);assert.equal(engine.playing,false);assert.equal(utterance,undefined);
+  for(let i=0;i<40;i++)capture(frame(.08));for(let i=0;i<70;i++)capture(frame(0));
+  assert.ok(utterance instanceof Float32Array);assert.ok(utterance.some(x=>x>.07));engine.endCapture();
+});
 test('silence stays bounded and never creates a turn',()=>{const v=new TurnDetector(16000);assert.equal(feed(v,6000,0).length,0);assert.ok(v.samples<=4160);});
 test('a short noise is discarded',()=>{const v=new TurnDetector(16000);assert.equal([...feed(v,15,.1),...feed(v,150,0)].length,0);});
 test('steady ambient noise raises the local floor without creating a turn',()=>{const v=new TurnDetector(16000,{threshold:.004});assert.equal(feed(v,500,.008).length,0);assert.ok(v.currentThreshold>.008);const turns=[...feed(v,50,.04),...feed(v,100,0)];assert.equal(turns.length,1);});

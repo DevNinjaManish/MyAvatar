@@ -16,7 +16,7 @@ const createWindow=()=>{
   const win=new BrowserWindow({
     width,height,
     x:area.x+area.width-width-24,
-    y:area.y+area.height-height-24,
+    y:area.y+Math.max(0,area.height-770-24),
     minWidth:width,minHeight:height,maxWidth:width,maxHeight:770,
     frame:false,transparent:true,hasShadow:false,resizable:false,
     backgroundColor:'#00000000',title:'MyAvatar',

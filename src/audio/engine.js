@@ -33,7 +33,7 @@ export class AudioEngine{
   constructor(onAmplitude){
     this.onAmplitude=onAmplitude;this.queue=[];this.playing=false;this.generation=0;this.captureGeneration=0;
     this.captureMode=null;this.captureActive=false;this.liveGate=false;this.chunks=[];this.sourceTurnToken=null;
-    this.readyPromise=null;this.workletPromise=null;this.workletLoaded=false;this.playbackStartedAt=0;this.bargeDetector=null;
+    this.readyPromise=null;this.workletPromise=null;this.workletLoaded=false;this.playbackStartedAt=0;this.bargeDetector=null;this.decodeChain=Promise.resolve();
   }
   async ready(){
     if(this.ctx?.state==='closed'){this.ctx=null;this.workletLoaded=false;this.workletPromise=null;}
@@ -102,9 +102,12 @@ export class AudioEngine{
         if(utterance&&this._isCaptureCurrent(generation)){this.liveGate=false;emitInputLevel(0);onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.detector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:false});}
         return;
       }
-      if(this.playing&&Date.now()-this.playbackStartedAt>=this.bargeInGuardMs){
+      if(this.bargeCapturing||(this.playing&&Date.now()-this.playbackStartedAt>=this.bargeInGuardMs)){
         const utterance=this.bargeDetector?.push(frame);
-        if(utterance&&this._isCaptureCurrent(generation))onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.bargeDetector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:true});
+        if(!this.bargeCapturing&&this.bargeDetector?.started&&settings.onBargeIn){
+          const detector=this.bargeDetector;this.bargeCapturing=true;settings.onBargeIn();this.bargeDetector=detector;
+        }
+        if(utterance&&this._isCaptureCurrent(generation)){this.bargeCapturing=false;onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.bargeDetector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:true});}
       }
     },{mode:'live'});
     if(started===false)return false;
@@ -117,6 +120,7 @@ export class AudioEngine{
     this.liveGate=next;if(!next)emitInputLevel(0);this.detector?.reset();this.bargeDetector?.reset();return this.liveGate;
   }
   endCapture({collect=false}={}){
+    this.bargeCapturing=false;
     const sampleRate=this.ctx?.sampleRate||16000;++this.captureGeneration;this.liveGate=false;emitInputLevel(0);this.detector?.reset();this.bargeDetector?.reset();
     const chunks=collect?(this.chunks||[]):[];this._releaseCaptureNodes();this.captureActive=false;this.captureMode=null;this.chunks=[];
     if(activeCaptureOwner===this)activeCaptureOwner=null;
@@ -124,10 +128,14 @@ export class AudioEngine{
     const pcm=new Float32Array(chunks.reduce((n,c)=>n+c.length,0));let offset=0;for(const chunk of chunks){pcm.set(chunk,offset);offset+=chunk.length;}return resample(pcm,sampleRate);
   }
   stopRecord(){return this.endCapture({collect:true});}
-  async enqueue(encoded,onStart,onEnd){
+  enqueue(encoded,onStart=()=>{},onEnd=()=>{}){
     const generation=this.generation;const turnToken=turnPlayback.beginAudioDecode();
-    try{await this.ready();const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const buffer=await this.ctx.decodeAudioData(bytes.buffer);if(generation!==this.generation){turnPlayback.finishAudioDecode(turnToken,false);return false;}turnPlayback.finishAudioDecode(turnToken,true);this.queue.push({buffer,onStart,onEnd,turnToken});this.pump();return true;}
-    catch(error){turnPlayback.finishAudioDecode(turnToken,false);throw error;}
+    if(!turnToken)return Promise.resolve(false);
+    const work=this.decodeChain.then(async()=>{
+      try{if(generation!==this.generation){turnPlayback.finishAudioDecode(turnToken,false);return false;}await this.ready();const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const buffer=await this.ctx.decodeAudioData(bytes.buffer);if(generation!==this.generation){turnPlayback.finishAudioDecode(turnToken,false);return false;}if(!turnPlayback.finishAudioDecode(turnToken,true))return false;this.queue.push({buffer,onStart,onEnd,turnToken});this.pump();return true;}
+      catch(error){turnPlayback.finishAudioDecode(turnToken,false);throw error;}
+    });
+    this.decodeChain=work.catch(()=>{});return work;
   }
   pump(){
     if(this.playing||!this.queue.length)return;
@@ -139,7 +147,7 @@ export class AudioEngine{
   stop(){
     this.generation++;for(const item of this.queue)turnPlayback.discardAudio(item.turnToken);this.queue=[];
     if(this.source){this.source.onended=null;turnPlayback.discardAudio(this.sourceTurnToken);try{this.source.stop();this.source.disconnect();this.analyser?.disconnect();}catch{}}
-    this.source=null;this.sourceTurnToken=null;this.playing=false;this.playbackStartedAt=0;this.bargeDetector?.reset();this.onAmplitude(0);
+    this.source=null;this.sourceTurnToken=null;this.playing=false;this.playbackStartedAt=0;if(!this.bargeCapturing)this.bargeDetector?.reset();this.onAmplitude(0);
   }
   dispose(){this.endCapture();this.stop();}
   playFiller(){if(!this.ctx)return;const osc=this.ctx.createOscillator(),gain=this.ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(880,this.ctx.currentTime);osc.frequency.exponentialRampToValueAtTime(440,this.ctx.currentTime+.05);gain.gain.setValueAtTime(0.1,this.ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,this.ctx.currentTime+.05);osc.connect(gain).connect(this.ctx.destination);osc.start();osc.stop(this.ctx.currentTime+.05);}

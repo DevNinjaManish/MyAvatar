@@ -2,16 +2,19 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {resample,AudioEngine,getActiveCaptureSnapshot,endActiveCapture,suspendActiveLiveCapture} from '../../src/audio/engine.js';
 import {AppState} from '../../src/conversation/state.js';
+import {turnPlayback} from '../../src/audio/turn-playback.js';
 
 test('48k capture retains duration and DC level at 16k',()=>{const output=resample(new Float32Array(48000).fill(.25),48000);assert.equal(output.length,16000);assert.ok(output.every(x=>x===.25));});
 test('44.1k capture handles non-integral resampling without NaNs',()=>{const output=resample(new Float32Array(44100).fill(.5),44100);assert.equal(output.length,16000);assert.ok(output.every(x=>Number.isFinite(x)&&x===.5));});
 test('state rejects unknown states and ignores duplicate transitions',()=>{const state=new AppState();let n=0;state.addEventListener('change',()=>n++);assert.equal(state.set('LISTENING'),true);assert.equal(state.set('LISTENING'),false);assert.equal(state.value,'LISTENING');assert.equal(n,1);assert.throws(()=>state.set('BROKEN'));});
 test('stop discards an audio decode that finishes after interruption',async()=>{
+  turnPlayback.beginTurn(1);turnPlayback.noteServerEvent({type:'audio',turn:1});
   let resolveDecode;const engine=new AudioEngine(()=>{});
   engine.ctx={state:'running',resume:async()=>{},decodeAudioData:()=>new Promise(resolve=>{resolveDecode=resolve;})};
   const pending=engine.enqueue(btoa('wav'),()=>assert.fail('stale audio started'),()=>{});
   await new Promise(setImmediate);engine.stop();resolveDecode({});await pending;
   assert.equal(engine.queue.length,0);assert.equal(engine.playing,false);
+  turnPlayback.cancelTurn();
 });
 
 test('stopping during microphone permission releases the late stream',async()=>{
@@ -24,6 +27,18 @@ test('stopping during microphone permission releases the late stream',async()=>{
    grant({getTracks:()=>[{stop:()=>{stopped=true;}}]});await pending;
    assert.equal(stopped,true);assert.equal(engine.stream,null);assert.equal(getActiveCaptureSnapshot().active,false);
  }finally{if(original)Object.defineProperty(globalThis,'navigator',original);else delete globalThis.navigator;}
+});
+
+test('speech decoding preserves arrival order and waits for all queued chunks',async()=>{
+  turnPlayback.beginTurn(99);const engine=new AudioEngine(()=>{});const decoded=[];let finishFirst;
+  engine.ctx={state:'running',decodeAudioData:bytes=>{const value=new Uint8Array(bytes)[0];decoded.push(value);return value===1?new Promise(resolve=>{finishFirst=()=>resolve({value});}):Promise.resolve({value});}};
+  engine.pump=()=>{};
+  turnPlayback.noteServerEvent({type:'audio',turn:99});const first=engine.enqueue(btoa(String.fromCharCode(1)));
+  turnPlayback.noteServerEvent({type:'audio',turn:99});const second=engine.enqueue(btoa(String.fromCharCode(2)));
+  turnPlayback.noteServerEvent({type:'done',turn:99});
+  await new Promise(setImmediate);assert.deepEqual(decoded,[1]);assert.equal(turnPlayback.canResumeListening(),false);
+  finishFirst();await Promise.all([first,second]);assert.deepEqual(engine.queue.map(item=>item.buffer.value),[1,2]);
+  engine.stop();assert.equal(turnPlayback.canResumeListening(),true);
 });
 
 test('capture setup failure releases the granted microphone immediately',async()=>{

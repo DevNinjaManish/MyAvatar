@@ -14,6 +14,7 @@ import {ProviderRegistry,checkProviderHealth} from '../src/runtime/providers.js'
 import {runProviderStream} from '../src/runtime/stream-runner.js';
 import {detectPerformanceProfile, hardwareSummary, PERFORMANCE_PROFILES, profileSettings} from '../src/runtime/profiles.js';
 import {voiceProfiles} from '../src/app/voice-profiles.js';
+import {SpeechSegments} from '../src/conversation/speech-segments.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
@@ -21,7 +22,7 @@ const requestedProfile=process.env.MYAVATAR_PERFORMANCE_PROFILE||'auto';
 const machine=hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length});
 let profileSelection=['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(requestedProfile)?requestedProfile:'auto';
 let performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:profileSelection});
-const model=process.env.MYAVATAR_CONVERSATION_MODEL||'qwen3.5:0.8b';
+const modelForProfile=()=>process.env.MYAVATAR_CONVERSATION_MODEL||(performanceProfile==='balanced'?'qwen3.5:4b':'qwen3.5:0.8b');
 const requestedProvider=process.env.MYAVATAR_CONVERSATION_PROVIDER||'ollama';
 const ollamaUrl='http://127.0.0.1:11434/api/chat';
 const exec=promisify(execFile);
@@ -56,10 +57,10 @@ providerRegistry.register('conversation','ollama',Object.freeze({
     if(!response.ok)return {available:false,reason:`Local model returned HTTP ${response.status}.`};
     return {available:true};
   },
-  async stream({text,signal,onToken,botId='nova'}){
+  async stream({text,signal,onToken,botId='nova',history=[]}){
     const profile=voiceProfiles[botId]||voiceProfiles.nova;
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal,
-      body:JSON.stringify({model,stream:true,think:false,options:{num_predict:profileSettings(performanceProfile).maxTokens},messages:[{role:'system',content:profile.systemPrompt},{role:'user',content:text}]})});
+      body:JSON.stringify({model:modelForProfile(),stream:true,think:false,options:{num_predict:profileSettings(performanceProfile).maxTokens},messages:[{role:'system',content:profile.systemPrompt+' Answer the actual request directly. Usually use one to three short spoken sentences. Use ordinary conversational language, no emojis, stage directions, or uninvited flirting. Follow the user’s requested length. Be honest about your capabilities.'},...history,{role:'user',content:text}]})});
     if(!response.ok)throw Error(`Local model returned HTTP ${response.status}.`);
     const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';
     while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split('\n');buffer=lines.pop()||'';for(const line of lines){if(!line.trim())continue;const part=JSON.parse(line);const tokenText=part.message?.content||'';if(tokenText)onToken(tokenText);}}
@@ -68,7 +69,7 @@ providerRegistry.register('conversation','ollama',Object.freeze({
 }));
 const conversationProvider=providerRegistry.resolve('conversation',{preferred:requestedProvider,fallbacks:['ollama']});
 
-function spokenText(text){
+function spokenTextForSpeech(text){
   return String(text||'')
     .replace(/```[\s\S]*?```/g,' ')
     .replace(/!\[([^\]]*)\]\([^)]*\)/g,'$1')
@@ -108,12 +109,13 @@ async function synthesizeSpeech(text,botId='nova',emotion=null){
   const aiff=join(dir,'speech.aiff');const wav=join(dir,'speech.wav');
   try{
     const voice=bots[botId]?.voice||voiceProfiles.nova;
-    const cleanText=spokenText(text);
+    const cleanText=spokenTextForSpeech(text);
     const speed=voice.speed*(emotion==='happy'?1.02:emotion==='sad'?.96:emotion==='curious'?.99:1);
     if(kokoroReady){
       try{
         const audio=await new Promise((resolveAudio,reject)=>{
-          const id=String(++kokoroRequestId);kokoroResponses.set(id,{resolve:resolveAudio,reject});
+          const id=String(++kokoroRequestId);const timer=setTimeout(()=>{kokoroResponses.delete(id);reject(Error('Speech synthesis timed out.'));},30000);
+          kokoroResponses.set(id,{resolve:value=>{clearTimeout(timer);resolveAudio(value);},reject:error=>{clearTimeout(timer);reject(error);}});
           kokoroWorker.stdin.write(`${JSON.stringify({id,text:cleanText,voice:voice.voiceId,speed,lang:voice.lang})}\n`,error=>{if(error){kokoroResponses.delete(id);reject(error);}});
         });
         return audio;
@@ -134,27 +136,37 @@ const server=new WebSocketServer({host:'127.0.0.1',port});
 server.on('connection',(socket,request)=>{
   if(new URL(request.url,'ws://127.0.0.1').searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
   const sessionId=randomUUID();let sequence=0;let stopped=new Set();const activeControllers=new Map();let activeBot='nova';
+  const histories=new Map();
   const send=(event)=>socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
   const sendConfig=()=>send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',voiceProvider:kokoroReady?'kokoro':'macos-say',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});
   sendConfig();
   const answer=async(turn,text,{speak=false}={})=>{
-    let spokenText='';
+    let spokenText='';const bot=activeBot;const history=histories.get(bot)||[];
+    const segments=new SpeechSegments();let speechChain=Promise.resolve();
     const controller=new AbortController();activeControllers.set(turn,controller);
-    try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:activeBot},onToken(tokenText){
+    const queueSpeech=sentence=>{speechChain=speechChain.then(async()=>{
+      if(controller.signal.aborted||stopped.has(turn))return;
+      const clean=spokenTextForSpeech(sentence);if(!clean)return;
+      const emotion=responseEmotion(clean,bot);
+      try{const audio=await synthesizeSpeech(clean,bot,emotion);if(!controller.signal.aborted&&!stopped.has(turn))send({type:'audio',turn,audio,mime:'audio/wav',voice:bots[bot].voice,emotion});}
+      catch(error){if(!controller.signal.aborted)send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
+    });};
+    try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:bot,history},onToken(tokenText){
       if(stopped.has(turn))return;
       spokenText+=tokenText;send({type:'token',turn,text:tokenText});
-    }});}finally{activeControllers.delete(turn);}
+      if(speak)for(const sentence of segments.push(tokenText))queueSpeech(sentence);
+    }});
+    if(speak)for(const sentence of segments.push('',true))queueSpeech(sentence);
+    await speechChain;
     if(stopped.has(turn)||controller.signal.aborted){stopped.delete(turn);return;}
-    if(speak){
-      const emotion=responseEmotion(spokenText,activeBot);
-      try{send({type:'audio',turn,audio:await synthesizeSpeech(spokenText,activeBot,emotion),mime:'audio/wav',voice:bots[activeBot]?.voice,emotion});}
-      catch(error){send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
-    }
+    histories.set(bot,[...history,{role:'user',content:text},{role:'assistant',content:spokenText}].slice(-12));
     send({type:'done',turn});
+    }finally{controller.abort();activeControllers.delete(turn);}
   };
   socket.on('message',async raw=>{
     let message;try{message=JSON.parse(raw.toString());}catch{return;}
     if(message.type==='stop'){stopped.add(message.turn);activeControllers.get(message.turn)?.abort(new Error('Turn stopped by user.'));return;}
+    if(message.type==='clear_history'){histories.delete(activeBot);return;}
     if(message.type==='switch_bot'&&typeof message.botId==='string'&&bots[message.botId]){activeBot=message.botId;sendConfig();return;}
     if(message.type==='set_profile'&&['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(message.profile)){
       profileSelection=message.profile;performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:profileSelection});
@@ -178,12 +190,14 @@ server.on('connection',(socket,request)=>{
       if(message.type==='voice'){
         if(typeof message.audio!=='string'||!message.audio)throw Error('No microphone audio was received.');
         text=await transcribeVoice(message.audio,message.mime);
+        if(stopped.has(turn)||socket.readyState!==1){stopped.delete(turn);return;}
         if(!text)throw Error('No speech was recognized. Typed chat is available.');
         send({type:'transcript',turn,text});
       }
       if(typeof text!=='string'||!text.trim())throw Error('Empty request.');
-      await answer(turn,text,{speak:message.type==='voice'});
+      await answer(turn,text,{speak:message.type==='voice'||message.speak===true});
     }catch(error){if(!stopped.has(turn)&&error?.name!=='AbortError')send({type:'error',turn,message:`${message.type==='voice'?'Voice':'Conversation'} unavailable: ${message.type==='voice'?voiceSetupError(error):error.message}`});stopped.delete(turn);}
   });
+  socket.on('close',()=>{for(const controller of activeControllers.values())controller.abort();});
 });
 server.on('listening',()=>console.log(`Conversation service listening on ws://127.0.0.1:${port}`));

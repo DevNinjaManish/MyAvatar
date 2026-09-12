@@ -42,6 +42,11 @@ selection is retained locally for the next launch. Profile changes affect the
 conversation response budget and avatar rendering load without changing bot
 identity or voice mapping.
 
+Current conversation defaults are `qwen3.5:0.8b` for Fast and `qwen3.5:4b`
+for Balanced; `MYAVATAR_CONVERSATION_MODEL` overrides both. These models
+must be present in the local Ollama installation. The profile changes apply
+to subsequent requests.
+
 ### Fast
 
 Fast is optimized for slower or resource-constrained Macs. It uses smaller models, shorter context windows, lighter memory retrieval, and reduced visual effects to keep voice interaction responsive.
