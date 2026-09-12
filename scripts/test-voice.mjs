@@ -19,7 +19,7 @@ try{
   socket.on('message',data=>{
     const event=JSON.parse(data);
     if(event.type==='config'){
-      const expected={nova:['af_nova','Samantha'],sterling:['bm_daniel','Daniel'],rivet:['am_onyx','Fred'],luma:['af_aoede','Karen']};
+      const expected={nova:['af_heart','Heart'],sterling:['bm_daniel','Daniel'],rivet:['am_onyx','Fred'],luma:['af_aoede','Karen']};
       sawConfig=(!requestedProfile||event.runtime?.profileSelection===profile)&&Object.entries(expected).every(([id,[voiceId,voice]])=>event.config?.bots?.[id]?.voice?.provider==='kokoro'&&event.config?.bots?.[id]?.voice?.voiceId===voiceId&&event.config?.bots?.[id]?.voice?.name===voice);
       started=Date.now();socket.send(JSON.stringify({type:'voice',turn:1,audio,mime:'audio/wav'}));
     }
@@ -29,7 +29,7 @@ try{
     if(event.type==='audio'&&event.filler)console.log(`Acknowledgement: ${Date.now()-started}ms`);
     if(event.type==='audio'&&!event.filler){if(!sawAudio)console.log(`First reply audio: ${Date.now()-started}ms`);sawAudio=Boolean(event.audio);sawVoice=event.voice?.voiceId||'';}
     if(event.type==='error'){clearTimeout(timer);console.error(event.message);process.exit(1);}
-    if(event.type==='done'){clearTimeout(timer);if(!sawConfig||!transcript.trim()||!response.trim()||!sawAudio||sawVoice!=='af_nova'){console.error('Voice integration did not complete STT, response, bot-specific TTS, and voice audio.');process.exit(1);}console.log(`Voice integration passed: ${transcript.trim()} -> ${response.trim()} (${sawVoice})`);socket.close();}
+    if(event.type==='done'){clearTimeout(timer);if(!sawConfig||!transcript.trim()||!response.trim()||!sawAudio||sawVoice!=='af_heart'){console.error('Voice integration did not complete STT, response, bot-specific TTS, and voice audio.');process.exit(1);}console.log(`Voice integration passed: ${transcript.trim()} -> ${response.trim()} (${sawVoice})`);socket.close();}
   });
   socket.on('error',error=>{clearTimeout(timer);console.error(error.message);process.exit(1);});
 }finally{await fs.rm(dir,{recursive:true,force:true});}
