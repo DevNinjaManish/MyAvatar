@@ -27,8 +27,13 @@ const imageWorker=path.join(projectRoot,'scripts/luma-image-worker.py');
 const lumaConversationModel=()=>process.env.MYAVATAR_FAST_MODEL||'huihui_ai/qwen3.5-abliterated:4b';
 let lumaJob=null;
 let lumaCancelled=false;
-const runLumaWorker=(request,onProgress=()=>{})=>new Promise(resolve=>{
-  if(lumaJob)return resolve({error:'Luma is already creating one image.'});
+let lumaPreparing=false;
+const lumaSleepModels=()=>[lumaConversationModel(),process.env.MYAVATAR_BALANCED_MODEL||'huihui_ai/qwen3.5-abliterated:9b'].filter((model,index,models)=>models.indexOf(model)===index);
+const sleepModel=async model=>{try{const response=await fetch('http://127.0.0.1:11434/api/generate',{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(3500),body:JSON.stringify({model,keep_alive:0})});await response.body?.cancel();}catch{}};
+const runLumaWorker=(request,onProgress=()=>{})=>new Promise(async resolve=>{
+  if(lumaJob||lumaPreparing)return resolve({error:'Luma is already creating one image.'});
+  lumaPreparing=true;onProgress({stage:'reclaiming',message:'Luma Focus · freeing chat model memory'});
+  try{await Promise.all(lumaSleepModels().map(sleepModel));}finally{lumaPreparing=false;}
   const modelPath=path.join(app.getPath('userData'),'models','stable-diffusion-v1-5');
   const outputPath=path.join(app.getPath('userData'),'creations');
   const child=spawn(imagePython,[imageWorker,modelPath,outputPath],{stdio:['pipe','pipe','pipe'],env:{...process.env,HF_HUB_DISABLE_XET:'1'}});let stdout='',stdoutBuffer='',stderr='',settled=false;
