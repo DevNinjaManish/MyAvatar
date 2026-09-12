@@ -236,7 +236,7 @@ server.on('connection',(socket,request)=>{
         send({type:'recognizing',turn});
         const recognition=await transcribeVoice(message.audio,message.mime);text=recognition.text;recognizedLanguage=recognition.language;
         if(stopped.has(turn)||socket.readyState!==1){stopped.delete(turn);return;}
-        send({type:'recognition',turn,text,language:recognition.language,durationMs:recognition.durationMs,uncertain:recognition.uncertain});
+        send({type:'recognition',turn,text,language:recognition.language,durationMs:recognition.durationMs,uncertain:recognition.uncertain,rescuedEnglish:recognition.rescuedEnglish===true});
         if(recognition.uncertain||!text){
           const clarification='I didn’t catch that clearly. Could you say it again?';
           send({type:'token',turn,text:clarification});

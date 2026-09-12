@@ -47,7 +47,8 @@ persistent memory are not implemented. These are not implied by passing tests.
 
 ## Recognition and response latency follow-up
 
-- Active recognizer: persistent Faster-Whisper small, int8 CPU, automatic
+- Active recognizer: persistent Faster-Whisper small, int8 CPU, beam-two
+  decoding by default, automatic
   language detection for Hindi–English. No MLX or Apple system voices in the
   runtime. Kokoro supplies Hindi and English voice models locally.
 - Simple greetings/thanks bypass generation. Delayed acknowledgements are contextual,
@@ -55,7 +56,9 @@ persistent memory are not implemented. These are not implied by passing tests.
   after recognition, at 3.5 seconds. They are cancelled on reply audio, stop,
   completion, or disconnect.
 - Recognition now exposes an explicit `Understanding…` state. Faster-Whisper uses a
-  beam-one low-latency pass, multilingual VAD filtering, and a Hindi–English prompt.
+  beam-two quality-first pass, less aggressive trailing-speech preservation,
+  multilingual VAD filtering, and a Hindi–English prompt. A weak automatically
+  detected English result receives one English-only higher-beam recovery pass.
 - TTS starts at a natural clause boundary on long first sentences instead of always
   waiting for final sentence punctuation. Spoken generation is instructed to
   lead with a short complete sentence, and uses a lower clause threshold so the

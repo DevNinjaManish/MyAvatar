@@ -54,7 +54,9 @@ Voice inference uses local open-source Faster-Whisper small (int8 CPU) for
 multilingual recognition and Kokoro for English/Hindi speech. It does not use
 Apple system voices or MLX. Recognition detects language automatically by
 default for Hindi–English use; `MYAVATAR_SPEECH_LANGUAGE` can explicitly select
-a language. Install Python dependencies from `requirements-voice.txt`.
+a language. The default decoder uses beam size two; `MYAVATAR_WHISPER_BEAM_SIZE`
+can override it when a user deliberately prefers more speed or more accuracy.
+Install Python dependencies from `requirements-voice.txt`.
 
 ### Fast
 
