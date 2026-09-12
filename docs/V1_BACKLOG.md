@@ -14,13 +14,14 @@ This backlog is ordered by dependency and risk. Work proceeds in small vertical 
 
 ## Phase 2: real-time voice and liveness
 
-1. Replace the single-turn voice path with an interruptible streaming turn manager.
-2. Add barge-in, endpointing, cancellation, and voice fallback.
-3. Add hybrid local TTS plus authored nonverbal audio playback.
-4. Add 2.5D layered rendering and shared animation state machine.
-5. Add audio-driven mouth and light equalizer.
-6. Add listening, thinking, speaking, sleeping, powered, broken, and recovery states.
-7. Add bot-specific voice and animation fixtures.
+1. [x] Replace the single-turn voice path with an interruptible streaming turn manager.
+2. [x] Add barge-in, adaptive endpointing, cancellation, and contextual persona fallback.
+3. [ ] Complete hybrid local TTS with authored nonverbal audio playback; local persona TTS is connected.
+4. [ ] Complete 2.5D layered rendering; the shared state machine and visual direction exist.
+5. [x] Add audio-driven mouth and light equalizer.
+6. [ ] Complete listening, thinking, speaking, sleeping, powered, broken, and recovery production states.
+7. [ ] Complete bot-specific voice and animation fixtures and blind identity QA.
+8. [ ] Pass real-microphone English/Hindi/Hinglish, noisy-room, pause, interruption, and 20-turn soak qualification.
 
 Use existing bot assets as provisional placeholders throughout this phase. Asset redesign is not a prerequisite for implementing or testing the runtime.
 
@@ -63,10 +64,16 @@ Use existing bot assets as provisional placeholders throughout this phase. Asset
 6. Fix critical issues and run a creator daily-use trial.
 7. Decide private V1 versus public V1 release.
 
-## Deferred visual replacement pass
+## Visual replacement pass
 
-After image-generation capacity is available, produce replacement bot art using the V1 visual specification. Re-run visual QA and asset performance checks, but preserve the bot configuration, animation state, voice visualization, and panel contracts.
+The first four-bot activity-state reference is complete at
+`design-references/v1-companion-state-reference.png`. Complete Working,
+Sleeping, and Recovery references, then produce production-ready layered assets.
+Re-run visual QA and asset performance checks while preserving bot configuration,
+animation state, voice visualization, and panel contracts.
 
-## First implementation slice
+## Completed first implementation slice
 
-Start with shared event schemas, provider interfaces, hardware/profile detection, and fake providers. This reduces architectural risk while preserving the current MVP UI and behavior. The first slice should not add new visible features until the existing regression path remains green through the new runtime boundary.
+Shared event schemas, provider interfaces, hardware/profile detection, and the
+existing regression path are implemented and green. Current execution priority
+is the remaining Phase 2 human voice qualification above.

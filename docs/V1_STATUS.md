@@ -17,28 +17,48 @@ and validated product behavior.
 | Platform controls and compact geometry | Implemented | Pause/Resume, More, runtime health, hide, quit; native visual QA passes |
 | V1 documentation consolidation | Implemented | Active docs are V1-only; former MVP docs are archived |
 | Structural wireframes | Complete | Ten V1 wireframes exist |
-| High-fidelity visual designs | Not started | Produce references per `V1_DESIGN_DELIVERABLES.md` |
-| Motion and behavior specifications | Not started | Define after shared visual language is approved |
-| Streaming voice turn manager | Partial qualification | Sentence streaming, ordered playback, recent dialogue, amplitude-driven mouth movement, and interruption onset are connected; see `V1_VOICE_QA.md` for evidence and remaining naturalness work |
+| High-fidelity visual designs | In progress | Four-bot Ready/Listening/Thinking/Speaking/Error reference exists; remaining surfaces and production assets are tracked in `V1_DESIGN_DELIVERABLES.md` |
+| Motion and behavior specifications | Documented; implementation partial | Shared state timing is specified; production state animation and bot-specific fixtures remain |
+| Streaming voice turn manager | Implemented; human qualification pending | Continuous launch listening, interruption, clause streaming, contextual persona fallbacks, local multilingual STT, bot TTS, and explicit Understanding state are connected; real-microphone Hinglish and repeated-turn soak remain |
 | Memory and context systems | Not started | Implement local stores, collectors, permissions, and retrieval |
 | Specialist panels and delegation | Contracts only | Build after core context and action boundaries |
 | V1 acceptance qualification | Not started | Track evidence in `V1_ACCEPTANCE_MATRIX.md` |
 
 ## Execution order
 
-1. Harden the runtime with provider health, fake providers, cancellation integration tests, and reconnection recovery.
-2. Build the interruptible voice/liveness loop and its visual state fixtures.
-3. Create the shared high-fidelity companion design and motion language.
-4. Implement memory, context, provenance, and permission controls.
-5. Author and test Nova, Sterling, Rivit, and Luma behavior.
-6. Build specialist panels, action approval, jobs, and delegation.
-7. Run hardware, setup, visual, performance, soak, and daily-use qualification.
+1. Qualify and tune the current voice loop with real microphone Hindi, English, and Hinglish recordings, repeated turns, noisy rooms, pauses, and barge-in.
+2. Convert the approved activity-state reference into deterministic production state behavior and complete Working, Sleeping, and Recovery references.
+3. Implement local memory, context provenance, permission controls, and inspect/forget flows.
+4. Complete and blind-test Nova, Sterling, Rivit, and Luma behavior and voice identity.
+5. Build specialist panels, action approval, jobs, and delegation.
+6. Run hardware, setup, visual, performance, soak, and daily-use qualification.
 
 ## Batch checkpoints
 
 - Batch 0: V1 foundation and documentation consolidation — complete (`0fa5fe7`)
 - Batch 1: Runtime resilience — complete (`64f7253`)
-- Batch 2: Continuous voice launch slice — implemented; native clean-launch and typed speech QA pass; repeated-turn and barge-in soak remain
+- Batch 2: Continuous voice launch slice — implemented; native clean-launch and typed speech QA pass
+- Batch 3: Responsive multilingual voice and visual-state direction — implemented (`80f547c`); 92 tests and production build pass; real-microphone Hinglish and repeated-turn soak remain
+
+## Next recommended batch
+
+Run a real-microphone voice qualification loop before expanding feature scope:
+
+1. Capture a small local QA corpus from the actual microphone: short English,
+   Hindi, and Hinglish turns; quiet speech; natural pauses; names; commands; and
+   interruption while Nova is speaking. Keep recordings temporary unless the
+   user explicitly chooses to retain them.
+2. Record endpoint, recognition, first-token, first-audio, and interruption
+   latency separately so tuning targets the correct stage.
+3. Add vocabulary hints and conservative repair rules only for observed errors;
+   compare Fast and Balanced recognition without slowing every turn.
+4. Run a 20-turn continuous conversation and noisy-room soak, then document the
+   error rate, dropped turns, false activations, and subjective naturalness.
+5. Fix the measured failures and repeat native visual/audio QA.
+
+Exit: ordinary English/Hindi/Hinglish turns are understood reliably on the
+creator machine, simple replies begin without dead air, longer work uses a
+contextual persona fallback only when needed, and interruption remains fluid.
 
 ## Definition of “documented” versus “done”
 

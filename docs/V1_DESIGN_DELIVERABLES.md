@@ -13,7 +13,8 @@ design work required before each surface is considered design-ready.
 
 ## Companion and voice
 
-- [ ] High-fidelity references for Ready, Listening, Thinking, Speaking, Working, Sleeping, Broken, and Recovery
+- [x] Shared high-fidelity reference for Ready, Listening, Thinking, Speaking, and recoverable Error across all four bots
+- [ ] Extend the shared reference with Working, Sleeping, and Recovery
 - [ ] Motion timing and interruption specification for each state
 - [ ] Audio-reactive mouth and equalizer behavior reference
 - [ ] Nova, Sterling, Rivit, and Luma expression and lighting parameters
@@ -51,4 +52,6 @@ Each surface needs:
 4. A link from the corresponding structural wireframe.
 
 The existing provisional bot art remains usable for implementation and QA while
-the final visual replacement pass is pending.
+the final layered visual replacement pass is pending. The approved direction
+reference is [`design-references/v1-companion-state-reference.png`](design-references/v1-companion-state-reference.png);
+it is not itself a production spritesheet.
