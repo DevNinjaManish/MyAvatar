@@ -8,8 +8,8 @@
   </head>
   <body class="mvp-widget">
     <main id="app" aria-label="MyAvatar companion">
-      <div class="stage-frame">
-        <div id="stage" aria-label="Companion avatar"></div>
+      <div class="stage-frame" aria-live="polite">
+        <div id="stage" aria-label="Companion avatar" aria-busy="true"></div>
         <div class="presence-chip" aria-live="polite"><i></i><span id="stage-status">Warming…</span></div>
       </div>
       <section class="widget-card" aria-label="Companion controls">
@@ -34,6 +34,16 @@
             <button id="profile-fast" type="button" aria-pressed="false">Fast</button>
             <button id="profile-balanced" type="button" aria-pressed="false">Balanced</button>
           </div>
+        </section>
+        <section class="visual-control" aria-label="Companion appearance">
+          <strong>Appearance</strong>
+          <small id="appearance-summary">Natural scale · presence glow on</small>
+          <div class="appearance-options" role="group" aria-label="Avatar scale">
+            <button id="avatar-scale-small" type="button" aria-pressed="false">Small</button>
+            <button id="avatar-scale-normal" type="button" aria-pressed="true">Natural</button>
+            <button id="avatar-scale-large" type="button" aria-pressed="false">Large</button>
+          </div>
+          <button id="avatar-glow" class="appearance-toggle" type="button" aria-pressed="true">Presence glow</button>
         </section>
         <button id="runtime-health" type="button"><span>Runtime health</span><small>Provider and connection</small></button>
         <button id="hide-widget" type="button"><span>Hide widget</span><small>Keep the runtime active</small></button>
