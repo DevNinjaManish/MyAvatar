@@ -12,6 +12,7 @@ test('typed runtime starts only from config',()=>{
   const gate=new RuntimeEventGate();
   assert.equal(gate.accept(event('ready',1)),false);
   assert.equal(gate.accept(event('config',1)),true);
+  assert.equal(gate.accept(event('profile',2)),true);
 });
 
 test('rejects duplicate and out-of-order sequence numbers',()=>{

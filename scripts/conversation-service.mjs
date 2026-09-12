@@ -12,13 +12,15 @@ import {createInterface} from 'node:readline';
 import {WebSocketServer} from 'ws';
 import {ProviderRegistry,checkProviderHealth} from '../src/runtime/providers.js';
 import {runProviderStream} from '../src/runtime/stream-runner.js';
-import {detectPerformanceProfile, hardwareSummary, PERFORMANCE_PROFILES} from '../src/runtime/profiles.js';
+import {detectPerformanceProfile, hardwareSummary, PERFORMANCE_PROFILES, profileSettings} from '../src/runtime/profiles.js';
 import {voiceProfiles} from '../src/app/voice-profiles.js';
 
 const port=8787;
 const token=process.env.MYAVATAR_RUNTIME_TOKEN||'local-mvp';
 const requestedProfile=process.env.MYAVATAR_PERFORMANCE_PROFILE||'auto';
-const performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:requestedProfile});
+const machine=hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length});
+let profileSelection=['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(requestedProfile)?requestedProfile:'auto';
+let performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:profileSelection});
 const model=process.env.MYAVATAR_CONVERSATION_MODEL||'qwen3.5:0.8b';
 const requestedProvider=process.env.MYAVATAR_CONVERSATION_PROVIDER||'ollama';
 const ollamaUrl='http://127.0.0.1:11434/api/chat';
@@ -57,7 +59,7 @@ providerRegistry.register('conversation','ollama',Object.freeze({
   async stream({text,signal,onToken,botId='nova'}){
     const profile=voiceProfiles[botId]||voiceProfiles.nova;
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal,
-      body:JSON.stringify({model,stream:true,think:false,options:{num_predict:performanceProfile===PERFORMANCE_PROFILES.FAST?192:256},messages:[{role:'system',content:profile.systemPrompt},{role:'user',content:text}]})});
+      body:JSON.stringify({model,stream:true,think:false,options:{num_predict:profileSettings(performanceProfile).maxTokens},messages:[{role:'system',content:profile.systemPrompt},{role:'user',content:text}]})});
     if(!response.ok)throw Error(`Local model returned HTTP ${response.status}.`);
     const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';
     while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split('\n');buffer=lines.pop()||'';for(const line of lines){if(!line.trim())continue;const part=JSON.parse(line);const tokenText=part.message?.content||'';if(tokenText)onToken(tokenText);}}
@@ -133,7 +135,7 @@ server.on('connection',(socket,request)=>{
   if(new URL(request.url,'ws://127.0.0.1').searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
   const sessionId=randomUUID();let sequence=0;let stopped=new Set();const activeControllers=new Map();let activeBot='nova';
   const send=(event)=>socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
-  const sendConfig=()=>send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',voiceProvider:kokoroReady?'kokoro':'macos-say',profile:performanceProfile,hardware:hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length})}});
+  const sendConfig=()=>send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',voiceProvider:kokoroReady?'kokoro':'macos-say',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});
   sendConfig();
   const answer=async(turn,text,{speak=false}={})=>{
     let spokenText='';
@@ -154,6 +156,11 @@ server.on('connection',(socket,request)=>{
     let message;try{message=JSON.parse(raw.toString());}catch{return;}
     if(message.type==='stop'){stopped.add(message.turn);activeControllers.get(message.turn)?.abort(new Error('Turn stopped by user.'));return;}
     if(message.type==='switch_bot'&&typeof message.botId==='string'&&bots[message.botId]){activeBot=message.botId;sendConfig();return;}
+    if(message.type==='set_profile'&&['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(message.profile)){
+      profileSelection=message.profile;performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),requested:profileSelection});
+      send({type:'profile',profile:performanceProfile,selection:profileSelection,settings:profileSettings(performanceProfile),hardware:machine});
+      return;
+    }
     if(message.type==='health'){
       send({type:'health',health:await checkProviderHealth(conversationProvider,{timeoutMs:1500})});
       return;

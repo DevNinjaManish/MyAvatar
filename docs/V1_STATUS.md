@@ -10,7 +10,7 @@ and validated product behavior.
 | --- | --- | --- |
 | V1 product direction and scope | Documented | `V1_VISION.md`, `V1_SCOPE.md`, `V1_PRODUCT_BRIEF.md` |
 | Runtime contracts and provider registry | Implemented | JavaScript contract tests pass |
-| Hardware/profile detection | Implemented | Profile unit tests pass |
+| Hardware/profile detection | Implemented | RAM-based Auto selection, More-menu Fast/Balanced override, persistence, and profile unit tests pass |
 | Local conversation service integration | Implemented | MVP WebSocket path preserved; build/tests pass |
 | Provider timeout and cancellation | Implemented | Hard timeout/cancellation runner tests and runtime smoke pass |
 | Runtime health and reconnect recovery | Implemented | Typed health event, bounded provider probe, and automatic reconnect path pass |

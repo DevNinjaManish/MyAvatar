@@ -16,7 +16,7 @@ the corresponding item in `V1_ACCEPTANCE.md` complete.
 | Specialist panels | Nova/Sterling, Rivit, and Luma panels stay focused and connected to common chat | Panel integration and visual QA | Not started |
 | Delegation | Scoped task, visible status, cancellation, timeout, loop rejection, and result return | Delegation contract and soak tests | Foundation only |
 | Setup and repair | Clean install, interrupted download, dependency failure, repair, and resume | Native setup matrix | Not started |
-| Performance profiles | Fast works on 8 GB target; Balanced remains responsive on preferred hardware | Hardware benchmark and thermal logs | Profile selection only |
+| Performance profiles | Fast works on 8 GB target; Balanced remains responsive on preferred hardware | Hardware benchmark and thermal logs | Auto RAM selection and More-menu switching implemented; hardware qualification remains |
 | Provider portability | Provider can be replaced through contracts without UI/bot changes | Fake provider and adapter tests | Passing foundation |
 | Runtime resilience | Provider health, hard timeout, cancellation, typed health event, reconnect, and streamed response | `runtime-stream` tests and `test:runtime` | Passing |
 | Regression safety | Existing launch, chat, stop, voice fallback, and relaunch path remains green | `npm test`, build, runtime and native smoke | Passing foundation |

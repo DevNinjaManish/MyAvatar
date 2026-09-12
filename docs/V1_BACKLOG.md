@@ -7,7 +7,7 @@ This backlog is ordered by dependency and risk. Work proceeds in small vertical 
 1. Define shared typed event schemas and versioning.
 2. Define model, voice, vision, context, image, and action provider interfaces.
 3. Add hardware, memory, disk, and architecture detection.
-4. Add Fast/Balanced profile selection and diagnostics.
+4. Complete Fast/Balanced profile diagnostics and hardware qualification; runtime selection is implemented in the More menu.
 5. Add provider health, fallback, cancellation, and timeout contracts.
 6. Build deterministic fake providers for CI and native smoke tests.
 7. Preserve and automate the existing MVP regression path.

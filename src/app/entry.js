@@ -35,7 +35,10 @@ let runtimeInfo=null;
 let liveVoiceEnabled=false;
 let greetingSent=false;
 let greetingTimer=null;
+let profileSelection='auto';
+let activeProfile='fast';
 const MAX_RECONNECT_ATTEMPTS=Infinity;
+const PROFILE_IDS=['auto','fast','balanced'];
 
 const desktop=globalThis.desktop;
 const stopDrag=()=>{document.body.classList.remove('dragging');avatar.setDragging(false);desktop?.stopDrag?.();};
@@ -47,10 +50,24 @@ function setOpen(id,open){
   const panel=$(id);const changed=panel.hidden===open;panel.hidden=!open;
   if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(changed)desktop?.resize?.(open?770:500);if(open)$('message').focus({preventScroll:true});}
   if(id==='companion-picker')$('companion-toggle').setAttribute('aria-expanded',String(open));
-  if(id==='more-menu'){$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');}
+  if(id==='more-menu'){$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');if(changed)desktop?.resize?.(open?770:500);}
 }
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;}
+function applyProfileUi({profile='fast',selection='auto',hardware=null,settings=null}={}){
+  activeProfile=profile;profileSelection=selection;
+  if(settings)avatar.configure({maxFps:settings.maxFps,effectFps:settings.effectFps});
+  for(const id of PROFILE_IDS){const button=$(`profile-${id}`);if(button)button.setAttribute('aria-pressed',String(id===selection));}
+  const ram=hardware?.memoryGb?` (${hardware.memoryGb} GB RAM)`:'';
+  $('profile-summary').textContent=selection==='auto'?`Auto · ${profile[0].toUpperCase()+profile.slice(1)}${ram}`:`${profile[0].toUpperCase()+profile.slice(1)} · selected manually`;
+}
+function selectProfile(selection){
+  if(!PROFILE_IDS.includes(selection))return;
+  if(activeTurn!==null){showNotice('Finish or stop the current response before changing performance.',false,'warning');return;}
+  profileSelection=selection;localStorage.setItem('myavatar-performance-profile',selection);setOpen('more-menu',false);
+  if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'set_profile',profile:selection}));
+  else showNotice('Runtime unavailable. The profile will apply when it reconnects.',true,'warning');
+}
 function setPaused(value){paused=Boolean(value);if(paused)stopVoiceCapture();appState.set(paused?STATES.PAUSED:STATES.IDLE);$('pause-toggle').textContent=paused?'Resume':'Pause';$('pause-toggle').setAttribute('aria-label',paused?'Resume companion':'Pause companion');setRuntimeStatus(paused?'Paused':'Ready');if(!paused)startVoiceCapture({automatic:false});}
 function setVoiceButton(active){$('mic-toggle').textContent=active?'Stop':'Mic';$('mic-toggle').setAttribute('aria-label',active?'Stop microphone':'Start microphone');$('mic-toggle').setAttribute('aria-pressed',String(active));}
 function bytesToBase64(bytes){let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(binary);}
@@ -120,7 +137,7 @@ function connectRuntime(){
   if(runtimeSocket&&(runtimeSocket.readyState===WebSocket.OPEN||runtimeSocket.readyState===WebSocket.CONNECTING))return;
   setRuntimeStatus(reconnectAttempts?'Reconnecting…':'Starting…');
   const socket=new WebSocket('ws://127.0.0.1:8787/?token=local-mvp');runtimeSocket=socket;
-  socket.addEventListener('open',()=>{reconnectAttempts=0;setRuntimeStatus('Connecting…');});
+  socket.addEventListener('open',()=>{reconnectAttempts=0;setRuntimeStatus('Connecting…');const saved=localStorage.getItem('myavatar-performance-profile');if(PROFILE_IDS.includes(saved)&&saved!=='auto')socket.send(JSON.stringify({type:'set_profile',profile:saved}));});
   socket.addEventListener('error',()=>{if(runtimeSocket===socket)setRuntimeStatus('Unavailable');});
   socket.addEventListener('close',()=>{if(runtimeSocket!==socket)return;runtimeSocket=null;stopVoiceCapture();if(activeTurn!==null){chat.applyRuntimeEvent({type:'error',turn:activeTurn,message:'The local runtime disconnected.'});activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;}setRuntimeStatus('Reconnecting…');showNotice('Reconnecting to the local runtime…',false,'info');scheduleRuntimeReconnect();});
 }
@@ -148,9 +165,16 @@ window.addEventListener('myavatar:runtime-event',event=>{
     const current=companionById[detail.botId];
     if(current){selected=current.id;$('companion-name').textContent=current.name;stage.setAttribute('aria-label',`${current.name} avatar`);document.body.dataset.companion=current.id;document.documentElement.style.setProperty('--accent',current.accent);avatar.showRobot(current.id);$('message').value=chat.draft(current.id);$('pause-toggle').textContent=paused?'Resume':'Pause';}
     runtimeInfo=detail.runtime||runtimeInfo;
+    applyProfileUi({profile:detail.runtime?.profile||activeProfile,selection:detail.runtime?.profileSelection||profileSelection,hardware:detail.runtime?.hardware,settings:detail.runtime?.profileSettings});
     setRuntimeStatus('Ready');
     if(!greetingSent){greetingSent=true;clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>startVoiceCapture({automatic:true}),8000);if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'greeting'}));}
     else if(!liveVoiceEnabled&&!paused)startVoiceCapture({automatic:true});
+  }
+  if(detail?.type==='profile'){
+    runtimeInfo={...runtimeInfo,profile:detail.profile,profileSelection:detail.selection,profileSettings:detail.settings,hardware:detail.hardware};
+    applyProfileUi({profile:detail.profile,selection:detail.selection,hardware:detail.hardware,settings:detail.settings});
+    showNotice(`${detail.selection==='auto'?'Auto':'Manual'} · ${detail.profile} profile active`,false,'info');
+    setTimeout(()=>showNotice(''),1800);
   }
   if(detail?.type==='greeting'){
     clearTimeout(greetingTimer);greetingTimer=null;
@@ -188,6 +212,9 @@ $('more-toggle').addEventListener('click',()=>{setOpen('chat-panel',false);setOp
 $('more-close').addEventListener('click',()=>setOpen('more-menu',false));
 $('pause-toggle').addEventListener('click',()=>{if(activeTurn!==null){showNotice('Stop the current response before pausing the companion.',false,'warning');return;}setPaused(!paused);setOpen('more-menu',false);showNotice(paused?'Companion paused.':'Companion resumed.',false,'info');});
 $('runtime-health').addEventListener('click',()=>{setOpen('more-menu',false);if(runtimeSocket?.readyState!==WebSocket.OPEN){showNotice('Runtime unavailable. Reconnecting…',true,'warning');return;}showNotice('Checking runtime health…',false,'info');runtimeSocket.send(JSON.stringify({type:'health'}));});
+$('profile-auto').addEventListener('click',()=>selectProfile('auto'));
+$('profile-fast').addEventListener('click',()=>selectProfile('fast'));
+$('profile-balanced').addEventListener('click',()=>selectProfile('balanced'));
 $('hide-widget').addEventListener('click',()=>{setOpen('more-menu',false);desktop?.minimize?.();});
 $('quit-app').addEventListener('click',()=>desktop?.close?.());
 const options=$('companion-options');

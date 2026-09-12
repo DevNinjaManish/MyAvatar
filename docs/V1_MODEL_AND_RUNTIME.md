@@ -36,6 +36,12 @@ Bots share models where possible. Persona, voice, memory, emotional behavior, to
 
 ## Performance profiles
 
+Auto mode selects Fast below 16 GB of system RAM and Balanced at 16 GB or
+above. The More menu also allows an explicit Fast or Balanced override; the
+selection is retained locally for the next launch. Profile changes affect the
+conversation response budget and avatar rendering load without changing bot
+identity or voice mapping.
+
 ### Fast
 
 Fast is optimized for slower or resource-constrained Macs. It uses smaller models, shorter context windows, lighter memory retrieval, and reduced visual effects to keep voice interaction responsive.

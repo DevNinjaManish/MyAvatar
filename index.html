@@ -22,6 +22,15 @@
       </section>
       <section id="more-menu" class="more-menu" aria-label="More options" hidden>
         <header><strong>More</strong><button id="more-close" type="button" aria-label="Close more menu">×</button></header>
+        <section class="profile-control" aria-label="Performance profile">
+          <strong>Performance</strong>
+          <small id="profile-summary">Auto · detecting system RAM</small>
+          <div class="profile-options" role="group" aria-label="Performance profile">
+            <button id="profile-auto" type="button" aria-pressed="true">Auto</button>
+            <button id="profile-fast" type="button" aria-pressed="false">Fast</button>
+            <button id="profile-balanced" type="button" aria-pressed="false">Balanced</button>
+          </div>
+        </section>
         <button id="runtime-health" type="button"><span>Runtime health</span><small>Provider and connection</small></button>
         <button id="hide-widget" type="button"><span>Hide widget</span><small>Keep the runtime active</small></button>
         <button id="quit-app" class="danger" type="button"><span>Quit MyAvatar</span><small>Close the app and runtime</small></button>

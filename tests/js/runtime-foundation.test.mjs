@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {createDelegationEnvelope,createRuntimeEvent,isRuntimeEvent} from '../../src/runtime/contracts.js';
-import {detectPerformanceProfile,hardwareSummary,PERFORMANCE_PROFILES} from '../../src/runtime/profiles.js';
+import {detectPerformanceProfile,hardwareSummary,PERFORMANCE_PROFILES,profileSettings} from '../../src/runtime/profiles.js';
 import {ProviderRegistry,checkProviderHealth,createFakeProvider} from '../../src/runtime/providers.js';
 
 test('runtime events have a typed identity and reject unknown types',()=>{
@@ -18,9 +18,12 @@ test('delegation envelopes are scoped and cannot self-loop',()=>{
 });
 
 test('automatic performance selection stays conservative',()=>{
-  assert.equal(detectPerformanceProfile({arch:'x64',totalMemoryBytes:32*1024**3}),PERFORMANCE_PROFILES.FAST);
+  assert.equal(detectPerformanceProfile({arch:'x64',totalMemoryBytes:32*1024**3}),PERFORMANCE_PROFILES.BALANCED);
   assert.equal(detectPerformanceProfile({arch:'arm64',totalMemoryBytes:16*1024**3}),PERFORMANCE_PROFILES.BALANCED);
+  assert.equal(detectPerformanceProfile({arch:'x64',totalMemoryBytes:8*1024**3}),PERFORMANCE_PROFILES.FAST);
   assert.equal(detectPerformanceProfile({requested:'fast',arch:'arm64',totalMemoryBytes:64*1024**3}),PERFORMANCE_PROFILES.FAST);
+  assert.equal(profileSettings(PERFORMANCE_PROFILES.FAST).maxTokens,192);
+  assert.equal(profileSettings(PERFORMANCE_PROFILES.BALANCED).maxTokens,256);
   assert.equal(hardwareSummary({arch:'x64',totalMemoryBytes:8*1024**3}).supportedArchitecture,true);
 });
 
