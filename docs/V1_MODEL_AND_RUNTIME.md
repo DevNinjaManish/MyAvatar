@@ -48,40 +48,46 @@ Fast uses `huihui_ai/qwen3.5-abliterated:4b` for every reply. Balanced uses
 present in Ollama. The 0.8B model is not used in user-facing replies.
 
 The configured stack is approximately 12 GB of model weights on disk
-(4B + 9B Qwen, 1.5 GB Whisper, 342 MB Zipformer, and 337 MB Kokoro/voices),
+(4B + 9B Qwen, about 1.75 GB of MLX Whisper profiles, 342 MB Zipformer, and
+337 MB Kokoro/voices),
 inside the approximately 20 GB active-model budget. Only the selected profile's
-Qwen model is loaded and warmed at a time. Switching profiles warms the next
-model before the profile becomes active, avoiding hidden model swaps during a
-conversation.
+Qwen and Whisper models are loaded and warmed. Switching profiles warms the next
+ASR and conversation model before the profile becomes active, then asks Ollama
+to release the prior conversation model, avoiding a first-turn model swap.
 
-Voice inference uses local open-source Faster-Whisper `large-v3-turbo` (int8 CPU) for
-multilingual recognition and Kokoro for English/Hindi speech. It does not use
-Apple system voices or MLX. Recognition detects language automatically by
-default for Hindi–English use; `MYAVATAR_SPEECH_LANGUAGE` can explicitly select
-a language. The default decoder uses beam size two; `MYAVATAR_WHISPER_BEAM_SIZE`
-can override it when a user deliberately prefers more speed or more accuracy.
-Install Python dependencies from `requirements-voice.txt`.
+On Apple Silicon, voice inference uses Apple MLX Whisper. Fast uses
+`mlx-community/whisper-base.en-mlx`, the same English-first recognizer that made
+the pre-MVP loop responsive. Balanced uses
+`mlx-community/whisper-large-v3-turbo` with automatic language detection for
+English, Hindi, and Hinglish. `MYAVATAR_SPEECH_LANGUAGE` may explicitly select a
+language, and `MYAVATAR_WHISPER_MODEL` may override the selected model. Intel
+uses Faster-Whisper `large-v3-turbo` as the compatibility fallback. Kokoro
+continues to provide local English/Hindi speech; Apple system voices are not
+used. Install Python dependencies from `requirements-voice.txt`.
 
 Local streaming Zipformer, installed in `models/streaming-asr/`, receives
 microphone frames during speech and supplies provisional captions. Its output is
 never authoritative conversational input. Every ordinary utterance is decoded
-again by Faster-Whisper after endpointing. Only an exact, narrow, harmless
+again by the selected Whisper model after endpointing. Only an exact, narrow, harmless
 immediate-command allowlist (`stop`, `cancel`, `stop talking`, `be quiet`, or
 `never mind`) may act directly on a finalized Zipformer result.
 
 ### Fast
 
 Fast is optimized for slower or resource-constrained Macs. It uses 4B for every
-conversation, shorter context windows, lighter memory retrieval, and reduced
-visual effects to keep voice interaction responsive. Auto selects Fast on a
-MacBook Air, and users may always choose it manually on a MacBook Pro.
+conversation and English-first MLX `base.en` recognition, plus shorter context
+windows, lighter memory retrieval, and reduced visual effects to keep voice
+interaction responsive. Auto selects Fast on a MacBook Air, and users may
+always choose it manually on a MacBook Pro. Use Balanced when multilingual
+Hindi/Hinglish recognition is required.
 
 The Fast conversational model should remain warm in memory where possible so a user can begin speaking without waiting for model startup. When quality and responsiveness conflict, Fast chooses responsiveness.
 
 ### Balanced
 
-Balanced uses 9B for every reply, richer context, and more visual detail. Auto
-selects it on MacBook Pro hardware with 16 GB or more memory.
+Balanced uses 9B for every reply, multilingual MLX `large-v3-turbo`, richer
+context, and more visual detail. Auto selects it on MacBook Pro hardware with
+16 GB or more memory.
 
 Natural filler is allowed when it reflects a real state:
 
@@ -117,6 +123,7 @@ Voice, animation, and basic companion interaction remain available if a deeper r
 
 At launch, the companion remains in a sleeping “Warming…” state. It does not
 present Ready, greet, accept chat or microphone input, or begin live listening
-until Faster-Whisper, Zipformer, Kokoro, and both configured Ollama routes have
-initialized successfully. A failed warmup leaves the companion unavailable with
-the failure reason instead of presenting a partially ready bot.
+until the selected Whisper route has completed a real inference warm-up and
+Zipformer, Kokoro, and the selected Ollama route have initialized successfully.
+A failed warmup leaves the companion unavailable with the failure reason instead
+of presenting a partially ready bot.

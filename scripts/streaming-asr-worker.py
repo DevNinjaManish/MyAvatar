@@ -19,6 +19,15 @@ recognizer = sherpa_onnx.OnlineRecognizer.from_transducer(
 )
 streams = {}
 
+# Exercise the retained ONNX graph before readiness. Zipformer is provisional,
+# but its first live caption must not pay one-time session initialization cost.
+warm_stream = recognizer.create_stream()
+warm_stream.accept_waveform(16000, np.zeros(3200, dtype=np.float32))
+warm_stream.input_finished()
+while recognizer.is_ready(warm_stream):
+    recognizer.decode_stream(warm_stream)
+recognizer.get_result(warm_stream)
+
 def decode(stream):
     while recognizer.is_ready(stream):
         recognizer.decode_stream(stream)

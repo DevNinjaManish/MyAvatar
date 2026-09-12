@@ -19,14 +19,14 @@ and validated product behavior.
 | Structural wireframes | Complete | Ten V1 wireframes exist |
 | High-fidelity visual designs | Core batch complete; variants remain | Five-board UI gallery covers all ten wireframes; both four-bot state references exist; production layered assets and secondary failure variants remain |
 | Motion and behavior specifications | Core implementation complete | Nine shared states have deterministic transitions, runtime mapping, Fast/Balanced reduction, reduced-motion behavior, and four-bot visual fixtures |
-| Streaming voice turn manager | Implemented; human qualification pending | Continuous launch listening, interruption, clause streaming, contextual persona fallbacks, local multilingual STT, bot TTS, and explicit Understanding state are connected; real-microphone Hinglish and repeated-turn soak remain |
+| Streaming voice turn manager | Implemented; human qualification pending | Continuous launch listening, provisional captions, clause streaming, Fast English / Balanced multilingual STT, bot TTS, and explicit Understanding state are connected; real-microphone Hinglish and repeated-turn soak remain |
 | Memory and context systems | Not started | Implement local stores, collectors, permissions, and retrieval |
 | Specialist panels and delegation | Contracts only | Build after core context and action boundaries |
 | V1 acceptance qualification | Not started | Track evidence in `V1_ACCEPTANCE_MATRIX.md` |
 
 ## Execution order
 
-1. Qualify and tune the current voice loop with real microphone Hindi, English, and Hinglish recordings, repeated turns, noisy rooms, pauses, and barge-in.
+1. Qualify and tune the current voice loop with real microphone Hindi, English, and Hinglish recordings, repeated turns, noisy rooms, and pauses. Keep acoustic barge-in disabled until semantic interruption is qualified.
 2. Convert the approved activity-state reference into deterministic production state behavior and complete Working, Sleeping, and Recovery references.
 3. Implement local memory, context provenance, permission controls, and inspect/forget flows.
 4. Complete and blind-test Nova, Sterling, Rivit, and Luma behavior and voice identity.

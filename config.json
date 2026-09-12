@@ -8,8 +8,10 @@
       "context": 2048
     },
     "speechToText": {
-      "provider": "faster-whisper",
-      "model": "large-v3-turbo",
+      "provider": "mlx-whisper",
+      "fastModel": "mlx-community/whisper-base.en-mlx",
+      "balancedModel": "mlx-community/whisper-large-v3-turbo",
+      "fallbackProvider": "faster-whisper",
       "provisionalProvider": "zipformer"
     },
     "textToSpeech": {

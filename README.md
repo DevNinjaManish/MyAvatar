@@ -60,20 +60,23 @@ MyAvatar is released under the [MIT License](LICENSE).
 ## Local voice setup
 
 Create the project virtual environment, install the checked-in voice dependencies,
-and install Ollama. The configured V1 stack uses Faster-Whisper
-`large-v3-turbo`, Zipformer provisional captions, Fast 4B / Balanced 9B Qwen
-profiles, and Kokoro persona voices:
+and install Ollama. On Apple Silicon, Fast restores the original low-latency
+MLX `whisper-base.en` path with Qwen 4B, while Balanced uses multilingual MLX
+`large-v3-turbo` with Qwen 9B. Zipformer supplies provisional captions and
+Kokoro supplies persona voices. Intel retains Faster-Whisper as a fallback:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/pip install -r requirements-voice.txt
+uv pip install --python .venv/bin/python -r requirements-voice.txt
 ollama pull huihui_ai/qwen3.5-abliterated:4b
 ollama pull huihui_ai/qwen3.5-abliterated:9b
-.venv/bin/python -c "from faster_whisper import WhisperModel; WhisperModel('large-v3-turbo', device='cpu', compute_type='int8')"
 npm run doctor
 ```
 
 Large model files live outside Git. Do not delete existing Ollama or Hugging Face
 models during setup. Kokoro and Zipformer assets are expected under `models/`.
+The selected profile's recognizer downloads and performs a real warm inference
+before the companion may show Ready. Changing Fast/Balanced warms the next
+profile before activating it; it does not make the first utterance pay setup cost.
 If an authoritative recognizer or TTS asset is unavailable, the widget keeps
 typed chat available and shows a recoverable voice warning.

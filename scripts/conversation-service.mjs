@@ -1,7 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {promises as fs} from 'node:fs';
-import {execFile,spawn,spawnSync} from 'node:child_process';
-import {promisify} from 'node:util';
+import {spawn,spawnSync} from 'node:child_process';
 import {tmpdir} from 'node:os';
 import {arch, totalmem, cpus} from 'node:os';
 import {join} from 'node:path';
@@ -34,12 +33,16 @@ const balancedConversationModel=()=>process.env.MYAVATAR_BALANCED_MODEL||'huihui
 const modelForProfile=()=>performanceProfile===PERFORMANCE_PROFILES.BALANCED?balancedConversationModel():fastConversationModel();
 const requestedProvider=process.env.MYAVATAR_CONVERSATION_PROVIDER||'ollama';
 const ollamaUrl='http://127.0.0.1:11434/api/chat';
-const exec=promisify(execFile);
-const whisperModel=process.env.MYAVATAR_WHISPER_MODEL||'large-v3-turbo';
 const recognitionLanguage=process.env.MYAVATAR_SPEECH_LANGUAGE||'auto';
 const projectRoot=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const localPython=join(projectRoot,'.venv/bin/python');
-const recognizer=new JsonWorker(process.env.MYAVATAR_WHISPER_PYTHON||localPython,[join(projectRoot,'scripts/whisper-worker.py'),whisperModel]);
+const defaultRecognitionProvider=process.platform==='darwin'&&arch()==='arm64'?'mlx-whisper':'faster-whisper';
+const recognitionProvider=process.env.MYAVATAR_RECOGNITION_PROVIDER||defaultRecognitionProvider;
+const whisperModelForProfile=profile=>process.env.MYAVATAR_WHISPER_MODEL||(recognitionProvider==='mlx-whisper'?(profile===PERFORMANCE_PROFILES.FAST?'mlx-community/whisper-base.en-mlx':'mlx-community/whisper-large-v3-turbo'):'large-v3-turbo');
+let whisperModel=null;
+const recognizerScript=recognitionProvider==='mlx-whisper'?'mlx-whisper-worker.py':'whisper-worker.py';
+const createRecognizer=model=>new JsonWorker(process.env.MYAVATAR_WHISPER_PYTHON||localPython,[join(projectRoot,'scripts',recognizerScript),model]);
+let recognizer=null;
 const streamingModel=process.env.MYAVATAR_STREAMING_ASR_MODEL||join(projectRoot,'models/streaming-asr/sherpa-onnx-streaming-zipformer-en-2023-06-26');
 const streamingReady=existsSync(join(streamingModel,'tokens.txt'));
 const streamingCallbacks=new Map();
@@ -61,9 +64,11 @@ if(kokoroWorker){
   });
   kokoroWorker.on('close',()=>{const error=Error('Kokoro TTS worker stopped.');failKokoroReady(error);for(const pending of kokoroResponses.values())pending.reject(error);kokoroResponses.clear();});
 }
-const stopKokoro=()=>{recognizer.close();streamingRecognizer?.close();if(kokoroWorker&&!kokoroWorker.killed)kokoroWorker.kill('SIGTERM');};
-process.on('SIGTERM',()=>{stopKokoro();process.exit(0);});
-process.on('SIGINT',()=>{stopKokoro();process.exit(0);});
+const stopKokoro=()=>{recognizer?.close();streamingRecognizer?.close();if(kokoroWorker&&!kokoroWorker.killed)kokoroWorker.kill('SIGTERM');};
+let shuttingDown=false;
+const shutDown=async()=>{if(shuttingDown)return;shuttingDown=true;stopKokoro();if(runtimeBootstrap)await unloadConversation(modelForProfile());process.exit(0);};
+process.on('SIGTERM',shutDown);
+process.on('SIGINT',shutDown);
 const bots=Object.freeze({nova:{name:'Nova',voice:voiceProfiles.nova},sterling:{name:'Sterling',voice:voiceProfiles.sterling},rivet:{name:'Rivit',voice:voiceProfiles.rivet},luma:{name:'Luma',voice:voiceProfiles.luma}});
 const providerRegistry=new ProviderRegistry();
 providerRegistry.register('conversation','ollama',Object.freeze({
@@ -88,13 +93,27 @@ const acknowledgementAudio=new Map();
 const quickAudio=new Map();
 function quickSpeech(text,bot){const key=bot+text;if(!quickAudio.has(key))quickAudio.set(key,synthesizeSpeech(text,bot).catch(error=>{quickAudio.delete(key);throw error;}));return quickAudio.get(key);}
 const warmedModels=new Set();
-async function warmConversation(model=fastConversationModel(),{force=false}={}){
+async function warmConversation(model=modelForProfile(),{force=false}={}){
   if(!force&&warmedModels.has(model))return;
   warmedModels.add(model);
   try{
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(60000),body:JSON.stringify({model,messages:[],stream:false,keep_alive:'10m'})});
     await response.body?.cancel();if(!response.ok)throw Error(`Local model returned HTTP ${response.status}.`);
   }catch(error){warmedModels.delete(model);throw error;}
+}
+async function unloadConversation(model){
+  try{
+    const response=await fetch('http://127.0.0.1:11434/api/generate',{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(10000),body:JSON.stringify({model,keep_alive:0})});
+    await response.body?.cancel();
+  }catch{}
+  warmedModels.delete(model);
+}
+async function warmRecognizer(profile){
+  const model=whisperModelForProfile(profile);
+  if(model===whisperModel)return null;
+  const worker=createRecognizer(model);
+  try{await worker.ready;return {worker,model};}
+  catch(error){worker.close();throw error;}
 }
 function warmVoiceFastLane(bot){
   const reply=quickReply('how are you',bot);
@@ -135,7 +154,8 @@ async function transcribeVoice(audio,mime='audio/webm'){
   const input=join(dir,`input.${extension}`);
   try{
     await fs.writeFile(input,Buffer.from(audio,'base64'));
-    return await recognizer.request({path:input,language:recognitionLanguage==='auto'?null:recognitionLanguage});
+    const activeRecognizer=recognizer;
+    return await activeRecognizer.request({path:input,language:recognitionLanguage==='auto'?null:recognitionLanguage});
   }finally{await fs.rm(dir,{recursive:true,force:true});}
 }
 
@@ -164,15 +184,29 @@ async function synthesizeSpeech(text,botId='nova',emotion=null){
 // A companion may present itself as alive only after every mandatory local
 // dependency and the profile-selected conversation route have initialized.
 // A 16 GB Mac keeps one Qwen route resident to avoid eviction churn.
-const runtimeBootstrap=Promise.all([
-  recognizer.ready,
-  streamingRecognizer?.ready||Promise.reject(Error('Local Zipformer model is unavailable.')),
-  kokoroWorkerReady,
-]).then(async()=>{
-  await warmConversation(modelForProfile());
-  await synthesizeSpeech('Ready.','nova');
-});
-runtimeBootstrap.catch(()=>{});
+let runtimeBootstrap=null;
+function ensureRuntime(selection=profileSelection){
+  if(runtimeBootstrap)return runtimeBootstrap;
+  if(['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(selection)){
+    profileSelection=selection;
+    performanceProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),modelIdentifier:macModelIdentifier,requested:profileSelection});
+  }
+  whisperModel=whisperModelForProfile(performanceProfile);
+  recognizer=createRecognizer(whisperModel);
+  runtimeBootstrap=Promise.all([
+    recognizer.ready,
+    streamingRecognizer?.ready||Promise.reject(Error('Local Zipformer model is unavailable.')),
+    kokoroWorkerReady,
+  ]).then(async()=>{
+    const selectedModel=modelForProfile();
+    await warmConversation(selectedModel);
+    const inactiveModel=performanceProfile===PERFORMANCE_PROFILES.BALANCED?fastConversationModel():balancedConversationModel();
+    if(inactiveModel!==selectedModel)await unloadConversation(inactiveModel);
+    await synthesizeSpeech('Ready.','nova');
+  });
+  runtimeBootstrap.catch(()=>{});
+  return runtimeBootstrap;
+}
 
 function voiceSetupError(error){
   if(error?.code==='ENOENT')return 'Local speech recognition is unavailable. Repair the project voice dependencies.';
@@ -181,7 +215,9 @@ function voiceSetupError(error){
 
 const server=new WebSocketServer({host:'127.0.0.1',port});
 server.on('connection',(socket,request)=>{
-  if(new URL(request.url,'ws://127.0.0.1').searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
+  const requestUrl=new URL(request.url,'ws://127.0.0.1');
+  if(requestUrl.searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
+  const bootstrap=ensureRuntime(requestUrl.searchParams.get('profile')||profileSelection);
   const sessionId=randomUUID();let sequence=0;let stopped=new Set();const activeControllers=new Map();let activeBot='nova';
   const streamingTurns=new Map();
   const pendingAcknowledgements=new Map();
@@ -198,9 +234,9 @@ server.on('connection',(socket,request)=>{
     }
     if(socket.readyState===1)socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
   };
-  const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),fastModel:fastConversationModel(),balancedModel:balancedConversationModel(),recognitionProvider:'faster-whisper',recognitionModel:whisperModel,recognitionLanguage,streamingRecognition:streamingReady?'zipformer-provisional-en':'unavailable',voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
+  const sendConfig=()=>{warmVoiceFastLane(activeBot);send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',model:modelForProfile(),fastModel:fastConversationModel(),balancedModel:balancedConversationModel(),recognitionProvider,recognitionModel:whisperModel,recognitionLanguage,streamingRecognition:streamingReady?'zipformer-provisional-en':'unavailable',voiceProvider:kokoroReady?'kokoro':'unavailable',profile:performanceProfile,profileSelection,profileSettings:profileSettings(performanceProfile),hardware:machine}});};
   send({type:'readiness',readiness:{state:'warming',ready:false,message:'Warming local models…'}});
-  runtimeBootstrap.then(sendConfig).catch(error=>send({type:'readiness',readiness:{state:'unavailable',ready:false,message:`Runtime warmup failed: ${error.message}`}}));
+  bootstrap.then(sendConfig).catch(error=>send({type:'readiness',readiness:{state:'unavailable',ready:false,message:`Runtime warmup failed: ${error.message}`}}));
   const answer=async(turn,text,{speak=false,recognizedLanguage=''}={})=>{
     let spokenText='';const bot=activeBot;const history=histories.get(bot)||[];
     const quick=quickReply(text,bot);
@@ -257,8 +293,12 @@ server.on('connection',(socket,request)=>{
     if(message.type==='set_profile'&&['auto',PERFORMANCE_PROFILES.FAST,PERFORMANCE_PROFILES.BALANCED].includes(message.profile)){
       const nextSelection=message.profile;const nextProfile=detectPerformanceProfile({arch:arch(),totalMemoryBytes:totalmem(),modelIdentifier:macModelIdentifier,requested:nextSelection});
       const nextModel=nextProfile===PERFORMANCE_PROFILES.BALANCED?balancedConversationModel():fastConversationModel();
+      const previousModel=modelForProfile();
       await warmConversation(nextModel,{force:true});
+      const nextRecognizer=await warmRecognizer(nextProfile);
+      if(nextRecognizer){const previous=recognizer;recognizer=nextRecognizer.worker;whisperModel=nextRecognizer.model;previous.close();}
       profileSelection=nextSelection;performanceProfile=nextProfile;
+      if(previousModel!==nextModel)await unloadConversation(previousModel);
       send({type:'profile',profile:performanceProfile,selection:profileSelection,settings:profileSettings(performanceProfile),hardware:machine});
       return;
     }
@@ -267,7 +307,6 @@ server.on('connection',(socket,request)=>{
       return;
     }
     if(message.type==='greeting'){
-      warmConversation();
       const text=bots[activeBot]?.voice?.greeting||'Hi, I’m ready.';
       try{send({type:'greeting',text,audio:await synthesizeSpeech(text,activeBot,'happy'),mime:'audio/wav',voice:bots[activeBot]?.voice,emotion:'happy'});getAcknowledgement(activeBot,0,'Please help me think through this carefully').catch(()=>{});}
       catch{send({type:'greeting',text});}

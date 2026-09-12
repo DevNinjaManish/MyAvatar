@@ -19,7 +19,8 @@ remain consistent.
 
 ## Interruption rules
 
-- User stop or barge-in immediately halts output audio and speaking motion.
+- User Stop immediately halts output audio and speaking motion. Acoustic
+  barge-in remains disabled until it can distinguish intent from room noise.
 - A cancelled turn cannot emit late tokens, audio, completion, or visual state changes.
 - The companion returns to Listening when capture remains active, otherwise Ready.
 - Reduced motion removes decorative phase animation but preserves audio amplitude,
@@ -29,7 +30,7 @@ remain consistent.
 ## QA timing fixtures
 
 Every bot needs fixtures for: wake, ready idle, listening onset, thinking under
-one second, extended thinking, speaking with pauses, barge-in, cancellation,
+one second, extended thinking, speaking with pauses, Stop cancellation,
 working banner, permission request, failure, recovery, sleep, and reduced
 motion. Fixtures must use deterministic event timing and real audio envelopes
 where audio-reactive behavior is claimed.

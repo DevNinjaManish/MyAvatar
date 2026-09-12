@@ -15,13 +15,13 @@ This backlog is ordered by dependency and risk. Work proceeds in small vertical 
 ## Phase 2: real-time voice and liveness
 
 1. [x] Replace the single-turn voice path with an interruptible streaming turn manager.
-2. [x] Add barge-in, adaptive endpointing, cancellation, and contextual persona fallback.
+2. [x] Add adaptive endpointing, reliable Stop cancellation, noise-safe reply playback, and contextual persona fallback. Acoustic barge-in remains opt-in pending semantic qualification.
 3. [ ] Complete hybrid local TTS with authored nonverbal audio playback; local persona TTS is connected.
 4. [x] Complete the core 2.5D state renderer and shared animation state machine; final replacement art remains a separate asset pass.
 5. [x] Add audio-driven mouth and light equalizer.
 6. [x] Complete ready, listening, understanding, speaking, working, paused, sleeping, error, and recovery production states.
 7. [ ] Complete bot-specific voice fixtures and blind identity QA; four-bot visual state fixtures are complete.
-8. [ ] Pass real-microphone English/Hindi/Hinglish, noisy-room, pause, interruption, and 20-turn soak qualification.
+8. [ ] Pass real-microphone English/Hindi/Hinglish, noisy-room, pause, Stop cancellation, and 20-turn soak qualification.
 
 Use existing bot assets as provisional placeholders throughout this phase. Asset redesign is not a prerequisite for implementing or testing the runtime.
 

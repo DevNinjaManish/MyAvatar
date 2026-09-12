@@ -10,7 +10,8 @@ const checks=[
 ];
 for(const [name,ok,detail] of checks) console.log(`${ok?'✓':'✗'} ${name}: ${ok?'ready':detail}`);
 const python=resolve(root,'.venv/bin/python');
-const voicePython=existsSync(python)&&spawnSync(python,['-c','import faster_whisper, kokoro_onnx, sherpa_onnx'],{stdio:'ignore'}).status===0;
+const voiceImports=process.arch==='arm64'?'import mlx_whisper, kokoro_onnx, sherpa_onnx':'import faster_whisper, kokoro_onnx, sherpa_onnx';
+const voicePython=existsSync(python)&&spawnSync(python,['-c',voiceImports],{stdio:'ignore'}).status===0;
 const kokoro=existsSync(resolve(root,'models/kokoro-v1.0.onnx'))&&existsSync(resolve(root,'models/voices-v1.0.bin'));
 const zipformer=existsSync(resolve(root,'models/streaming-asr/sherpa-onnx-streaming-zipformer-en-2023-06-26/tokens.txt'));
 const ollama=spawnSync('ollama',['list'],{encoding:'utf8'});

@@ -124,9 +124,7 @@ async function startVoiceCapture({automatic=false}={}){
   const socket=runtimeSocket;
   if(!socket||socket.readyState!==WebSocket.OPEN){if(!automatic)showNotice('Conversation service unavailable. Typed chat is available.',true,'warning');return false;}
   try{
-    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:440,shortSilenceMs:300,shortTurnMs:520,preRollMs:260,calibrationMs:0,releaseRatio:.68,onLiveSpeechFrame:streamLiveSpeech,onLiveSpeechRejected:rejectLiveSpeech,onBargeIn:()=>{
-      const turn=activeTurn??turnPlayback.activeTurn;if(turn!==null){runtimeSocket?.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);}stopSpeechPlayback();activeTurn=null;appState.set(STATES.LISTENING);setRuntimeStatus('Listening');
-    },bargeIn:{guardMs:400,threshold:.016,onsetMs:180,confirmMs:360,minSpeechMs:260,silenceMs:420,preRollMs:220,releaseRatio:.7}});
+    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:440,shortSilenceMs:300,shortTurnMs:520,preRollMs:260,calibrationMs:0,releaseRatio:.68,onLiveSpeechFrame:streamLiveSpeech,onLiveSpeechRejected:rejectLiveSpeech});
     if(!started||!audioEngine.setListening(true))throw Error('Microphone listening could not be started.');
     liveVoiceEnabled=true;setVoiceButton(true);appState.set(STATES.LISTENING);setRuntimeStatus('Listening');if(!automatic)showNotice('Listening…');return true;
   }catch(error){endActiveCapture();liveVoiceEnabled=false;setVoiceButton(false);showNotice(`Microphone unavailable: ${error.message}`,false,'warning');return false;}
@@ -155,8 +153,9 @@ function scheduleRuntimeReconnect(){
 function connectRuntime(){
   if(runtimeSocket&&(runtimeSocket.readyState===WebSocket.OPEN||runtimeSocket.readyState===WebSocket.CONNECTING))return;
   setRuntimeStatus(reconnectAttempts?'Reconnecting…':'Starting…');
-  const socket=new WebSocket('ws://127.0.0.1:8787/?token=local-mvp');runtimeSocket=socket;
-  socket.addEventListener('open',()=>{reconnectAttempts=0;setRuntimeStatus('Connecting…');const saved=localStorage.getItem('myavatar-performance-profile');if(PROFILE_IDS.includes(saved)&&saved!=='auto')socket.send(JSON.stringify({type:'set_profile',profile:saved}));});
+  const saved=localStorage.getItem('myavatar-performance-profile');const startupProfile=PROFILE_IDS.includes(saved)?saved:'auto';
+  const socket=new WebSocket(`ws://127.0.0.1:8787/?token=local-mvp&profile=${encodeURIComponent(startupProfile)}`);runtimeSocket=socket;
+  socket.addEventListener('open',()=>{reconnectAttempts=0;setRuntimeStatus('Connecting…');});
   socket.addEventListener('error',()=>{if(runtimeSocket===socket)setRuntimeStatus('Unavailable');});
   socket.addEventListener('close',()=>{if(runtimeSocket!==socket)return;runtimeSocket=null;setRuntimeReady(false);stopVoiceCapture();clearTimeout(recoveryTimer);appState.set(STATES.ERROR);if(activeTurn!==null){chat.applyRuntimeEvent({type:'error',turn:activeTurn,message:'The local runtime disconnected.'});activeTurn=null;$('send-message').hidden=false;$('stop-response').hidden=true;}setRuntimeStatus('Unavailable');showNotice('Reconnecting to the local runtime…',false,'info');scheduleRuntimeReconnect();});
 }

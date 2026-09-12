@@ -7,7 +7,8 @@ Implemented in this batch:
 - Sentence generation and synthesis overlap. Audio is decoded in arrival order,
   queued, and played through the same engine used for microphone interruption.
 - Actual output amplitude drives the avatar mouth, including the greeting.
-- Speech onset can cancel playback; captured interruption becomes the next turn.
+- The Stop control cancels playback. Automatic acoustic barge-in is disabled by
+  default so room noise or another nearby voice cannot cut off a reply.
 - Stopped turns cannot deliver late audio. Pending sentence jobs skip cancelled
   turns; a synthesis already executing may finish internally before being discarded.
 - Listening resumes only after server completion and all audio settles.
@@ -25,23 +26,23 @@ Implemented in this batch:
   its provisional streaming session. It cannot contaminate the next real turn.
 - English microphone frames are sent to the local streaming Zipformer recognizer
   in 160 ms batches for provisional captions and exact immediate commands only.
-  Persistent Faster-Whisper `large-v3-turbo` is authoritative for every normal
-  conversational utterance, including English, Hindi, and Hinglish.
+  A persistent MLX Whisper worker is authoritative for every normal turn:
+  `base.en` in Fast and multilingual `large-v3-turbo` in Balanced.
 - Streaming begins with the detector's retained pre-roll and includes trailing
   endpoint frames. A finalized exact stop/cancel command may be handled directly;
   a stale partial is never acted on. Normal turns always go through Whisper.
   The 360 ms endpoint now applies only below 520 ms of voiced speech; full
   sentences retain the safer 480 ms pause window.
-- Live barge-in uses its own detector and never performs startup calibration.
-  It may interrupt after 400 ms of reply playback only after 360 ms of sustained
-  voiced audio; short room-noise bursts cannot cancel a reply.
+- Acoustic barge-in remains an opt-in engine capability covered by unit tests,
+  but the V1 widget does not enable it. This restores the pre-MVP sequential
+  listen/respond behavior until semantic interruption can be qualified.
 - Fast uses local `huihui_ai/qwen3.5-abliterated:4b` for every reply; Balanced
   uses `huihui_ai/qwen3.5-abliterated:9b` for every reply. The selected model is
   warmed before the profile becomes active. The 0.8B model is not exposed.
 
 Evidence:
 
-- 103 JavaScript tests, including ordered decoding, stale decode cancellation,
+- 105 JavaScript tests, including ordered decoding, stale decode cancellation,
   streamed sentence boundaries, and interruption onset with retained speech.
 - Production build passes (existing bundle-size warning remains).
 - Runtime smoke and recorded speech input integration passed.
@@ -63,18 +64,18 @@ persistent memory are not implemented. These are not implied by passing tests.
 
 ## Recognition and response latency follow-up
 
-- Active authoritative recognizer: persistent Faster-Whisper `large-v3-turbo`, int8 CPU, beam-two
-  decoding by default, automatic
-  language detection for Hindi–English. No MLX or Apple system voices in the
-  runtime. Kokoro supplies Hindi and English voice models locally.
+- Active Apple Silicon recognizers: persistent MLX `whisper-base.en` in Fast and
+  persistent MLX `large-v3-turbo` in Balanced. Fast is English-first; Balanced
+  automatically detects Hindi–English. Intel retains Faster-Whisper as a
+  compatibility fallback. Kokoro supplies Hindi and English voices locally.
 - Simple greetings/thanks bypass generation. Delayed acknowledgements are contextual,
   persona-specific, rotating, and only scheduled for requests of seven or more words
   after recognition, at 3.5 seconds. They are cancelled on reply audio, stop,
   completion, or disconnect.
-- Recognition now exposes an explicit `Understanding…` state. Faster-Whisper uses a
-  beam-two quality-first pass, less aggressive trailing-speech preservation,
-  multilingual VAD filtering, and a Hindi–English prompt. A weak automatically
-  detected English result receives one English-only higher-beam recovery pass.
+- Recognition exposes an explicit `Understanding…` state. The selected MLX
+  worker is retained between turns and performs a real inference before it
+  reports ready, so first-use model compilation cannot occur after the companion
+  presents itself as alive.
 - TTS starts at a natural clause boundary on long first sentences instead of always
   waiting for final sentence punctuation. Spoken generation is instructed to
   lead with a short complete sentence, and uses a lower clause threshold so the
@@ -103,3 +104,33 @@ persistent memory are not implemented. These are not implied by passing tests.
 - Reply language follows the newest recognized turn, not prior conversation
   history. An explicit “switch back to English” applies English-only output to
   that response, even after a Hindi turn.
+
+### 2026-09-12 recognizer correction from repository history
+
+- Commit `519f8c1` shows that the responsive pre-MVP voice path used Apple MLX
+  `whisper-base.en`, not Faster-Whisper. Its checked-in latency record measured
+  105–153 ms warm STT and about 2.3–3.4 seconds from live endpoint to first
+  reply audio under comparable warm conditions.
+- The same cached `base.en` model was re-run on this Mac: the first fixture took
+  857 ms, then four retained-model English passes took 160–167 ms and produced
+  the exact reference transcript.
+- MLX `large-v3-turbo` retained the exact English and Hindi fixture output at
+  2,301–2,609 ms. That is materially faster than the current Faster-Whisper CPU
+  results (6,579–8,710 ms), while preserving the multilingual model for Balanced.
+- MLX `small` reached 641 ms English and about 990 ms Hindi after warm-up, but
+  repeated a token across the Hinglish fixture; it is rejected as the default.
+- The 4-bit MLX large-turbo conversion used about 464 MB but was slower here
+  (2,902–3,019 ms warm) and degraded the Hinglish output; it is rejected.
+- WhisperKit's 632 MB Core ML turbo candidate downloaded successfully, but its
+  Neural Engine specialization ran for more than six minutes and created heavy
+  swap pressure on this 16 GB Mac. It is retained on disk but rejected as the
+  simple, predictable default.
+- Complete warm service tests measured Fast at 381–558 ms recognition and
+  1,710–1,939 ms from audio receipt to first reply WAV. Balanced measured
+  2,622–4,059 ms recognition and 3,781–6,308 ms to first reply WAV on the same
+  English fixture. A short direct-reply streaming turn completed in 2,417 ms.
+  Real-microphone percentile qualification remains necessary rather than
+  claiming one fixed latency number.
+- Starting in Fast and switching to Balanced passed the runtime integration:
+  the next Whisper and Qwen models warmed before the profile event, and the
+  previous recognizer was closed after the swap.

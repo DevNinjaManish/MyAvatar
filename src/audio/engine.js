@@ -116,7 +116,7 @@ export class AudioEngine{
         else if(wasStreaming&&!this.detector.started){streamingActive=false;settings.onLiveSpeechRejected?.();}
         return;
       }
-      if(this.bargeCapturing||(this.playing&&Date.now()-this.playbackStartedAt>=this.bargeInGuardMs)){
+      if(settings.onBargeIn&&(this.bargeCapturing||(this.playing&&Date.now()-this.playbackStartedAt>=this.bargeInGuardMs))){
         const utterance=this.bargeDetector?.push(frame);
         // Do not cancel a reply at energy onset. A knock, keyboard clatter, or
         // a short room-noise burst can cross onset; require sustained voiced

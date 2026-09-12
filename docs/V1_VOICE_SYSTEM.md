@@ -10,7 +10,7 @@ prosody are already implemented.
 V1 is voice-first. Listening, thinking, speaking, interruption, silence, and nonverbal expression must feel like a natural live interaction. Each bot has a unique voice performance based on persona, not merely a different pitch or voice preset.
 
 Natural liveness is a V1 baseline, never an optional enhancement. Continuous
-listening, interruption, fast first response, contextual acknowledgement,
+listening, deliberate cancellation, fast first response, contextual acknowledgement,
 persona-led pacing, and recovery from misunderstanding apply to every bot by
 default. Settings may adjust boundaries or performance, but may not turn the
 core companion loop into a passive push-to-talk chat tool.
@@ -28,8 +28,8 @@ The hybrid system keeps the primary speech loop responsive while allowing richer
 The voice loop should support:
 
 - Fast response onset after the user finishes speaking
-- Barge-in while the bot is talking
-- Immediate speech cancellation when interrupted
+- A reliable Stop control while the bot is talking
+- Immediate speech cancellation when deliberately stopped
 - Natural pauses without appearing stuck
 - Short acknowledgements while processing
 - Backchannel reactions when appropriate
@@ -46,10 +46,11 @@ before the VAD. These measures improve common background noise; they do not
 magically separate nearby human speech or loud television audio from the user.
 
 English speech is streamed to a local Zipformer recognizer in 160 ms batches
-while the user speaks. At the end of a clearly English turn, its latest stable
-result takes the fast path; Hindi, Hinglish, unclear, or non-English output
-automatically falls back to persistent Faster-Whisper. This is an internal
-quality route, not a user-facing mode choice.
+while the user speaks. It supplies provisional captions and an exact narrow
+immediate-command path, but not ordinary conversation text. Fast authoritatively
+decodes with MLX `base.en`; Balanced authoritatively decodes with multilingual
+MLX `large-v3-turbo`. This is one Fast/Balanced choice, not a separate voice
+quality setting.
 
 ## Listening performance
 
@@ -111,11 +112,16 @@ audio arrives or the turn stops. Recognition remains loaded between turns and
 low-confidence/repetitive output asks for clarification. Neither language
 detection nor the confidence heuristic guarantees correct code-switching.
 
-For latency, brief social voice turns use the warm Fast local model even in
-Balanced mode. Work-like requests retain the user-selected performance model.
-The endpoint is deliberately asymmetric: speech below 520 ms resolves after
-360 ms of silence, while longer utterances keep a 480 ms window to avoid chopping a
+Fast and Balanced use only their selected, warmed conversational and speech
+models; there is no hidden per-request model swap. The endpoint is deliberately
+asymmetric: speech below 520 ms resolves after 300 ms of silence, while longer
+utterances keep a 440 ms window to avoid chopping a
 natural pause. This is a product rule, not an excuse to cut a speaker off.
+
+Automatic acoustic barge-in is disabled in the widget. The microphone remains
+owned for continuous conversation but is gated while reply audio plays; the
+visible Stop control is the reliable interruption path. The engine retains an
+opt-in barge-in capability for future semantic qualification.
 
 ## Nonverbal vocalizations
 
@@ -145,10 +151,10 @@ Voice remains available while extended work runs. The bot can say that it is con
 
 ## Quality bar
 
-Voice is V1-ready when users can interrupt naturally, hear clear speech with
+Voice is V1-ready when users can stop speech reliably, hear clear speech with
 recognizable bot identity, distinguish listening from silence, experience
 believable pauses and emotion, and complete a conversation without the bot
 becoming stuck or talking over them. Automated checks cover profile routing,
 spoken-text cleanup, local TTS output, automatic greeting, and playback
-coordination; remaining qualification is repeated-turn and barge-in soak
+coordination; remaining qualification is repeated-turn and noisy-room soak
 testing on representative hardware.

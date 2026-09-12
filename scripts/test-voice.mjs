@@ -11,14 +11,16 @@ const input=join(dir,'fixture.aiff');
 try{
   const fixture=await exec('.venv/bin/python',['scripts/kokoro-tts.py','models/kokoro-v1.0.onnx','models/voices-v1.0.bin','af_nova','1','en-us','hello from local voice testing'],{maxBuffer:4*1024*1024});
   const audio=fixture.stdout.trim();
-  const socket=new WebSocket('ws://127.0.0.1:8787/?token=local-mvp');
+  const requestedProfile=process.env.MYAVATAR_PERFORMANCE_PROFILE;
+  const profile=requestedProfile||'auto';
+  const socket=new WebSocket(`ws://127.0.0.1:8787/?token=local-mvp&profile=${encodeURIComponent(profile)}`);
   const timer=setTimeout(()=>{console.error('voice integration timeout');process.exit(1);},180000);
   let transcript='',response='',sawAudio=false,sawConfig=false,sawVoice='',started=0;
   socket.on('message',data=>{
     const event=JSON.parse(data);
     if(event.type==='config'){
       const expected={nova:['af_nova','Samantha'],sterling:['bm_daniel','Daniel'],rivet:['am_onyx','Fred'],luma:['af_aoede','Karen']};
-      sawConfig=Object.entries(expected).every(([id,[voiceId,voice]])=>event.config?.bots?.[id]?.voice?.provider==='kokoro'&&event.config?.bots?.[id]?.voice?.voiceId===voiceId&&event.config?.bots?.[id]?.voice?.name===voice);
+      sawConfig=(!requestedProfile||event.runtime?.profileSelection===profile)&&Object.entries(expected).every(([id,[voiceId,voice]])=>event.config?.bots?.[id]?.voice?.provider==='kokoro'&&event.config?.bots?.[id]?.voice?.voiceId===voiceId&&event.config?.bots?.[id]?.voice?.name===voice);
       started=Date.now();socket.send(JSON.stringify({type:'voice',turn:1,audio,mime:'audio/wav'}));
     }
     if(event.type==='transcript')transcript+=event.text||'';
