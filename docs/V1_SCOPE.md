@@ -48,7 +48,7 @@ The following are the V1 target context surface. They are introduced in phased s
 - Small model bundles and automatic model/runtime setup
 - Fast and Balanced profiles
 - Apple Silicon and Intel Mac support
-- 8 GB minimum target for the core voice/chat experience and 16 GB preferred target for richer context, panels, and model quality
+- 8 GB minimum target for the core voice/chat experience, 16 GB preferred target for Balanced operation, and approximately 20 GB allowed for the complete local model bundle
 - Real-time local voice with hybrid TTS and authored nonverbal audio
 - Interruptible asynchronous background jobs
 - Tiered observation, preparation, and action permissions

@@ -67,12 +67,19 @@ Initial direction:
 - **Sterling:** British, male, composed, measured, articulate, and discreet
 - **Luma:** expressive, curious, fluid, emotionally colorful, and creatively enthusiastic
 
-The current local fallback assigns a distinct installed macOS voice and speaking
-rate to every bot while the Kokoro provider is being integrated: Nova uses
-Samantha, Sterling uses Daniel, Rivit uses Fred, and Luma uses Karen. The voice
-profile is part of the bot contract, so greetings, normal replies, and future
-nonverbal assets must resolve through the same profile rather than a global
-default.
+The voice profile is part of the bot contract. The local Kokoro voice IDs are
+`af_nova`, `bm_daniel`, `am_onyx`, and `af_aoede` for Nova, Sterling, Rivit,
+and Luma respectively. If the local model bundle is unavailable, the verified
+macOS fallback uses Samantha, Daniel, Fred, and Karen at authored per-bot
+rates. Greetings, normal replies, and future nonverbal assets resolve through
+the same profile rather than a global default.
+
+The profile also supplies a persona behavior prompt. TTS changes how a bot
+sounds; the behavior prompt changes sentence shape, warmth, humor, vocabulary,
+initiative, and boundary behavior. Both layers are required for a believable
+bot identity. Spoken output removes markdown and stage directions, applies
+small persona-specific speed and emotion adjustments, and synchronizes the
+avatar expression with the detected conversational emotion.
 
 ## Nonverbal vocalizations
 
@@ -102,4 +109,10 @@ Voice remains available while extended work runs. The bot can say that it is con
 
 ## Quality bar
 
-Voice is V1-ready when users can interrupt naturally, hear clear speech with recognizable bot identity, distinguish listening from silence, experience believable pauses and emotion, and complete a conversation without the bot becoming stuck or talking over them.
+Voice is V1-ready when users can interrupt naturally, hear clear speech with
+recognizable bot identity, distinguish listening from silence, experience
+believable pauses and emotion, and complete a conversation without the bot
+becoming stuck or talking over them. Automated checks cover profile routing,
+spoken-text cleanup, local TTS output, automatic greeting, and playback
+coordination; remaining qualification is repeated-turn and barge-in soak
+testing on representative hardware.

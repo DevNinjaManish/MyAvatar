@@ -8,11 +8,20 @@ Apple Silicon may support larger or faster local models, but Intel remains a sup
 
 ## Small local model strategy
 
-V1 prioritizes compact local models. The default installation should be practical for beginners and should avoid requiring an unnecessarily large download or excessive memory.
+V1 remains local-first, but the complete voice, conversation, context, and
+specialist model bundle may use up to approximately 20 GB of disk space. The
+installer must explain that cost before downloading and allow a smaller core
+install when the user prefers a faster setup.
 
-The initial setup target is under approximately 10 GB. V1 supports 8 GB Macs for the core voice and chat experience, with 16 GB preferred for richer context, specialist panels, and model quality. Hardware detection may select smaller models, shorter context, and lighter visual effects on constrained machines.
+V1 supports 8 GB Macs for the core voice and chat experience, 16 GB Macs for
+the preferred Balanced profile, and up to 20 GB of local model storage for the
+complete voice, context, and specialist bundle. Hardware detection may select
+smaller models, shorter context, and lighter visual effects on constrained
+machines.
 
-The system may download additional optional models when a capability needs them, but the first-run experience should establish a useful voice conversation with the smallest appropriate bundle.
+The system may download additional capability models when needed. First run
+should establish a useful voice conversation with the smallest appropriate
+bundle, while clearly offering the complete approximately 20 GB installation.
 
 Model roles are separated:
 

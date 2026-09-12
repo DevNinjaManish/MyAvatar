@@ -78,7 +78,7 @@ Run:
 
 - Daily-use and soak testing
 - Intel and Apple Silicon qualification
-- 8 GB core-path and 16 GB richer-path testing
+- 8 GB core-path, 16 GB Balanced-path, and 20 GB complete-bundle testing
 - Setup, repair, upgrade, migration, and rollback testing
 - Performance, thermal, voice quality, and model comparison
 - Full code and visual QA

@@ -30,4 +30,4 @@ Rules:
 - Seeing Eye starts off; optional permissions are explained separately and narrowly.
 - Nova introduces herself only after the core runtime is ready.
 
-QA: clean install, 8 GB Fast, 16 GB Balanced, interrupted download, disk shortage, microphone denial, speaker failure, offline setup, retry, repair, and first-turn completion.
+QA: clean install, 8 GB Fast, 16 GB Balanced, 20 GB complete bundle, interrupted download, disk shortage, microphone denial, speaker failure, offline setup, retry, repair, and first-turn completion.

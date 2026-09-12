@@ -27,6 +27,7 @@ The user should always see what is happening, how long a download may take, and 
 - No unexplained dependency errors
 - Automatic retry and repair for incomplete setup
 - Clear disk-space and memory estimates before large downloads
+- The complete local model option may use approximately 20 GB; the user must explicitly choose it or continue with a smaller core bundle
 - Resume interrupted downloads
 - Verify model and runtime health after installation
 - Offer a beginner-safe reset or repair flow

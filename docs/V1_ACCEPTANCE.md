@@ -53,7 +53,7 @@
 - [ ] Beginner can install without Terminal or manual model paths.
 - [ ] Setup detects Intel and Apple Silicon hardware.
 - [ ] Setup chooses or explains Fast/Balanced mode.
-- [ ] Initial model/runtime download is small and resumable.
+- [ ] Initial model/runtime download is profile-aware and resumable; the complete local bundle may use approximately 20 GB and is shown before download.
 - [ ] Repair and upgrade flows work after interrupted or incomplete setup.
 - [ ] Fast mode supports the core experience on 8 GB Macs.
 - [ ] Balanced mode remains responsive on preferred hardware.

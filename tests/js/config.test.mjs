@@ -11,7 +11,7 @@ test('companion configuration is complete and unique',()=>{
   assert.equal(config.defaultCompanion,'nova');
   const names=new Set();
   for(const companion of companions){const {id}=companion;
-    assert.match(id,/^[a-z][a-z0-9_-]*$/);assert.ok(companion.name);assert.ok(companion.asset);assert.ok(companion.voice?.name);assert.ok(companion.voice?.rate>0);
+    assert.match(id,/^[a-z][a-z0-9_-]*$/);assert.ok(companion.name);assert.ok(companion.asset);assert.equal(companion.voice?.provider,'kokoro');assert.ok(companion.voice?.voiceId);assert.ok(companion.voice?.lang);assert.ok(companion.voice?.speed>0);assert.ok(companion.voice?.name);assert.ok(companion.voice?.rate>0);assert.ok(companion.voice?.defaultEmotion);assert.ok(companion.voice?.systemPrompt);assert.ok(companion.voice?.greeting);
     assert.equal(names.has(companion.name),false,companion.name+' is duplicated');names.add(companion.name);
   }
   assert.equal(new Set(companions.map(companion=>companion.voice.name)).size,companions.length);

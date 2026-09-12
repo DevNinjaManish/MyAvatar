@@ -108,7 +108,11 @@ Setup requires no Terminal, manual model paths, or technical troubleshooting for
 
 V1 supports Apple Silicon and Intel Macs. It prioritizes small local models and a manageable first-run download. Fast mode is optimized for slower hardware; Balanced mode adds reasoning depth and context without accepting an unresponsive conversation. Natural filler may acknowledge real extended thinking or checking, but must never hide a stalled system or fake progress.
 
-The initial setup target is under approximately 10 GB. V1 supports 8 GB Macs as a minimum, with 16 GB preferred. The Fast model should remain warm for voice where possible, and responsiveness wins over depth when resources are constrained.
+The complete V1 local model budget is approximately 20 GB. An 8 GB Mac remains
+the minimum target for the core voice/chat path, 16 GB is preferred for
+Balanced operation, and the full voice/context/specialist bundle may use the
+20 GB allowance. The Fast model should remain warm for voice where possible,
+and responsiveness wins over depth when resources are constrained.
 
 The model layer is provider-agnostic. Ollama may be the first adapter, but the bot framework, memory, UI, and capabilities must support swapping model runtimes later.
 

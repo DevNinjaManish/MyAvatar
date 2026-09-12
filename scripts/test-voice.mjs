@@ -17,8 +17,8 @@ try{
   socket.on('message',data=>{
     const event=JSON.parse(data);
     if(event.type==='config'){
-      const expected={nova:'Samantha',sterling:'Daniel',rivet:'Fred',luma:'Karen'};
-      sawConfig=Object.entries(expected).every(([id,voice])=>event.config?.bots?.[id]?.voice?.name===voice);
+      const expected={nova:['af_nova','Samantha'],sterling:['bm_daniel','Daniel'],rivet:['am_onyx','Fred'],luma:['af_aoede','Karen']};
+      sawConfig=Object.entries(expected).every(([id,[voiceId,voice]])=>event.config?.bots?.[id]?.voice?.provider==='kokoro'&&event.config?.bots?.[id]?.voice?.voiceId===voiceId&&event.config?.bots?.[id]?.voice?.name===voice);
       socket.send(JSON.stringify({type:'voice',turn:1,audio,mime:'audio/aiff'}));
     }
     if(event.type==='transcript')transcript+=event.text||'';

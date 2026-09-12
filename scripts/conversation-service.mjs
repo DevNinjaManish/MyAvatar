@@ -1,10 +1,14 @@
 import {randomUUID} from 'node:crypto';
 import {promises as fs} from 'node:fs';
-import {execFile} from 'node:child_process';
+import {execFile,spawn} from 'node:child_process';
 import {promisify} from 'node:util';
 import {tmpdir} from 'node:os';
 import {arch, totalmem, cpus} from 'node:os';
 import {join} from 'node:path';
+import {existsSync} from 'node:fs';
+import {dirname,resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createInterface} from 'node:readline';
 import {WebSocketServer} from 'ws';
 import {ProviderRegistry,checkProviderHealth} from '../src/runtime/providers.js';
 import {runProviderStream} from '../src/runtime/stream-runner.js';
@@ -23,6 +27,24 @@ const whisperBinary=process.env.MYAVATAR_WHISPER_BIN||'whisper';
 const whisperModel=process.env.MYAVATAR_WHISPER_MODEL||'tiny';
 const sayBinary='/usr/bin/say';
 const ffmpegBinary=process.env.MYAVATAR_FFMPEG_BIN||'ffmpeg';
+const projectRoot=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const kokoroPython=process.env.MYAVATAR_KOKORO_PYTHON||join(projectRoot,'.venv/bin/python');
+const kokoroModel=process.env.MYAVATAR_KOKORO_MODEL||join(projectRoot,'models/kokoro-v1.0.onnx');
+const kokoroVoices=process.env.MYAVATAR_KOKORO_VOICES||join(projectRoot,'models/voices-v1.0.bin');
+const kokoroScript=join(projectRoot,'scripts/kokoro-tts.py');
+const kokoroWorkerScript=join(projectRoot,'scripts/kokoro-worker.py');
+const kokoroReady=existsSync(kokoroPython)&&existsSync(kokoroModel)&&existsSync(kokoroVoices)&&existsSync(kokoroScript)&&existsSync(kokoroWorkerScript);
+const kokoroWorker=kokoroReady?spawn(kokoroPython,[kokoroWorkerScript,kokoroModel,kokoroVoices],{stdio:['pipe','pipe','inherit']}):null;
+const kokoroResponses=new Map();let kokoroRequestId=0;
+if(kokoroWorker){
+  createInterface({input:kokoroWorker.stdout}).on('line',line=>{
+    try{const response=JSON.parse(line);const pending=kokoroResponses.get(response.id);if(!pending)return;kokoroResponses.delete(response.id);response.error?pending.reject(Error(response.error)):pending.resolve(response.audio);}catch{}
+  });
+  kokoroWorker.on('close',()=>{for(const pending of kokoroResponses.values())pending.reject(Error('Kokoro TTS worker stopped.'));kokoroResponses.clear();});
+}
+const stopKokoro=()=>{if(kokoroWorker&&!kokoroWorker.killed)kokoroWorker.kill('SIGTERM');};
+process.on('SIGTERM',()=>{stopKokoro();process.exit(0);});
+process.on('SIGINT',()=>{stopKokoro();process.exit(0);});
 const bots=Object.freeze({nova:{name:'Nova',voice:voiceProfiles.nova},sterling:{name:'Sterling',voice:voiceProfiles.sterling},rivet:{name:'Rivit',voice:voiceProfiles.rivet},luma:{name:'Luma',voice:voiceProfiles.luma}});
 const providerRegistry=new ProviderRegistry();
 providerRegistry.register('conversation','ollama',Object.freeze({
@@ -32,9 +54,10 @@ providerRegistry.register('conversation','ollama',Object.freeze({
     if(!response.ok)return {available:false,reason:`Local model returned HTTP ${response.status}.`};
     return {available:true};
   },
-  async stream({text,signal,onToken}){
+  async stream({text,signal,onToken,botId='nova'}){
+    const profile=voiceProfiles[botId]||voiceProfiles.nova;
     const response=await fetch(ollamaUrl,{method:'POST',headers:{'content-type':'application/json'},signal,
-      body:JSON.stringify({model,stream:true,think:false,options:{num_predict:performanceProfile===PERFORMANCE_PROFILES.FAST?192:256},messages:[{role:'user',content:text}]})});
+      body:JSON.stringify({model,stream:true,think:false,options:{num_predict:performanceProfile===PERFORMANCE_PROFILES.FAST?192:256},messages:[{role:'system',content:profile.systemPrompt},{role:'user',content:text}]})});
     if(!response.ok)throw Error(`Local model returned HTTP ${response.status}.`);
     const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';
     while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split('\n');buffer=lines.pop()||'';for(const line of lines){if(!line.trim())continue;const part=JSON.parse(line);const tokenText=part.message?.content||'';if(tokenText)onToken(tokenText);}}
@@ -42,6 +65,29 @@ providerRegistry.register('conversation','ollama',Object.freeze({
   }
 }));
 const conversationProvider=providerRegistry.resolve('conversation',{preferred:requestedProvider,fallbacks:['ollama']});
+
+function spokenText(text){
+  return String(text||'')
+    .replace(/```[\s\S]*?```/g,' ')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g,'$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
+    .replace(/\*(?:sighs?|laughs?|chuckles?|breathes?|pauses?|hums?)\*/gi,'')
+    .replace(/\((?:sighs?|laughs?|chuckles?|breathes?|pauses?|hums?)\)/gi,'')
+    .replace(/[*_`#>]/g,'')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,'')
+    .replace(/\n+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function responseEmotion(text,botId){
+  const profile=bots[botId]?.voice||voiceProfiles.nova;
+  if(/[!?]/.test(text)&&/(great|wonderful|love|fun|glad|excited|welcome|nice)/i.test(text))return 'happy';
+  if(/\?/.test(text))return 'curious';
+  if(/(sorry|unfortunately|difficult|sad|miss|worry)/i.test(text))return 'sad';
+  if(/(careful|warning|surprise|really\?)/i.test(text))return 'surprised';
+  return profile.defaultEmotion||'relaxed';
+}
 
 async function transcribeVoice(audio,mime='audio/webm'){
   const dir=await fs.mkdtemp(join(tmpdir(),'myavatar-voice-'));
@@ -55,12 +101,23 @@ async function transcribeVoice(audio,mime='audio/webm'){
   }finally{await fs.rm(dir,{recursive:true,force:true});}
 }
 
-async function synthesizeSpeech(text,botId='nova'){
+async function synthesizeSpeech(text,botId='nova',emotion=null){
   const dir=await fs.mkdtemp(join(tmpdir(),'myavatar-speech-'));
   const aiff=join(dir,'speech.aiff');const wav=join(dir,'speech.wav');
   try{
     const voice=bots[botId]?.voice||voiceProfiles.nova;
-    await exec(sayBinary,['-v',voice.name,'-r',String(voice.rate),'-o',aiff,text],{timeout:30000});
+    const cleanText=spokenText(text);
+    const speed=voice.speed*(emotion==='happy'?1.02:emotion==='sad'?.96:emotion==='curious'?.99:1);
+    if(kokoroReady){
+      try{
+        const audio=await new Promise((resolveAudio,reject)=>{
+          const id=String(++kokoroRequestId);kokoroResponses.set(id,{resolve:resolveAudio,reject});
+          kokoroWorker.stdin.write(`${JSON.stringify({id,text:cleanText,voice:voice.voiceId,speed,lang:voice.lang})}\n`,error=>{if(error){kokoroResponses.delete(id);reject(error);}});
+        });
+        return audio;
+      }catch(error){console.warn(`Kokoro TTS unavailable for ${botId}; using macOS voice fallback: ${error.message}`);}
+    }
+    await exec(sayBinary,['-v',voice.name,'-r',String(voice.rate),'-o',aiff,cleanText],{timeout:30000});
     await exec(ffmpegBinary,['-y','-loglevel','error','-i',aiff,'-acodec','pcm_s16le',wav],{timeout:30000});
     return (await fs.readFile(wav)).toString('base64');
   }finally{await fs.rm(dir,{recursive:true,force:true});}
@@ -76,18 +133,19 @@ server.on('connection',(socket,request)=>{
   if(new URL(request.url,'ws://127.0.0.1').searchParams.get('token')!==token){socket.close(1008,'Unauthorized');return;}
   const sessionId=randomUUID();let sequence=0;let stopped=new Set();const activeControllers=new Map();let activeBot='nova';
   const send=(event)=>socket.send(JSON.stringify({runtimeVersion:1,sessionId,sequence:++sequence,botId:activeBot,...event}));
-  const sendConfig=()=>send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',profile:performanceProfile,hardware:hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length})}});
+  const sendConfig=()=>send({type:'config',config:{conversation:{persona:activeBot,provider:conversationProvider?.name||'unavailable',profile:performanceProfile},bots},runtime:{provider:conversationProvider?.name||'unavailable',voiceProvider:kokoroReady?'kokoro':'macos-say',profile:performanceProfile,hardware:hardwareSummary({arch:arch(),totalMemoryBytes:totalmem(),cpuCount:cpus().length})}});
   sendConfig();
   const answer=async(turn,text,{speak=false}={})=>{
     let spokenText='';
     const controller=new AbortController();activeControllers.set(turn,controller);
-    try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,onToken(tokenText){
+    try{await runProviderStream(conversationProvider,{text,signal:controller.signal,timeoutMs:30000,providerOptions:{botId:activeBot},onToken(tokenText){
       if(stopped.has(turn))return;
       spokenText+=tokenText;send({type:'token',turn,text:tokenText});
     }});}finally{activeControllers.delete(turn);}
     if(stopped.has(turn)||controller.signal.aborted){stopped.delete(turn);return;}
     if(speak){
-      try{send({type:'audio',turn,audio:await synthesizeSpeech(spokenText,activeBot),mime:'audio/wav',voice:bots[activeBot]?.voice});}
+      const emotion=responseEmotion(spokenText,activeBot);
+      try{send({type:'audio',turn,audio:await synthesizeSpeech(spokenText,activeBot,emotion),mime:'audio/wav',voice:bots[activeBot]?.voice,emotion});}
       catch(error){send({type:'speech_unavailable',turn,message:`Speech output unavailable: ${error.message}`});}
     }
     send({type:'done',turn});
@@ -101,8 +159,8 @@ server.on('connection',(socket,request)=>{
       return;
     }
     if(message.type==='greeting'){
-      const text='Hi, I’m ready.';
-      try{send({type:'greeting',text,audio:await synthesizeSpeech(text,activeBot),mime:'audio/wav',voice:bots[activeBot]?.voice});}
+      const text=bots[activeBot]?.voice?.greeting||'Hi, I’m ready.';
+      try{send({type:'greeting',text,audio:await synthesizeSpeech(text,activeBot,'happy'),mime:'audio/wav',voice:bots[activeBot]?.voice,emotion:'happy'});}
       catch{send({type:'greeting',text});}
       return;
     }

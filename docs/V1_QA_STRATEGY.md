@@ -43,7 +43,7 @@ Capture approved states for the widget, chat, banners, bot panels, onboarding, s
 
 ### Performance tests
 
-Measure Fast and Balanced profiles on representative Intel and Apple Silicon Macs, including 8 GB and 16 GB configurations where available. Track startup, model load, time to first audio, interruption latency, memory use, CPU/GPU load, and thermal behavior.
+Measure Fast and Balanced profiles on representative Intel and Apple Silicon Macs, including 8 GB, 16 GB, and complete 20 GB model-bundle configurations where available. Track startup, model load, time to first audio, interruption latency, memory use, CPU/GPU load, disk use, and thermal behavior.
 
 Also test first-run setup, interrupted downloads, repair, upgrades, model replacement, permission changes, and migration from the MVP data/state format.
 
