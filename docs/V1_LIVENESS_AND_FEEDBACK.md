@@ -146,8 +146,9 @@ has fully warmed.
 - Hover or keyboard focus reveals the same controls, names, and status used by
   the normal layout; quiet mode never creates a second control model.
 - Fast uses low-amplitude eye light, posture, and gaze changes only. Balanced
-  may add the existing hands layer and richer state light, but never more
-  frequent idle motion.
+  may add richer state light, but never more frequent idle motion. The modular
+  hands files are preserved but withheld from live composition until a new
+  gesture pass looks natural at compact size.
 - State reactions are event-driven: Listening focuses toward the user,
   Thinking narrows attention, Speaking carries restrained sentence emphasis,
   and Ready returns to a relaxed neutral pose. They must not imply an emotion

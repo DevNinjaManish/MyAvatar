@@ -56,6 +56,7 @@ Rules:
 | Speaking | audio-driven emphasis | warm light pulse | restrained cadence | punchy accent | flowing response light |
 | Working | truthful task cue | patient hold | discreet indicator | active technical cue | inspired exploration |
 
-Fast uses only the shared cue and portrait lighting. Balanced may layer hands
-and deeper light response. Both use the exact same state and never fabricate
-progress or mood.
+Fast uses only the shared cue and portrait lighting. Balanced may add deeper
+light response. The preserved modular hands are intentionally not shown until
+they receive a new art-directed gesture pass. Both profiles use the exact same
+state and never fabricate progress or mood.

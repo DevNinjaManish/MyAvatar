@@ -117,16 +117,17 @@ export class PortraitFace {
     this.portrait=new THREE.Mesh(new THREE.CircleGeometry(portraitRadius,48),new THREE.MeshBasicMaterial({map,transparent:true}));
     this.portrait.position.z=-.015;this.root.add(this.portrait);
     // One canonical asset pack is used at runtime: portrait.png owns the live
-    // face hardware, body.png supplies transparent depth, and hands.png is an
-    // optional foreground gesture layer. Stable names keep release labels out
-    // of the artwork contract.
+    // face hardware and body.png supplies transparent depth. The canonical
+    // hands.png files remain preserved for a future art-directed gesture pass,
+    // but are deliberately not composited until they read naturally at widget
+    // scale. Stable names keep release labels out of the artwork contract.
     this.body=null;this.bodyShadow=null;this.hands=null;
     const bodyProfiles={
-      rivet:{asset:'rivet/body.png',hands:'hands.png',fade:[.44,.59],size:1.48,y:-.15},
-      nova:{asset:'nova/body.png',hands:'hands.png',fade:[.47,.62],size:1.48,y:-.145},
-      sterling:{asset:'sterling/body.png',hands:'hands.png',fade:[.43,.58],size:1.46,y:-.15},
-      pixel:{asset:'pixel/body.png',hands:'hands.png',fade:[.46,.61],size:1.49,y:-.15},
-      luma:{asset:'luma/body.png',hands:'hands.png',fade:[.42,.57],size:1.48,y:-.15}
+      rivet:{asset:'rivet/body.png',fade:[.44,.59],size:1.48,y:-.15},
+      nova:{asset:'nova/body.png',fade:[.47,.62],size:1.48,y:-.145},
+      sterling:{asset:'sterling/body.png',fade:[.43,.58],size:1.46,y:-.15},
+      pixel:{asset:'pixel/body.png',fade:[.46,.61],size:1.49,y:-.15},
+      luma:{asset:'luma/body.png',fade:[.42,.57],size:1.48,y:-.15}
     };
     this.bodyProfile=bodyProfiles[bot]||null;
     if(this.bodyProfile){
