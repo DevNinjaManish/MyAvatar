@@ -14,8 +14,9 @@ This folder contains the structural wireframes for V1. Wireframes define layout,
 - `08-delegation-and-banners.md` — background work, specialist cues, and system banners
 - `09-onboarding-and-setup.md` — beginner installation, model setup, and permission flow
 - `10-settings-and-recovery.md` — settings, repair, failure, and reset states
+- `11-quiet-presence.md` — transparent resting companion, reveal interaction, and personality reactions
 
-All ten structural wireframes are now complete. They define layout, state,
+All eleven structural wireframes are now complete. They define layout, state,
 interaction, failure/recovery, accessibility, and QA coverage.
 
 The focused high-fidelity core-surface gallery is complete at

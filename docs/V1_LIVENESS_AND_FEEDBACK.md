@@ -133,6 +133,28 @@ Reconnection or restart gets its own animation: tentative light pulses, reorient
 - **Sterling:** restrained posture, precise movements, polished chimes, measured light pulses, discreet acknowledgement gestures
 - **Luma:** fluid color transitions, expressive eyes, painterly trails, curious head movement, musical and exploratory reactions
 
+## Quiet desktop presence
+
+Quiet mode is a deliberate desktop posture, not a hidden or broken widget. It
+keeps the companion art and one small truthful state signal visible, while the
+control card recedes until the user hovers the companion or intentionally
+focuses it. The companion must never show as alive before the selected runtime
+has fully warmed.
+
+- The resting surface is transparent: no avatar window, backdrop card, or fake
+  desktop wallpaper sits behind the bot.
+- Hover or keyboard focus reveals the same controls, names, and status used by
+  the normal layout; quiet mode never creates a second control model.
+- Fast uses low-amplitude eye light, posture, and gaze changes only. Balanced
+  may add the existing hands layer and richer state light, but never more
+  frequent idle motion.
+- State reactions are event-driven: Listening focuses toward the user,
+  Thinking narrows attention, Speaking carries restrained sentence emphasis,
+  and Ready returns to a relaxed neutral pose. They must not imply an emotion
+  or task the runtime did not report.
+- A bot may offer a low-pressure prompt only after a long idle period and only
+  when the user has opted in. V1 does not initiate conversational audio.
+
 ## Sound design
 
 Sound should be sparse, spatially consistent, and optional. Useful sound families include:
