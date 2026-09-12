@@ -85,7 +85,10 @@ function setPerformanceOpen(open){document.body.classList.toggle('performance-op
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
 function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
-function setRuntimeReady(value){runtimeReady=Boolean(value);document.body.classList.toggle('runtime-ready',runtimeReady);stage.setAttribute('aria-busy',String(!runtimeReady));for(const id of ['mic-toggle','pause-toggle','send-message'])$(id).disabled=!runtimeReady;}
+function setRuntimeReady(value){
+  runtimeReady=Boolean(value);document.body.classList.toggle('runtime-ready',runtimeReady);stage.setAttribute('aria-busy',String(!runtimeReady));
+  for(const id of ['companion-toggle','mic-toggle','pause-toggle','chat-toggle','workspace-toggle','more-toggle','send-message','message'])$(id).disabled=!runtimeReady;
+}
 function setBootProgress({step=0,total=5,message='Starting local services…'}={}){const percent=Math.max(0,Math.min(100,Math.round((step/Math.max(1,total))*100)));$('boot-detail').textContent=message;$('boot-meter-fill').style.width=`${percent}%`;$('boot-step').textContent=`${percent}% · local only`;}
 function loadNovaWorkspace(){try{return normalizeNovaWorkspace(JSON.parse(localStorage.getItem(NOVA_WORKSPACE_STORAGE_KEY)||'{}'));}catch{return emptyNovaWorkspace();}}
 function saveNovaWorkspace(){localStorage.setItem(NOVA_WORKSPACE_STORAGE_KEY,JSON.stringify(novaWorkspace));renderNovaWorkspace();}

@@ -631,7 +631,7 @@ body[data-presence="recovery"] #stage::after {
   opacity: 0;
   transition: opacity 0.36s ease;
 }
-.runtime-ready .mvp-widget #stage {
+body.runtime-ready #stage {
   opacity: 1;
   pointer-events: auto;
 }
@@ -662,6 +662,11 @@ body[data-presence="recovery"] #stage::after {
 .boot-meter i { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--signal)); transition: width .35s ease; }
 .runtime-ready .boot-progress { opacity: 0; transform: scale(.94); pointer-events: none; }
 @keyframes boot-spin { to { transform: rotate(360deg); } }
+.widget-card button:disabled,
+.chat-panel textarea:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
 .mvp-widget #stage canvas {
   transform: scale(var(--avatar-scale, 1));
   transform-origin: 50% 52%;
