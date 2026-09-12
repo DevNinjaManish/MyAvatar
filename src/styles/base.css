@@ -960,6 +960,7 @@ body[data-avatar-glow="false"] #stage::after {
 }
 .workspace-open.mvp-widget main {
   width: 610px;
+  height: 750px;
 }
 .workspace-open .stage-frame {
   position: absolute;
@@ -970,12 +971,16 @@ body[data-avatar-glow="false"] #stage::after {
 .workspace-open .widget-card {
   left: 370px;
 }
+.workspace-open .chat-panel {
+  left: 370px;
+}
 .more-open.mvp-widget,
 .more-open .mvp-widget {
   width: 630px;
 }
 .more-open.mvp-widget main {
   width: 610px;
+  height: 750px;
 }
 .more-open .stage-frame {
   position: absolute;
@@ -986,11 +991,15 @@ body[data-avatar-glow="false"] #stage::after {
 .more-open .widget-card {
   left: 370px;
 }
+.more-open .chat-panel {
+  left: 370px;
+}
 .more-open .more-menu {
   top: 10px;
   left: 0;
   width: 350px;
-  max-height: 500px;
+  height: 750px;
+  max-height: 750px;
 }
 .nova-workspace {
   position: absolute;
@@ -998,7 +1007,8 @@ body[data-avatar-glow="false"] #stage::after {
   top: 10px;
   left: 0;
   width: 350px;
-  max-height: 500px;
+  height: 750px;
+  max-height: 750px;
   overflow: auto;
   padding: 11px;
   border: 1px solid #ffffff1c;

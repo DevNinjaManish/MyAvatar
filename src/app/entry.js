@@ -66,14 +66,16 @@ platform.addEventListener('pointerdown',event=>{if(event.button!==0||event.targe
 platform.addEventListener('pointerup',stopDrag);
 platform.addEventListener('pointercancel',stopDrag);
 
+function resizePanels(){const wide=!$('nova-workspace').hidden||!$('more-menu').hidden;const tall=wide||!$('chat-panel').hidden;desktop?.resize?.(tall?770:520,wide?630:260);}
 function setOpen(id,open){
   const panel=$(id);const changed=panel.hidden===open;panel.hidden=!open;
-  if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(changed)desktop?.resize?.(open?770:520);if(open)$('message').focus({preventScroll:true});}
+  if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(open)$('message').focus({preventScroll:true});}
   if(id==='companion-picker')$('companion-toggle').setAttribute('aria-expanded',String(open));
-  if(id==='more-menu'){document.body.classList.toggle('more-open',open);$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');if(changed)desktop?.resize?.(520,open?630:260);}
-  if(id==='nova-workspace'){document.body.classList.toggle('workspace-open',open);if(changed)desktop?.resize?.(520,open?630:260);}
+  if(id==='more-menu'){document.body.classList.toggle('more-open',open);$('more-toggle').setAttribute('aria-expanded',String(open));$('more-toggle').setAttribute('aria-label',open?'Close more options':'More options');}
+  if(id==='nova-workspace')document.body.classList.toggle('workspace-open',open);
+  if(changed&&['chat-panel','more-menu','nova-workspace'].includes(id))resizePanels();
 }
-function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){desktop?.resize?.(520,630);healthRequested=true;runtimeSocket?.send(JSON.stringify({type:'health'}));}else desktop?.resize?.(520,$('more-menu').hidden?260:630);}
+function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){resizePanels();healthRequested=true;runtimeSocket?.send(JSON.stringify({type:'health'}));}else resizePanels();}
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
 function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
@@ -298,14 +300,14 @@ window.addEventListener('myavatar:runtime-event',event=>{
   }
 });
 
-$('chat-toggle').addEventListener('click',()=>{setOpen('nova-workspace',false);setOpen('companion-picker',false);setOpen('chat-panel',$('chat-panel').hidden);});
+$('chat-toggle').addEventListener('click',()=>{setOpen('companion-picker',false);setOpen('chat-panel',$('chat-panel').hidden);});
 $('chat-close').addEventListener('click',()=>setOpen('chat-panel',false));
 $('clear-chat').addEventListener('click',()=>{if(activeTurn!==null){const turn=activeTurn;if(runtimeSocket?.readyState===WebSocket.OPEN)runtimeSocket.send(JSON.stringify({type:'stop',turn}));stopSpeechPlayback();chat.interrupt(turn);}chat.clear();activeTurn=null;voiceTurn=null;appState.set(STATES.IDLE);resumeLiveListening();$('message').value='';chat.setDraft('');$('send-message').hidden=false;$('stop-response').hidden=true;showNotice('');});
 $('runtime-retry').addEventListener('click',()=>{reconnectAttempts=0;showNotice('');connectRuntime();});
 $('companion-toggle').addEventListener('click',()=>{setNovaWorkspaceOpen(false);setOpen('chat-panel',false);setOpen('companion-picker',$('companion-picker').hidden);});
 $('workspace-toggle').addEventListener('click',()=>setNovaWorkspaceOpen($('nova-workspace').hidden));
 $('picker-close').addEventListener('click',()=>setOpen('companion-picker',false));
-$('more-toggle').addEventListener('click',()=>{setOpen('nova-workspace',false);setOpen('chat-panel',false);setOpen('companion-picker',false);setOpen('more-menu',$('more-menu').hidden);});
+$('more-toggle').addEventListener('click',()=>{setOpen('nova-workspace',false);setOpen('companion-picker',false);setOpen('more-menu',$('more-menu').hidden);});
 $('more-close').addEventListener('click',()=>setOpen('more-menu',false));
 $('companion-picker-menu').addEventListener('click',()=>{setOpen('more-menu',false);setOpen('companion-picker',true);});
 $('nova-workspace-close').addEventListener('click',()=>setNovaWorkspaceOpen(false));
