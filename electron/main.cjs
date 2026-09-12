@@ -142,6 +142,11 @@ else app.whenReady().then(()=>{
     try{const response=await fetch('http://127.0.0.1:11434/api/chat',{method:'POST',headers:{'content-type':'application/json'},signal:AbortSignal.timeout(30000),body:JSON.stringify({model:lumaConversationModel(),stream:false,think:false,messages:[{role:'system',content:'You are Luma, a concise local image art director. Rewrite the user idea as one vivid image prompt. Preserve every concrete subject and action. Add only useful composition, lighting, and material detail. No labels, no prose, no markdown. Maximum 260 characters.'},{role:'user',content:`Format: ${format}. Idea: ${prompt}`} ]})});if(!response.ok)throw Error();const text=(await response.json())?.message?.content?.trim();return {prompt:text?.slice(0,260)||fallback,assisted:Boolean(text)};}catch{return {prompt:fallback,assisted:false};}
   });
   ipcMain.handle('luma-model-status',async event=>event.sender===mainWindow?.webContents?lumaModelStatus():null);
+  ipcMain.handle('luma-warm',async event=>{
+    if(event.sender!==mainWindow?.webContents)return null;
+    const status=await lumaModelStatus();if(!status.ready)return {ready:false,error:'Download Luma’s local model before warming it.'};
+    const result=await runLumaWorker({prompt:'warm',mode:'repair',image:''});return result.error?result:{ready:true};
+  });
   ipcMain.handle('luma-model-repair',async event=>{
     if(event.sender!==mainWindow?.webContents)return null;
     const status=await lumaModelStatus();if(!status.workerReady)return {error:'Luma’s local Python image runtime is missing.'};

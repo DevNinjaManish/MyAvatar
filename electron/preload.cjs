@@ -14,4 +14,5 @@ contextBridge.exposeInMainWorld('desktop',{
   directImage:request=>ipcRenderer.invoke('luma-direct',request),
   lumaModelStatus:()=>ipcRenderer.invoke('luma-model-status'),
   repairLumaModel:()=>ipcRenderer.invoke('luma-model-repair')
+  ,warmLuma:()=>ipcRenderer.invoke('luma-warm')
 });
