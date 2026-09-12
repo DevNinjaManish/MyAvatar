@@ -35,6 +35,8 @@ const runLumaWorker=request=>new Promise(resolve=>{
   lumaJob=child;child.stdout.on('data',chunk=>{stdout+=chunk;});child.stderr.on('data',chunk=>{stderr+=chunk;});child.on('error',()=>finish({error:'Luma’s local image worker could not start. Run setup for image support.'}));child.on('close',()=>{try{const result=JSON.parse(stdout);finish(result.error?{error:result.error}:result);}catch{finish({error:stderr.trim()||'Luma could not finish that image.'});}});
   child.stdin.end(JSON.stringify(request));
 });
+const directoryBytes=async directory=>{let total=0;const visit=async folder=>{let entries=[];try{entries=await fs.readdir(folder,{withFileTypes:true});}catch{return;}for(const entry of entries){const target=path.join(folder,entry.name);if(entry.isDirectory())await visit(target);else if(entry.isFile()){try{total+=(await fs.stat(target)).size;}catch{}}}};await visit(directory);return total;};
+const lumaModelStatus=async()=>{const modelPath=path.join(app.getPath('userData'),'models','stable-diffusion-v1-5');const ready=Boolean(await fs.stat(path.join(modelPath,'model_index.json')).catch(()=>null));const bytes=await directoryBytes(modelPath);let freeBytes=null;try{freeBytes=(await fs.statfs(app.getPath('userData'))).bavail*(await fs.statfs(app.getPath('userData'))).bsize;}catch{}return {ready,bytes,freeBytes,workerReady:require('node:fs').existsSync(imagePython)&&require('node:fs').existsSync(imageWorker)};};
 const stopDragging=()=>{if(dragTimer){clearInterval(dragTimer);dragTimer=null;}};
 
 const createWindow=()=>{
@@ -129,6 +131,12 @@ else app.whenReady().then(()=>{
     if(!prompt||prompt.length>600)return {error:'Describe the image in 600 characters or fewer.'};
     if(image&&(!/^data:image\/(?:png|jpeg|webp);base64,/.test(image)||image.length>16*1024*1024))return {error:'Choose a PNG, JPEG, or WebP image up to 12 MB.'};
     return runLumaWorker({prompt,mode:request.mode==='edit'?'edit':'generate',image});
+  });
+  ipcMain.handle('luma-model-status',async event=>event.sender===mainWindow?.webContents?lumaModelStatus():null);
+  ipcMain.handle('luma-model-repair',async event=>{
+    if(event.sender!==mainWindow?.webContents)return null;
+    const status=await lumaModelStatus();if(!status.workerReady)return {error:'Luma’s local Python image runtime is missing.'};
+    return runLumaWorker({prompt:'repair',mode:'repair',image:''});
   });
   createWindow();
 });

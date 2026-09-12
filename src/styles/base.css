@@ -459,6 +459,8 @@ textarea:focus-visible {
   background: color-mix(in srgb, var(--accent) 18%, var(--inset));
   color: var(--accent);
 }
+.model-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px; color:var(--muted); font-size:8px; }
+.model-row button { min-height:25px; padding:4px 8px; border-radius:8px; background:#ffffff08; color:var(--accent); font:inherit; font-size:9px; font-weight:760; }
 .more-menu > button {
   display: grid;
   gap: 1px;

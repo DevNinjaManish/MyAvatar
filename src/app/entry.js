@@ -99,6 +99,8 @@ function setOpen(id,open){
   if(changed&&['chat-panel','more-menu',...specialistIds].includes(id))resizePanels();
 }
 function setPerformanceOpen(open){document.body.classList.toggle('performance-open',open);$('performance-panel').hidden=!open;if(open){resizePanels();healthRequested=true;runtimeSocket?.send(JSON.stringify({type:'health'}));}else resizePanels();}
+function readableBytes(value){return Number.isFinite(value)?`${(value/1024/1024/1024).toFixed(value>10*1024*1024*1024?0:1)} GB`:'';}
+async function refreshLumaModelStatus(){if(!desktop?.lumaModelStatus)return;const status=await desktop.lumaModelStatus();if(!status)return;const action=$('luma-model-repair');action.disabled=!status.workerReady;action.textContent=status.ready?'Repair':'Download';$('luma-model-summary').textContent=status.ready?`Luma · ready locally · ${readableBytes(status.bytes)} model`:`Luma · ${status.workerReady?'not installed':'image runtime missing'}`;$('voice-model-summary').textContent=`Voice · ${runtimeReady?'ready locally':'checking local runtime'}${status.freeBytes?` · ${readableBytes(status.freeBytes)} free`:''}`;}
 function showNotice(text,retry=false,variant='info'){const visible=Boolean(text);$('notice-text').textContent=text;$('notice').dataset.variant=variant;$('runtime-retry').hidden=!retry;$('notice').hidden=!visible;}
 function setRuntimeStatus(text){$('runtime-status').textContent=text;$('stage-status').textContent=text;}
 function setPresenceLine(){const companion=companionById[selected];$('presence-line').textContent=companion?.presence?.[appState.value]||presenceFallback[appState.value]||'Ready';}
@@ -344,8 +346,9 @@ $('runtime-retry').addEventListener('click',()=>{reconnectAttempts=0;showNotice(
 $('companion-toggle').addEventListener('click',()=>{setSpecialistOpen(false);setOpen('chat-panel',false);setOpen('companion-picker',$('companion-picker').hidden);});
 $('workspace-toggle').addEventListener('click',()=>setSpecialistOpen($(specialistFor[selected].id).hidden));
 $('picker-close').addEventListener('click',()=>setOpen('companion-picker',false));
-$('more-toggle').addEventListener('click',()=>{setOpen('nova-workspace',false);setOpen('companion-picker',false);setOpen('more-menu',$('more-menu').hidden);});
+$('more-toggle').addEventListener('click',()=>{setOpen('nova-workspace',false);setOpen('companion-picker',false);const open=$('more-menu').hidden;setOpen('more-menu',open);if(open)refreshLumaModelStatus();});
 $('more-close').addEventListener('click',()=>setOpen('more-menu',false));
+$('luma-model-repair').addEventListener('click',async()=>{if(!desktop?.repairLumaModel)return;const button=$('luma-model-repair');button.disabled=true;button.textContent='Checking…';showNotice('Luma is checking its local model. A missing or incomplete download will resume.',true,'info');try{const result=await desktop.repairLumaModel();if(!result||result.error)showNotice(result?.error||'Luma model repair could not finish.',false,'warning');else showNotice('Luma’s local model is ready.',false,'info');await refreshLumaModelStatus();}finally{button.disabled=false;}});
 $('nova-workspace-close').addEventListener('click',()=>setSpecialistOpen(false));
 for(const button of document.querySelectorAll('.specialist-close'))button.addEventListener('click',()=>setSpecialistOpen(false));
 $('nova-calendar-prev').addEventListener('click',()=>{novaCalendarCursor=new Date(novaCalendarCursor.getFullYear(),novaCalendarCursor.getMonth()-1,1);renderNovaCalendar();});
