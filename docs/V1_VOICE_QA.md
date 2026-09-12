@@ -23,6 +23,11 @@ Implemented in this batch:
   in 160 ms batches. A stable ASCII-English streaming result is used at endpoint;
   Hindi, Hinglish, and uncertain/non-English output automatically uses the
   persistent Faster-Whisper fallback.
+- Streaming begins with the detector's retained pre-roll, includes the trailing
+  endpoint frames, and requires the finalized transcript rather than a stale
+  partial. If finalization exceeds 260 ms, the turn falls back to Whisper.
+  The 360 ms endpoint now applies only below 520 ms of voiced speech; full
+  sentences retain the safer 480 ms pause window.
 - Live barge-in uses its own detector and never performs startup calibration.
   It may interrupt after 260 ms of reply playback when it hears 110 ms of user
   speech; the shorter guard is supported by the browser echo-cancellation path.
@@ -31,7 +36,7 @@ Implemented in this batch:
 
 Evidence:
 
-- 101 JavaScript tests, including ordered decoding, stale decode cancellation,
+- 102 JavaScript tests, including ordered decoding, stale decode cancellation,
   streamed sentence boundaries, and interruption onset with retained speech.
 - Production build passes (existing bundle-size warning remains).
 - Runtime smoke and recorded speech input integration passed.

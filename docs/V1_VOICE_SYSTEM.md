@@ -112,8 +112,8 @@ detection nor the confidence heuristic guarantees correct code-switching.
 
 For latency, brief social voice turns use the warm Fast local model even in
 Balanced mode. Work-like requests retain the user-selected performance model.
-The endpoint is deliberately asymmetric: brief turns resolve after 360 ms of
-silence, while longer utterances keep a 480 ms window to avoid chopping a
+The endpoint is deliberately asymmetric: speech below 520 ms resolves after
+360 ms of silence, while longer utterances keep a 480 ms window to avoid chopping a
 natural pause. This is a product rule, not an excuse to cut a speaker off.
 
 ## Nonverbal vocalizations

@@ -258,7 +258,10 @@ server.on('connection',(socket,request)=>{
         if(typeof message.audio!=='string'||!message.audio)throw Error('No microphone audio was received.');
         send({type:'recognizing',turn});
         const streamState=message.streamId?streamingTurns.get(message.streamId):null;
-        const streamResult=streamState?.final||streamState?.latest||await new Promise(resolve=>{if(!streamState)return resolve(null);const timer=setTimeout(()=>resolve(streamState.latest),120);streamState.waiters.push(value=>{clearTimeout(timer);resolve(value);});});
+        // Only a completed stream may answer. If finalization misses the bounded
+        // budget, use Whisper rather than risking a truncated partial sentence.
+        const streamResult=streamState?.final||await new Promise(resolve=>{if(!streamState)return resolve(null);const timer=setTimeout(()=>resolve(null),260);streamState.waiters.push(value=>{clearTimeout(timer);resolve(value);});});
+        if(streamState){streamingCallbacks.delete(streamState.streamId);streamingTurns.delete(message.streamId);}
         const fastEnglish=streamResult?.text&&/^[\x20-\x7e]+$/.test(streamResult.text)&&/[a-z]/i.test(streamResult.text);
         const recognition=fastEnglish?{text:streamResult.text,language:'en',durationMs:streamResult.durationMs,uncertain:false,streaming:true}:await transcribeVoice(message.audio,message.mime);text=recognition.text;recognizedLanguage=recognition.language;
         if(stopped.has(turn)||socket.readyState!==1){stopped.delete(turn);return;}

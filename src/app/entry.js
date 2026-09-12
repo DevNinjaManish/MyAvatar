@@ -115,7 +115,7 @@ async function startVoiceCapture({automatic=false}={}){
   const socket=runtimeSocket;
   if(!socket||socket.readyState!==WebSocket.OPEN){if(!automatic)showNotice('Conversation service unavailable. Typed chat is available.',true,'warning');return false;}
   try{
-    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:480,shortSilenceMs:360,shortTurnMs:850,preRollMs:260,calibrationMs:900,releaseRatio:.68,onLiveSpeechFrame:streamLiveSpeech,onCalibrationChange:calibrating=>{if(calibrating)setRuntimeStatus('Tuning microphone…');else if(liveVoiceEnabled&&!paused&&activeTurn===null)setRuntimeStatus('Listening');},onBargeIn:()=>{
+    const started=await audioEngine.startLive(handleVoiceUtterance,{threshold:.0048,onsetMs:90,minSpeechMs:180,silenceMs:480,shortSilenceMs:360,shortTurnMs:520,preRollMs:260,calibrationMs:900,releaseRatio:.68,onLiveSpeechFrame:streamLiveSpeech,onCalibrationChange:calibrating=>{if(calibrating)setRuntimeStatus('Tuning microphone…');else if(liveVoiceEnabled&&!paused&&activeTurn===null)setRuntimeStatus('Listening');},onBargeIn:()=>{
       const turn=activeTurn??turnPlayback.activeTurn;if(turn!==null){runtimeSocket?.send(JSON.stringify({type:'stop',turn}));chat.interrupt(turn);}stopSpeechPlayback();activeTurn=null;appState.set(STATES.LISTENING);setRuntimeStatus('Listening');
     },bargeIn:{guardMs:260,threshold:.010,onsetMs:110,minSpeechMs:150,silenceMs:360,preRollMs:180,releaseRatio:.7}});
     if(!started||!audioEngine.setListening(true))throw Error('Microphone listening could not be started.');

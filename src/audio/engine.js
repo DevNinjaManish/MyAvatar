@@ -94,6 +94,7 @@ export class AudioEngine{
   async startLive(onUtterance,settings={}){
     await this.ready();this.detector=new TurnDetector(this.ctx.sampleRate,settings);
     let calibrationReported=this.detector.calibrationRemainingMs>0;
+    let streamingActive=false;
     if(calibrationReported)settings.onCalibrationChange?.(true);
     const barge=settings?.bargeIn||{};
     const {bargeIn,onCalibrationChange,calibrationMs,...bargeBase}=settings;
@@ -107,8 +108,9 @@ export class AudioEngine{
       if(this.liveGate){
         const utterance=this.detector.push(frame);
         if(calibrationReported&&!this.detector.calibrating){calibrationReported=false;settings.onCalibrationChange?.(false);}
-        if(this.detector.started)settings.onLiveSpeechFrame?.(frame,{sampleRate:this.ctx.sampleRate});
-        if(utterance&&this._isCaptureCurrent(generation)){this.liveGate=false;emitInputLevel(0);onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.detector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:false});}
+        if(!streamingActive&&this.detector.started){streamingActive=true;for(const buffered of this.detector.frames)settings.onLiveSpeechFrame?.(buffered,{sampleRate:this.ctx.sampleRate});}
+        else if(streamingActive)settings.onLiveSpeechFrame?.(frame,{sampleRate:this.ctx.sampleRate});
+        if(utterance&&this._isCaptureCurrent(generation)){streamingActive=false;this.liveGate=false;emitInputLevel(0);onUtterance(resample(utterance,this.ctx.sampleRate),{endDetectionMs:this.detector.lastDetectionDelayMs,captureGeneration:generation,bargeIn:false});}
         return;
       }
       if(this.bargeCapturing||(this.playing&&Date.now()-this.playbackStartedAt>=this.bargeInGuardMs)){
