@@ -73,7 +73,7 @@ platform.addEventListener('pointerdown',event=>{if(event.button!==0||event.targe
 platform.addEventListener('pointerup',stopDrag);
 platform.addEventListener('pointercancel',stopDrag);
 
-function resizePanels(){const wide=!$('nova-workspace').hidden||!$('more-menu').hidden;const tall=wide||!$('chat-panel').hidden;desktop?.resize?.(tall?770:520,wide?630:260);}
+function resizePanels(){const wide=!$('nova-workspace').hidden||!$('more-menu').hidden;const tall=wide||!$('chat-panel').hidden;desktop?.resize?.(tall?805:520,wide?630:260);}
 function setOpen(id,open){
   const panel=$(id);const changed=panel.hidden===open;panel.hidden=!open;
   if(id==='chat-panel'){$('chat-toggle').setAttribute('aria-expanded',String(open));$('chat-toggle').setAttribute('aria-label',open?'Close chat':'Open chat');if(open)$('message').focus({preventScroll:true});}

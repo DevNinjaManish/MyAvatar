@@ -66,7 +66,7 @@ textarea:focus-visible {
   min-height: 500px;
 }
 .mvp-widget:has(#chat-panel:not([hidden])) main {
-  height: 750px;
+  height: 785px;
 }
 .stage-frame {
   position: relative;
@@ -225,7 +225,7 @@ textarea:focus-visible {
 .chat-panel {
   position: absolute;
   z-index: 5;
-  top: 510px;
+  top: 545px;
   left: 0;
   width: 240px;
   height: 250px;
@@ -482,7 +482,7 @@ textarea:focus-visible {
 .notice {
   position: absolute;
   z-index: 6;
-  top: 442px;
+  top: 505px;
   left: 0;
   right: 0;
   display: flex;
@@ -931,7 +931,7 @@ body[data-avatar-glow="false"] #stage::after {
 .workspace-open.mvp-widget main,
 .more-open.mvp-widget main {
   width: 610px;
-  height: 750px;
+  height: 785px;
 }
 .workspace-open .stage-frame,
 .more-open .stage-frame {
@@ -946,12 +946,17 @@ body[data-avatar-glow="false"] #stage::after {
 .more-open .chat-panel {
   left: 370px;
 }
+.workspace-open .notice,
+.more-open .notice {
+  left: 370px;
+  width: 240px;
+}
 .more-open .more-menu {
   top: 10px;
   left: 0;
   width: 350px;
-  height: 750px;
-  max-height: 750px;
+  height: 785px;
+  max-height: 785px;
 }
 .nova-workspace {
   position: absolute;
@@ -959,8 +964,8 @@ body[data-avatar-glow="false"] #stage::after {
   top: 10px;
   left: 0;
   width: 350px;
-  height: 750px;
-  max-height: 750px;
+  height: 785px;
+  max-height: 785px;
   overflow: auto;
   padding: 11px;
   border: 1px solid #ffffff1c;
